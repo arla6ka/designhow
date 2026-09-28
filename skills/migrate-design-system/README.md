@@ -2,11 +2,13 @@
 
 Moves an app onto a design system that already exists, one surface at a time, with one coordinator agent running many workers. It builds a script-backed inventory, captures baselines before touching anything, lands the shared layer first, proves the recipe on a pilot, turns it into a codemod, then fans out. Each surface lands only after a separate verifier checks it against its baseline. The run ends when the inventory counts reach zero and every surface is verified on the final commit. It can also run as a read-only audit that ends at a plan.
 
+On shadcn, old and new code often share `@/components/ui`, so legacy is found by diffing each file against the team's registry, not by import path. `shadcn add` runs only in the shared layer.
+
 It uses the other skills in this repo. `token-mapping` builds each surface's migration list, `design-review` is part of each verdict, and `component-docs` documents any component the system owner adds to close a gap.
 
 ## Use as-is
 
-Ask for a migration and give a budget. A loose request is fine. The coordinator looks for the system itself (a `build-design-system` handoff, `registry.json`, a token source or a UI package) and writes what it found, plus every other default, into `frame.md` for you to check. For a first try, ask for audit mode, read `plan.md`, then start the real run from it.
+Ask for a migration and give a budget, or let the session be the budget. A loose request is fine. The run works on its own branch, `ds/<yyyy-mm-dd>-migrate`, and merging it into yours is always your call. The coordinator looks for the system itself (a `build-design-system` handoff, `registry.json`, a token source or a UI package) and writes what it found, plus every other default, into `frame.md` for you to check. For a first try, ask for audit mode, read `plan.md`, then start the real run from it.
 
 The skill is model-invocable, so a router skill or `build-design-system`'s handoff can start it. Its description triggers only on moving an app onto an existing system, not on general UI talk. It spawns many agents and spends real money, so the cost guard sits in the procedure. Inventory and audit are read-only, and no editing worker starts before `frame.md` states a budget. If you would rather start it only by hand, add `disable-model-invocation: true` to the frontmatter. A router can then no longer call it.
 
@@ -22,7 +24,7 @@ The skill is model-invocable, so a router skill or `build-design-system`'s hando
 
 Each of these prevents a failure that shows up at scale. Keep them unless your setup really differs.
 
-- The coordinator never writes product code. When it starts fixing things, it stops draining, and every worker behind it waits.
+- One coordinator rule, stated once under Boundaries in `SKILL.md`. It exists because a coordinator that starts fixing things stops draining, and every worker behind it waits.
 - Inventory by script. A search the model runs by hand gives a different count each time, so "done" means nothing.
 - Block new legacy usage before migrating. Otherwise feature work adds it back as fast as workers remove it.
 - Baselines first, and never edited. A reference the worker can change is not a reference.
@@ -34,7 +36,7 @@ Each of these prevents a failure that shows up at scale. Keep them unless your s
 
 ## Optional tools
 
-A browser automation tool with screenshot and accessibility-tree capture (Playwright, or your existing visual test setup) is close to required for implementation runs. Without one, the skill runs audit mode only. ast-grep makes the inventory and lint rule one file. A second model family for verifiers catches mistakes the worker's model is blind to. Parallel agents are optional, and the skill runs the same phases in sequence without them.
+A browser that captures screenshots and accessibility trees is close to required for implementation runs. Your existing visual test setup comes first, then `capture.mjs` on Playwright for captures, with agent-browser for one-off evidence, with the commands in `build-design-system/references/browser.md`. Without one, the skill runs audit mode only. ast-grep makes the inventory and lint rule one file. A second model family for verifiers catches mistakes the worker's model is blind to. Parallel agents are optional, and the skill runs the same phases in sequence without them.
 
 ## Check after changing
 
@@ -55,7 +57,7 @@ Interview me, one question per turn. Cover:
 - how we run the app and tests in CI, and which viewports and themes we support
 - whether our migration should look identical (exact) or adopt new values (mapped)
 - which agent platform we use and how many agents we can afford at once
-- who answers gates, and what may merge without a person
+- who answers gates
 
 Rules for you while we do this:
 - Leave the phase order, the one-writer rule, the anti-tamper rules, and the verdict states alone unless an answer of mine contradicts one.

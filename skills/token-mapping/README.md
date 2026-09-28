@@ -4,7 +4,7 @@ Maps raw values from a codebase or a running build onto the tokens you already h
 
 ## Use as-is
 
-Ask something like "are we using our tokens on the settings page?" With repo access it finds the screen's files and the token list itself. Without it, give it the values (pasted code, or a URL to a running build) and your token list. It reads DTCG JSON, Tokens Studio, Style Dictionary, CSS custom properties, and Tailwind theme config or `@theme`. With no token file in the repo, it stops and hands back every value grouped the way Geist lays out its foundations, ready to seed a token set.
+Ask something like "are we using our tokens on the settings page?" With repo access it finds the screen's files and the token list itself. Without it, give it the values (pasted code, or a URL to a running build) and your token list. It reads DTCG JSON, Tokens Studio, Style Dictionary, CSS custom properties, Tailwind theme config or `@theme`, and shadcn's variable pairs. On shadcn it maps onto the names as they are, and it counts a utility like `bg-muted` as a token use. With no token file in the repo, it stops and hands back every value grouped the way Geist lays out its foundations, ready to seed a token set.
 
 ## Replace first
 
@@ -18,7 +18,7 @@ Ask something like "are we using our tokens on the settings page?" With repo acc
 Keep these unless your system really differs.
 
 - Purpose before value. An 8px radius token is wrong for an 8px gap, and a report that says otherwise looks right until someone ships it.
-- Ambiguous rows stay visible with every candidate. That section holds the only decisions a person needs to make.
+- Ambiguous rows stay visible with every candidate, and a gap names the closest token when one fits the purpose. Those two sections hold the only decisions a person needs to make.
 - No invented token names. A proposed name in a handoff tends to become real without anyone deciding it.
 - Semantic tokens over primitives. Mapping to `gray.600` breaks the first time dark mode or a rebrand changes what "subtle text" means.
 - No list, no mapping. Mapping from memory is how wrong names spread.

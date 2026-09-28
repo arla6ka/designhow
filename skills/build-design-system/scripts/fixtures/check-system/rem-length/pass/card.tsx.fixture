@@ -1,0 +1,3 @@
+export function Card() {
+  return <div className="p-5" style={{ lineHeight: "1.5rem", letterSpacing: "0.02em", maxHeight: "calc(100vh - 2rem)" }} />;
+}

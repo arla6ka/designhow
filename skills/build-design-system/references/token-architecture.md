@@ -1,10 +1,11 @@
 # Token architecture
 
-> For the team setting this up: the default below fits most web apps. If your repo already has a token source that other tools read, keep its format and apply the layer and naming rules inside it. Record the departure in the run record with the reason.
+> For the team setting this up: the default below fits hand-rolled web apps. If your repo already has a token source that other tools read, keep its format and apply the layer and naming rules inside it. Record the departure in the run record with the reason. On shadcn or a package library, the base reference decides where tokens live and overrides this file. See "When the foundation owns the tokens" below.
 
 Contents
 
 - The default and why
+- When the foundation owns the tokens
 - Layers
 - Naming
 - Source format
@@ -20,7 +21,16 @@ Three layers, stored as W3C Design Tokens (DTCG) JSON, generating CSS custom pro
 
 The reason is that each output is a different reader. People read the JSON with its descriptions. Browsers read the CSS variables. Tailwind turns `@theme` into utilities. Agents read the generated Markdown tables. One source with generated outputs means one place to change a value and no copies to drift. DTCG is an open format, so the source outlives any one build tool.
 
-Choose a lighter setup only when the app has one theme, under about 40 values, and no Tailwind. In that case a single hand-written CSS file of semantic variables, with a comment per variable giving its role, is enough. Record the choice. The naming rules below still apply.
+Choose a lighter setup only when the app has one theme, under about 40 distinct values across all categories, and no Tailwind. In that case a single hand-written CSS file of semantic variables, with a comment per variable giving its role, is enough. The role comment does the job of `$description`. The docs generator reads it, and a variable without one fails the build's Done list. Record the choice. The naming rules below still apply.
+
+## When the foundation owns the tokens
+
+Some foundations already have a token file that other tools write into. A generator that takes it over breaks those tools.
+
+- **shadcn.** The CSS variable pairs in the `tailwindCss` file are the semantic layer, and their names stay as shadcn wrote them. `shadcn apply` and registry items with `cssVars` write there. No DTCG generator by default. New roles are new pairs in the same file. Details in `base-shadcn.md`.
+- **A package library.** The theme object is the source, in the shape the library reads. DTCG, if wanted, generates that object. Details in `base-library.md`.
+
+The naming, role and "never becomes a token" rules below still apply inside those files, except renaming. A foundation's names are never renamed.
 
 ## Layers
 
@@ -48,6 +58,7 @@ Semantic names read as category, then role, then variant, then state, from gener
 - Rename an existing token only when the inventory shows it used for two different roles. Split it, and record the split.
 - No brand or product words in semantic names, such as `color.acme` or `space.dashboard`. Those are gates.
 - CSS output flattens the path with hyphens: `color.text.subtle` becomes `--color-text-subtle`.
+- On Tailwind v4, the `@theme` key is the utility: `--color-<role>` becomes `bg-<role>`, `text-<role>` and `border-<role>`. So an `@theme` role never starts with a property word. `--color-text-muted` gives `text-text-muted`. Name the `@theme` key `--color-muted-foreground`, `--color-fg-muted` or `--color-edge`, and point it at the flattened variable. The check's `rule/doubled-utility` flags `text-text-*`, `bg-bg-*` and `border-border-*`.
 
 Typical semantic groups, to be trimmed to what the inventory supports:
 
@@ -67,6 +78,7 @@ One file per category under `tokens/`, plus one file per theme. DTCG rules that 
 - Aliases use `{group.token}`. A circular alias is an error the generator must report.
 - Mark a retired token with `$deprecated` and the name of its replacement as the reason string.
 - Keep tool-specific data under `$extensions` with a reverse-domain key.
+- A brand value given as hex keeps its exact color. When the file uses another format, such as OKLCH, convert it with code, never by eye, and keep the source hex in `$description` or the role comment. That settles "brand values stay as given" against "keep the file's format" without a gate.
 
 ```json
 {
@@ -86,7 +98,7 @@ Check your generator's support before using newer DTCG features such as `$extend
 
 - The base files hold primitives and the default theme's semantic aliases.
 - Each extra theme is one file that overrides semantic aliases only, such as `tokens/theme.dark.tokens.json`. It never defines primitives.
-- Every semantic token must resolve in every theme. The generator fails if one is missing.
+- Every semantic token must resolve in every theme. The generator fails if one is missing, and `rule/token-parity` in the check fails when a color key sits in `:root` and not in the dark block, or the reverse.
 - Support the themes the app ships. Adding dark mode to an app that has none is a product decision, so it is a gate.
 - Density or brand modes follow the same rule: one override file each, semantic layer only.
 
@@ -94,8 +106,8 @@ Check your generator's support before using newer DTCG features such as `$extend
 
 The generator reads `tokens/` and writes:
 
-- `tokens.css` with `:root { ... }` for the default theme and `[data-theme="dark"] { ... }` (or the selector the app already uses) for each override.
-- On Tailwind v4, `theme.css` with an `@theme inline` block that maps Tailwind namespaces to the CSS variables, such as `--color-text-subtle: var(--color-text-subtle);`. Start the block with `--color-*: initial;` and the same for each namespace you replace, so Tailwind's default palette cannot compile. Off-system classes then fail at build time.
+- `tokens.css` with `:root { ... }` for the default theme and one block per override, using the selector the app already uses, such as `.dark` or `[data-theme="dark"]`. With no selector yet, use the one the foundation expects, which on shadcn is `.dark`.
+- On Tailwind v4, `theme.css` with an `@theme inline` block that maps Tailwind namespaces to the CSS variables, such as `--color-fg-subtle: var(--color-text-subtle);`, which gives `text-fg-subtle`. Do not reset the whole color namespace with `--color-*: initial`. Stock components read `black`, `white` and `transparent`, and a full reset breaks them, such as shadcn's Dialog overlay. Palette classes are caught by the check's `rule/palette-use` instead (`checks.md`). A reset, if the team wants one, is scoped to named palette families such as `--color-red-*: initial`, and is proven on the stock overlay in every theme.
 - Optionally `tokens.d.ts` with a union of token names, so a typo in a typed style API fails type checking.
 - A Markdown table per category for the foundation pages and their twins.
 
@@ -104,7 +116,7 @@ Requirements:
 - First line of every output says it is generated and names the command.
 - Output is sorted and stable. Running twice yields no diff.
 - Errors name the token path, the file and the valid options. "Unknown alias `{color.grey.900}` in tokens/color.tokens.json. Did you mean `{color.gray.900}`?"
-- Use the tooling already in the repo. Style Dictionary, Terrazzo or a short Node script all work. Do not add a dependency when 60 lines of script would do.
+- Use the tooling already in the repo. Any generator the repo already uses works, or a short Node script. Do not add a dependency when 60 lines of script would do.
 
 ## What never becomes a token
 
@@ -127,4 +139,4 @@ The check allows these explicitly, by rule or by an allowlist with a reason, so 
 
 ## Worked example
 
-The inventory finds 23 distinct grays in text colors. Clustering by role gives three groups: body text (14 values between `#111` and `#2a2a2a`), secondary text (7 values between `#555` and `#737373`), and placeholder text (2 values). `token-mapping` against a proposed `text.default`, `text.subtle` and `text.placeholder` puts 19 rows under the right role with values that differ, and 4 rows as ambiguous, all gray text on a dark sidebar. Color has no tolerance, so the 19 become three merge gates, one per cluster, each stating its largest shift and the screens it touches, with merging as the default. The four become one more gate: "Sidebar text uses `text.inverse` (default) or a new `text.inverse.subtle`." Work continues on the defaults. The primitive layer keeps only the grays the clusters settled on, named on a numeric scale with gaps left open. No gray gets added to fill the scale.
+The inventory finds 23 distinct grays in text colors. Clustering by role gives three groups: body text (14 values between `#111` and `#2a2a2a`), secondary text (7 values between `#555` and `#737373`), and placeholder text (2 values). `token-mapping` against a proposed `text.default`, `text.subtle` and `text.placeholder` puts 19 rows under the right role with values that differ, and 4 rows as ambiguous, all gray text on a dark sidebar. Rows inside the color tolerance are decisions. The rest become three merge gates, one per cluster, each stating its largest shift and the screens it touches, with merging as the default. The four become one more gate: "Sidebar text uses `text.inverse` (default) or a new `text.inverse.subtle`." Work continues on the defaults, and the token files apply them now. The primitive layer keeps only the grays the clusters settled on, named on a numeric scale with gaps left open. No in-between step such as `gray.150` survives to hold a legacy one-off, and no gray gets added to fill the scale. Each merge gate's "Reverses by" names the primitives to restore if the answer is "keep separate".

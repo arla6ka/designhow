@@ -1,0 +1,4 @@
+:root {
+  --border: oklch(0.92 0 0);
+  --text-lg: 1.125rem;
+}

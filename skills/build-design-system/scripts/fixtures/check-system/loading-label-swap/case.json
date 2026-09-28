@@ -1,0 +1,1 @@
+{ "rule": "trap/loading-label-swap", "expect": { "trap/loading-label-swap": 3 } }

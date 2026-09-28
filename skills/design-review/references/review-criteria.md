@@ -4,13 +4,15 @@
 
 ## Severity
 
-**Blocking.** The user cannot finish the task, or is likely to lose data, spend money, or take an action they cannot undo without meaning to.
+**Blocking.** The user cannot finish the task, or is likely to lose data, spend money, or take an action they cannot undo without meaning to. A user who believes the task finished when it did not counts as cannot finish.
 
 **Should fix.** The user gets there, yet loses time to confusion or detours, or may well end up with an outcome they did not want.
 
 **Note.** A small inconsistency, or a pattern worth settling before other screens copy it.
 
 If a finding could go either of two ways, choose the milder level and add a sentence explaining the choice.
+
+Shown versus sent is the exception. When a field shows one value while the request sends another, and the hidden value grants access, spends money or picks a recipient, the finding is Blocking. Otherwise it is Should fix. The milder-level rule does not apply to it.
 
 ## Criteria
 
@@ -30,13 +32,13 @@ Cite these by number and name, for example "7. The screen shows what is happenin
 
 **7. The screen shows what is happening.** After an action, the user sees a response near where they acted. Loading, saving, success, and failure each look different.
 
-**8. Mistakes are hard to make and easy to fix.** Destructive actions ask for confirmation or offer undo. Errors say what went wrong and how to fix it, next to the cause, and keep what the user already entered.
+**8. Mistakes are hard to make and easy to fix.** Destructive actions ask for confirmation or offer undo. Errors say what went wrong and how to fix it, next to the cause, and keep what the user already entered. A field shows the value that will be sent. Lost or mismatched input is a finding here, never a product question.
 
 **9. The task asks for no more than it needs.** No field, step, or decision appears that the task does not require. Sensible defaults are filled in.
 
 **10. It matches the rest of the product.** Patterns that look the same behave the same as on neighboring screens. Any departure looks deliberate.
 
-For a product with few neighboring screens, compare against a well-structured public system instead. Vercel's Geist is a good example. Each of its components has one page that shows every variant and state side by side, so it is easy to tell whether two buttons that look alike are meant to act alike. Use such a system to spot a departure, and still cite this criterion, never the system. The review never needs to open Geist to run.
+For a product with few neighboring screens, compare against a well-structured public system instead. Vercel's Geist is a good example. Each of its components has one page that shows every variant and state side by side, so it is easy to tell whether two buttons that look alike are meant to act alike. Use such a system to spot a departure, and still cite this criterion, never the system. The review never needs to open Geist to run. To find where the app departs from its own decisions, such as two weights doing one job, run "Finding this app's visual slop" in `../build-design-system/references/traps.md`, only for the component types on the reviewed screens. When that sibling skill is not installed, skip it and say so in the review record.
 
 **11. Content holds up at the extremes.** The layout survives the longest realistic names, large numbers, translated text, and missing values, as well as very short content.
 
@@ -60,8 +62,8 @@ Check each and mark it shown or not shown. A case that is not shown is a questio
 ## What not to report
 
 - Preferences no criterion above supports.
-- Design-system compliance, such as token use, component choice, or documented states. The `token-mapping` and `component-docs` skills cover those.
+- Design-system compliance, such as token use, component choice, or documented states. `token-mapping` and the design system's own check (`check-system.mjs`) cover those.
 - Pixel alignment and spacing that follow the design system. That belongs in visual QA.
 - Rewritten copy. Flag the unclear text and say what is unclear.
-- The product decision behind a fix. Keep the finding and hand the decision to a person.
+- The product decision behind a fix. Keep the finding and hand the decision to a person. Whether to keep the user's input is not one.
 - Code defects in a running build, such as console errors. Mention them once under "For a person to decide" so they reach QA.

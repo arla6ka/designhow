@@ -1,0 +1,1 @@
+{ "rule": "rule/arbitrary-value", "config": { "tokenSources": ["tokens.css"] }, "expect": { "rule/arbitrary-value": 4 } }

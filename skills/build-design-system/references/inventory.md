@@ -26,13 +26,12 @@ Save every script under `.design-system/scripts/`. Each one writes a TSV or JSON
 ```
 .design-system/
   run.md
-  scripts/        inventory and baseline scripts, rerun at handoff
-  inventory/      routes.tsv, components.tsv, values.tsv, tokens.tsv
-  baseline/       screenshots, one folder per route
+  scripts/        inventory scripts, rerun at handoff
+  inventory/      routes.tsv, components.tsv, values.tsv, palette.tsv, tokens.tsv
   delete-plan.md
 ```
 
-Commit `run.md`, `scripts/` and `inventory/`. Screenshots are large, so commit `baseline/` only if the team wants them in history. Otherwise list it in `.gitignore` and keep it until the pilot is verified.
+Commit `run.md`, `scripts/` and `inventory/`. Captures live in `.design-system/review/`, where `*.png` is gitignored and the TSVs, probe files and reports are committed.
 
 ## Routes
 
@@ -93,9 +92,11 @@ rg -n --no-heading -o "#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)|hsla?\([^)]*\)|oklch\(
 rg -n --no-heading -o "(margin|padding|gap|inset|top|left|right|bottom|width|height|border-radius|font-size|line-height|letter-spacing)[a-z-]*\s*:\s*[^;]*\d(px|rem|em)" \
   --glob '*.{css,scss}' app components src
 
-# Tailwind arbitrary values and default palette classes
+# Tailwind arbitrary values (raw)
 rg -n --no-heading -o "\b[a-z-]+-\[[^\]]+\]" --glob '*.{tsx,jsx,html}' app components src
-rg -n --no-heading -o "\b(bg|text|border|ring|fill|stroke)-(slate|gray|zinc|neutral|stone|red|blue|green|amber)-\d{2,3}\b" \
+
+# Tailwind default palette classes (palette use, counted apart from raw)
+rg -n --no-heading -o "\b(bg|text|border|ring|fill|stroke|from|to|via|outline|divide|placeholder)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3}(/\d+)?\b" \
   --glob '*.{tsx,jsx,html}' app components src
 
 # Inline style objects
@@ -108,6 +109,8 @@ Normalize before counting, with the rules in `token-mapping`'s rules file: lengt
 
 A value inside a `var()` or `theme()` call is already a token reference. Count it separately in `tokens.tsv` as a use of that token.
 
+Palette classes go in `palette.tsv`, not `values.tsv`. They come from the framework's default theme, so they are neither raw values nor token use. Report them as their own count, the same way `token-mapping`, the router's triage and `checks.md` do. A utility built from a name the project declares (`bg-muted`) is token use.
+
 ## Existing tokens, fonts and icons
 
 - CSS custom properties: `rg -n --no-heading -o -e "--[a-z][a-z0-9-]*\s*:" --glob '*.{css,scss}'` for definitions, `rg -n --no-heading -o "var\(--[a-z][a-z0-9-]*"` for uses. A defined token with zero uses is a delete-plan candidate. A used token with no definition is a bug to record.
@@ -119,21 +122,7 @@ A value inside a `var()` or `theme()` call is already a token reference. Count i
 
 ## Baseline screenshots
 
-Capture the current UI before any edit in phase 2. After phase 2 starts deleting, the baseline is no longer the original.
-
-Use any headless browser the repo already has. Playwright is common. The script needs to:
-
-- Start from a clean state with seed or fixture data. Do not sign in with real accounts, submit forms that send data, or trigger paid actions.
-- Visit each reachable route in `routes.tsv` at each viewport (default 390 and 1280 px wide) and each theme.
-- Wait for fonts (`document.fonts.ready`) and for network to go idle.
-- Mask or freeze moving parts: clocks, relative dates, avatars from remote hosts, random ids, carousels. Turn off animation with a `prefers-reduced-motion` emulation.
-- Take a full-page screenshot and an accessibility snapshot (the accessible tree or ARIA snapshot) for each.
-- For the pilot flow, also capture each step: empty form, filled form, error state, success state, and each open overlay.
-- Write `baseline/<route-slug>/<viewport>-<theme>.png` and a `manifest.json` listing each file, the URL, viewport, theme, time and the commit.
-
-Run it twice. If the two runs differ, something is still moving. Mask it and rerun until they match. A baseline that changes by itself cannot prove anything later.
-
-Mark routes that failed to load or needed auth as unverified in `routes.tsv`. Do not guess what they look like.
+Before any edit, capture every route with one `capture.mjs --kind before` command (`browser.md`, Capture every route in one command). Mark routes that failed to load or need auth as unverified in `routes.tsv`.
 
 ## Delete plan
 
@@ -147,4 +136,6 @@ Anything another package or a published API exports stays, whatever the local co
 
 ## Rerunning at handoff
 
-In phase 8, rerun every script unchanged and write the output to `inventory/after/`. The handoff counts come from the difference between the two runs: raw values by route, deprecated imports by route, families with one canonical member. If a script had to change, say what changed and rerun it on the original commit too, so the two counts are comparable.
+Every count leaves out the run's own scaffolding: `public/system/`, generated twins and indexes, `scripts/` (fixtures included), `.design-system/`, `.migration/` and skill folders (`.agents/`, `.claude/`). With `rg`, add `--glob '!public/system/**' --glob '!scripts/**'` to each command that reaches them. A count that includes them tells the wrong story at handoff, such as raw colors rising because of the generated `index.html`.
+
+In phase 8, rerun every script unchanged and write the output to `inventory/after/`. The handoff counts come from the difference between the two runs: raw values by route, palette use by route, deprecated imports by route, families with one canonical member. If a script had to change, say what changed and rerun it on the original commit too, so the two counts are comparable.

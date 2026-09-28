@@ -2,9 +2,11 @@
 
 Writes a documentation entry for one component. It reads the code, the stories, and the real places the component appears, then drafts the entry in a fixed format whose order follows a Geist-style component page: description, examples, variants, states, props, usage, accessibility, tokens and related. Anything it could not source is marked, and every judgement call is listed so a person can check it.
 
+When the repo keeps specs, the entry is one. It adds the tables from the spec template in your repo's `docs/system/` (each state's trigger, which state wins when two overlap, keyboard, ARIA) and runs the repo's `scripts/check-spec.mjs` before it returns. The copies in `build-design-system` are the fallback.
+
 ## Use it as-is
 
-Name the component, as in "document the button". With repo access the skill finds the file, the stories and two real uses on its own by searching for call sites. Without repo access, paste the code and two real uses. A real use is a screen in your product, what put the component there, and which variant showed. Add the Storybook URL if you run one. The entry follows `references/doc-format.md`.
+Name the component, as in "document the button". With repo access the skill finds the file, the stories and two real uses on its own by searching for call sites. Without repo access, paste the code and two real uses. A real use is a screen in your product, what put the component there, and which variant showed. One real use still gets an entry, marked ready-with-gaps. For a component no screen uses yet, name the screen that will, and it is recorded as planned. Add the Storybook URL if you run one. The entry follows `references/doc-format.md`.
 
 ## Replace first
 
@@ -20,7 +22,7 @@ Name the component, as in "document the button". With repo access the skill find
 - **Conflicts stay visible.** The props type, the stories and the old docs disagree often. A quiet choice means you learn which side it trusted only after the entry is published.
 - **Every source is dated.** A tool read from last month and a paste from today are different evidence. The Sources block is how a reviewer tells.
 - **Guessed at.** It turns judgement into a list someone can correct. Without it, guesses become documented fact.
-- **A status line when another skill calls it.** A coordinator has no one to answer a question mid-run, so open questions go in the output and only missing inputs stop it.
+- **A status line when another skill calls it.** A coordinator has no one to answer a question mid-run, so open questions go in the output and only missing inputs stop it. The entry comes back as text and the coordinator saves it, since some hosts refuse files a subagent writes.
 
 ## Optional tools
 
@@ -31,7 +33,7 @@ Name the component, as in "document the button". With repo access the skill find
 
 ## Check after changing
 
-Run `TESTS.md`. At minimum, confirm it still stops when it has one real use and no call sites to search, finds the component from its name alone, still marks tokens `NOT SUPPLIED` when the code references none, and still lists a variant difference between the props type and the stories under Conflicts. Then put one entry next to a published one and check the headings match.
+Run `TESTS.md`. At minimum, confirm it still stops when it has no real and no planned use, returns ready-with-gaps with a gate on one real use, finds the component from its name alone, still marks tokens `NOT SUPPLIED` when the code references none, and still lists a variant difference between the props type and the stories under Conflicts. Then put one entry next to a published one and check the headings match.
 
 ## Adapt this skill
 

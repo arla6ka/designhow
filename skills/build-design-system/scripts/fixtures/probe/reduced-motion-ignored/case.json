@@ -1,0 +1,1 @@
+{ "trap": "trap/reduced-motion-ignored", "width": 390, "height": 600, "click": "#open", "expect": 2 }

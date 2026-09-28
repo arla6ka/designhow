@@ -1,0 +1,6 @@
+export function Card({ inset, ...props }) {
+  return <div className={inset ? "ui-card ui-card--inset" : "ui-card"} {...props} />;
+}
+export function CardHeader(props) {
+  return <div className="ui-card-header" {...props} />;
+}
