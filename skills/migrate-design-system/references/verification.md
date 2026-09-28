@@ -46,7 +46,7 @@ team-invite	loading	loading-layout-shift	button[type=submit]	96x36 idle, 243x36 
 team-invite	close	focus-return	dialog trigger	body	element	press Escape, then eval document.activeElement
 ```
 
-A worker's report and the verifier's verdict give the after number beside this row. A trap nobody measured before the edit is reported as `before not measured`, never guessed. If a before state was missed, measure it from a second worktree at the base commit, with an APFS or reflink clone of `node_modules` (`cp -cR` on macOS), since Turbopack refuses a symlinked `node_modules` that points outside the worktree.
+A worker's report and the verifier's verdict give the after number beside this row. A trap nobody measured before the edit is reported as `before not measured`, never guessed. If a before state was missed, measure it from a second worktree at the base commit, with a copy-on-write clone of `node_modules` (`cp -cR` on macOS), since Turbopack refuses a symlinked `node_modules` that points outside the worktree.
 
 If there is no baseline for a surface, that surface does not get briefed.
 

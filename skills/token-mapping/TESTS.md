@@ -1,5 +1,7 @@
 # Tests: token mapping
 
+Run these by hand on one real screen or file from your own product. For each case, run the same task in the same repo with the same prompt twice, once with the skill switched off and once with it on, and compare the two reports.
+
 ## Setup under test
 
 A result only means something next to the setup that produced it.
@@ -9,22 +11,11 @@ A result only means something next to the setup that produced it.
 - Tools connected: none, file access to the repo, or a browser
 - Model: the one you actually run
 
-A pasted list and a tool-read list are separate test runs. Record which one you used.
+A pasted list and a tool-read list are separate runs. Note which one you used.
 
-Word each prompt as a colleague would. Leave out "test", "eval" and "rubric", because a model that knows it is graded behaves differently. Grade from the report and the transcript (which files it searched and read, whether it ran a conversion), not from the model's summary of itself.
+Word each prompt as a colleague would. Leave out "test", "eval" and "rubric", because a model that knows it is being checked behaves differently. Judge from the report and the transcript (which files it searched and read, whether it ran a conversion), not from the model's summary of itself.
 
-## Cases in scope
-| Tailwind v4 palette | Tailwind v4 apps | Palette utilities read as tokens but carry no purpose |
-| Palette-only list | Palette-only lists | With no purposes, consistency by role is the answer |
-| Gap threshold | If a coordinator calls it | Too many gaps make the report not actionable, never a stop |
-| One candidate out of tolerance | Yes | The closest token must be named without being claimed |
-| The answer comes first | Direct runs | People read the first sentence and stop |
-| Palette var() | Tailwind v4 apps | A palette variable is not a role token |
-| Gaps never stop the run | If a coordinator calls it | A new token set leaves most values without a role |
-| Palette-only list, no Exact noise | Palette-only lists | Hundreds of Exact rows bury the answer |
-| Units named | Yes | Occurrences and lines differ, and triage counts lines |
-| Private folders | Next.js apps | Private folders are not product code |
-| Scaffolding stays out of the values | Repos after a build run | The system's own files are not product values |
+## Which cases apply
 
 | Case | Runs here | Reason |
 |---|---|---|
@@ -36,6 +27,15 @@ Word each prompt as a colleague would. Leave out "test", "eval" and "rubric", be
 | Ambiguous judgement | Yes | The skill classifies, and quietly settling an ambiguous row is the failure that matters most |
 | Called by a coordinator | If you run build-design-system or migrate-design-system | The caller needs a finished report and a status line, not a question |
 | shadcn names | shadcn apps | shadcn's variable pairs are the list, and renaming one breaks every copied component |
+| Tailwind v4 palette | Tailwind v4 apps | Palette utilities read as tokens but carry no purpose |
+| Palette var() | Tailwind v4 apps | A palette variable is not a role token |
+| Palette-only list | Palette-only lists | With no purposes, consistency by role is the answer, and Exact rows would bury it |
+| Gap threshold | If a coordinator calls it | Many gaps make the report not actionable, never a stop |
+| One candidate out of tolerance | Yes | The closest token must be named without being claimed |
+| The answer comes first | Direct runs | People read the first sentence and stop |
+| Units named | Yes | Occurrences and lines differ, and triage counts lines |
+| Private folders | Next.js apps | Private folders are not product code |
+| Scaffolding stays out of the values | Repos after a build run | The system's own files are not product values |
 
 ## Done means
 
@@ -43,11 +43,14 @@ The readiness list under Output in `SKILL.md`. Left to a person: new tokens for 
 
 ## Baseline
 
-First, try the task with the skill switched off. Give the model the values and the token list, and say "Map these values to our tokens." Record what happened before you trust any result below.
+Try each task with the skill switched off first. Give the model the same values and token list, and say "Map these values to our tokens." Then run it with the skill on and compare.
 
-| Case | Result without the skill |
-|---|---|
-| Normal | |
+| Case | Without the skill | With the skill |
+|---|---|---|
+| Normal | | |
+| Vague request | | |
+| Ambiguous judgement | | |
+| Missing required input | | |
 
 Watch for a token picked because its number matched, an ambiguous row settled without comment, a primitive chosen over a semantic token, a name missing from the list, and a made-up name attached to a gap.
 
@@ -137,6 +140,8 @@ Tool path only.
 
 **Fails if:** the report answers "consistent" with value matches alone, or a cluster gets a proposed token name.
 
+**Large palette version:** a Tailwind v4 app whose `@theme` holds only `--color-gray-50` to `--color-gray-950`, with 250 palette uses. Consistency by role comes right after the Summary, with distinct values and counts per role. The mapping table lists only non-Exact rows, and the summary still gives the Exact count. One Exact row per palette use fails.
+
 ## Gap threshold
 
 **Input:** a list that covers under half the values, called by a coordinator.
@@ -144,6 +149,8 @@ Tool path only.
 **Expect:** the full table, with `Status: not actionable (gap threshold)` and the "is this the right list" question under For a person to decide.
 
 **Fails if:** the status reads `stopped`, or the table is cut short.
+
+**New token set version:** a coordinator brief for a build where the token set is new, so most raw values have no role yet. The status is `complete` or `not actionable (gap threshold)`, every gap is a row and sits under For a person to decide, and Stops lists no gap condition. Any gap treated as a reason to halt fails.
 
 ## One candidate out of tolerance
 
@@ -169,25 +176,9 @@ Tool path only.
 
 **Fails if:** the rows are skipped, or counted as raw.
 
-## Gaps never stop the run
-
-**Input:** a coordinator brief for a build where the token set is new, so most raw values have no role yet.
-
-**Expect:** `Status: complete` or `Status: not actionable (gap threshold)`, with every gap as a row and under For a person to decide. Stops lists no gap condition.
-
-**Fails if:** the status reads `stopped`, or any gap is treated as a reason to halt.
-
-## Palette-only list, no Exact noise
-
-**Input:** a Tailwind v4 app whose `@theme` holds only `--color-gray-50` to `--color-gray-950`, 250 palette uses, and "are we using colors consistently?"
-
-**Expect:** Consistency by role comes right after the Summary, with distinct values and counts per role. The mapping table lists only non-Exact rows. The summary still gives the Exact count.
-
-**Fails if:** the table has one Exact row per palette use.
-
 ## Units named
 
-**Input:** the same app, where triage reports `tw_palette 216` lines.
+**Input:** the large palette app above, where triage reports `tw_palette 216` lines.
 
 **Expect:** the counts line says occurrences. If triage is quoted, its number is labeled lines, and the report does not claim the two agree.
 
@@ -208,11 +199,5 @@ Tool path only.
 **Expect:** rows come from `app/settings/page.tsx` only. Source lists the excluded folders once. The counts match a run with the scaffolding deleted.
 
 **Fails if:** any row cites a file under `public/system/`, `scripts/`, `.design-system/`, `.migration/` or a skill folder, a fixture, or a generated twin.
-
-## Record
-
-| When | Case | Result | Edit made next |
-|---|---|---|---|
-| | | | |
 
 Change one thing between runs, or you will not know which change helped.

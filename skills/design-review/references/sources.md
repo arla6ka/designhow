@@ -37,7 +37,7 @@ agent-browser is the default here, since a review captures a few screens. The fu
 agent-browser --session review-invite set viewport 390 844                # then 1280 900
 agent-browser --session review-invite open <url>
 agent-browser --session review-invite wait --text "<heading>"
-agent-browser --session review-invite screenshot --annotate /abs/repo/.design-review/2026-09-28-invite/home-390.png  # labels [N] map to refs @eN. Under a coordinator, the folder it names
+agent-browser --session review-invite screenshot --annotate /abs/repo/.design-review/2026-03-12-invite/home-390.png  # labels [N] map to refs @eN. Under a coordinator, the folder it names
 agent-browser --session review-invite snapshot -i                         # roles, names and refs
 agent-browser --session review-invite get box @e4                         # measured size, for target findings
 agent-browser --session review-invite a11y --tags wcag2a,wcag2aa --json   # automated accessibility scan

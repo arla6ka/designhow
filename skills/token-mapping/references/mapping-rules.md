@@ -161,5 +161,5 @@ Mode: light. Dark not mapped.
 - Whether table header height should be a token.
 
 ## Source
-tokens/tokens.json, DTCG format, read from the repo on 2026-09-27 at 14:10. Light mode. No second source. Colors converted to OKLCH and compared by ΔE OK with a scratch conversion script (`node /tmp/oklch.mjs values.tsv`, exit 0). Graphic excluded: 3 values in src/ui/Logo.tsx.
+tokens/tokens.json, DTCG format, read from the repo on 2026-03-12 at 14:10. Light mode. No second source. Colors converted to OKLCH and compared by ΔE OK with a scratch conversion script (`node /tmp/oklch.mjs values.tsv`, exit 0). Graphic excluded: 3 values in src/ui/Logo.tsx.
 ```

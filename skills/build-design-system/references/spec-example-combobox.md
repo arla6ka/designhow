@@ -1,6 +1,6 @@
 # Worked spec: Combobox
 
-> For the team setting this up: this shows how a spec gets derived, and the depth it should reach. It describes a fictional invoicing app, Ledgerline, built on shadcn's `base-nova` style with Base UI. Every value in it came from that app's code, call sites and captures, and the second half of this file shows the command or reading behind each answer. A worker copies the method, never the values. Your app's Combobox will have different states, numbers and rules. Replace this file with one of your own specs once one passes the check.
+> For the team setting this up: this shows how a spec gets derived, and the depth it should reach. It describes a fictional invoicing app, Northwind, built on shadcn's `base-nova` style with Base UI. Every value in it came from that app's code, call sites and captures, and the second half of this file shows the command or reading behind each answer. A worker copies the method, never the values. Your app's Combobox will have different states, numbers and rules. Replace this file with one of your own specs once one passes the check.
 
 Contents
 
@@ -144,7 +144,7 @@ Contrast: NEEDS REVIEW. The status row text on the popup surface was not measure
 
 ## How each answer was found
 
-Each question from `spec-template.md`, with what the worker ran or read in Ledgerline and what it concluded. This is the part to copy.
+Each question from `spec-template.md`, with what the worker ran or read in Northwind and what it concluded. This is the part to copy.
 
 **1. Foundation.** `npx shadcn@latest info --json` gave style `base-nova` and base `base`. `npx shadcn@latest add combobox --diff components/ui/combobox.tsx` printed no changes, so the file is `stock`. `rg -l '@/components/ui/combobox' app components` found 11 call sites and one wrapper, `CustomerPicker`. Reading the wrapper showed the status row and the `showClear` logic, which became the right column. Nothing in that column came from memory of what shadcn usually ships.
 
@@ -169,6 +169,6 @@ Each question from `spec-template.md`, with what the worker ran or read in Ledge
 ## What a worker should copy
 
 - Each answer names where it came from: a command, a file and line, a capture, or a gate.
-- Numbers come from the app. The debounce, the call-site counts and the option thresholds are Ledgerline's. Another app finds its own.
+- Numbers come from the app. The debounce, the call-site counts and the option thresholds are Northwind's. Another app finds its own.
 - A question the code does not answer becomes a gate with a default, and the spec records the default.
 - Rules come from the app's majority, with outliers sent to migration. The spec never imports a preference from another product.

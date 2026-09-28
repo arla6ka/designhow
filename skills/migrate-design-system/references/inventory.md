@@ -170,15 +170,15 @@ When a legacy module reaches zero callers and Delete legacy removes it, change t
 
 The inventory script supports these calls. Workers and verifiers use the same ones. `--help`, and any flag it does not know, prints usage and the allowlist format, writes nothing and exits 2. It reads `legacy.txt`, `ignore.txt`, `surfaces.tsv` and `allowlist.tsv` from the run folder given by `--run <folder>`, default the newest `.migration/*/` under the root, and never from a path relative to its own file.
 
-It takes `--root <dir>`, the tree it counts, like every build script. The default is the git root of `--run`, else of the current folder, else the current folder, so a worker can run it from any folder with absolute paths. Two failures exit 3 with a message that names the root and says to pass `--root`. The first is a run folder whose real path is not under the root. The second is a scan that reads no source files. Both guard the same false pass. Run from outside the app, the script used to count an empty tree and print `0 0 0 0`, which reads as a finished surface.
+It takes `--root <dir>`, the tree it counts, like every build script. The default is the git root of `--run`, else of the current folder, else the current folder, so a worker can run it from any folder with absolute paths. Two failures exit 3 with a message that names the root and says to pass `--root`. The first is a run folder whose real path is not under the root. The second is a scan that reads no source files. Both guard the same false pass. Without them, a script run from outside the app counts an empty tree and prints `0 0 0 0`, which reads as a finished surface.
 
 ```sh
 node scripts/migration-inventory.mjs                 # writes current.tsv and counts.txt
 node scripts/migration-inventory.mjs --paths "<glob>" # prints "imports raw palette files" for one surface
 node scripts/migration-inventory.mjs --check          # exits 1 unless the predicate's counts are 0 and the allowlist is clean
 node scripts/migration-inventory.mjs --pin            # reruns the counts at HEAD and writes the sha to inventory/pin.txt
-node scripts/migration-inventory.mjs --run .migration/2026-09-28 --check  # any call, against a named run folder
-node /abs/app/scripts/migration-inventory.mjs --run /abs/app/.migration/2026-09-28 --paths "<glob>"  # from any folder: the root comes from --run
+node scripts/migration-inventory.mjs --run .migration/2026-03-12 --check  # any call, against a named run folder
+node /abs/app/scripts/migration-inventory.mjs --run /abs/app/.migration/2026-03-12 --paths "<glob>"  # from any folder: the root comes from --run
 ```
 
 Test the guard when the script is written. From a folder outside the app, `--paths "app/**"` with an absolute `--run` prints the same counts as from inside, and `--root` pointing at another repo exits 3.

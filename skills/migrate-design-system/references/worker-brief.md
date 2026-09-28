@@ -41,7 +41,7 @@ STANDING ORDERS
 
 **MAY EDIT.** The surface's own paths from `surfaces.tsv`. Nothing shared.
 
-**MUST NOT EDIT.** The shared layer, other surfaces' paths, baselines, tests, snapshots, harness config, the lever, the run folder, and the allowlists (`scripts/check-allowlist.json`, `allowlist.tsv`). The coordinator owns those. Parallel workers editing one allowlist left its counts drifting in past runs. The verifier's forbidden-path check enforces this list, so the list and the check must match.
+**MUST NOT EDIT.** The shared layer, other surfaces' paths, baselines, tests, snapshots, harness config, the lever, the run folder, and the allowlists (`scripts/check-allowlist.json`, `allowlist.tsv`). The coordinator owns those. Parallel workers editing one allowlist make its counts drift. The verifier's forbidden-path check enforces this list, so the list and the check must match.
 
 **INPUTS.** Paths, not pasted text, for anything the worker can read locally. Include `mapping/<surface>.md`, `lever/RECIPE.md`, the system docs for each component the mapping names, and the pilot's landed diff as a worked example. On a retry, paste the previous report and the failing output in full, since those are the facts the retry exists to act on. Cloud workers that cannot read the local run folder get every input pasted.
 
@@ -55,7 +55,7 @@ STANDING ORDERS
 
 **TIME LIMIT.** Long enough for the pilot's runtime plus half again. A worker that hits it reports what it has.
 
-**REPORT.** The schema, returned as text in the final message and nowhere else. Never ask a worker to write `report.md` or any other report file. Hosts refuse it, and in past runs the ask cost a retry. The worker's own folder, `inbox/<surface>.<n>.captures/`, holds captures and `.probe.json` files only. The coordinator saves the status line and file list to `inbox/<surface>.<n>.md` and is that file's only writer. A brief line that asks for a report file, or points a worker at a coordinator-only file such as `inbox/<surface>.<n>.md` or anything in `verdicts/`, is a brief defect.
+**REPORT.** The schema, returned as text in the final message and nowhere else. Never ask a worker to write `report.md` or any other report file. Many hosts refuse it, and each refusal costs a retry. The worker's own folder, `inbox/<surface>.<n>.captures/`, holds captures and `.probe.json` files only. The coordinator saves the status line and file list to `inbox/<surface>.<n>.md` and is that file's only writer. A brief line that asks for a report file, or points a worker at a coordinator-only file such as `inbox/<surface>.<n>.md` or anything in `verdicts/`, is a brief defect.
 
 A decision or gate the worker proposes gets its surface as prefix, such as `D-billing-invoices-01` or `G-billing-invoices-01`, since two workers both reach for `-01`. The coordinator renumbers it to the next free `D-NN` or `G-NN` when it records it in `decisions.tsv` or `gates.md`, and keeps the worker's ID beside it.
 

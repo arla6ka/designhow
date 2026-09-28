@@ -45,7 +45,7 @@ node <skills>/build-design-system/scripts/capture.mjs --base http://localhost:30
 
 `--routes /,/settings/billing` takes paths separated by spaces or commas and captures the load state only. States need `--surfaces`, since only its `states` column names them.
 
-It requests every route first and exits 1 on any answer other than 200, or the code in the row's `status` column (`--expect-status notfound=404` on the command line) for a not-found demo. It fixes the clock and `Math.random`, sets lazy images to load eagerly and waits for them, waits for fonts, and waits for React to attach its handlers before a state function clicks anything, since a click before hydration measures nothing. Capture dark with the default `--theme-via media`, which emulates a dark OS. It proves the theme reaches users. `--theme-via class` or `storage:<key>` covers a user toggle, but sets the theme by hand, so it proves the tokens only. In one seed run a dark OS still got the light page while class captures looked right. `--height 320` with `--widths 390` measures dialogs on a short screen (`traps.md`, `trap/overlay-no-max-height`). `--via agent-browser --session ds-1` captures the load state of each route with agent-browser instead.
+It requests every route first and exits 1 on any answer other than 200, or the code in the row's `status` column (`--expect-status notfound=404` on the command line) for a not-found demo. It fixes the clock and `Math.random`, sets lazy images to load eagerly and waits for them, waits for fonts, and waits for React to attach its handlers before a state function clicks anything, since a click before hydration measures nothing. Capture dark with the default `--theme-via media`, which emulates a dark OS. It proves the theme reaches users. `--theme-via class` or `storage:<key>` covers a user toggle, but sets the theme by hand, so it proves the tokens only. A dark OS can still get the light page while class captures look right. `--height 320` with `--widths 390` measures dialogs on a short screen (`traps.md`, `trap/overlay-no-max-height`). `--via agent-browser --session ds-1` captures the load state of each route with agent-browser instead.
 
 ## One-off captures
 
@@ -86,7 +86,7 @@ node <skills>/build-design-system/scripts/pixdiff.mjs /abs/repo/.design-system/r
 
 Each line gives the size match, the changed-pixel percentage, the bounding box of the change (`bbox 37,219 53x266`), the largest channel delta and the tolerance. A changed pair gets a `.diff.png` beside the after file: the after capture faded, changed pixels red, the box outlined. It exits 1 on any change above `--max` (default 0). Paste its output and exit code into the run record.
 
-A pixel changes when any channel moves by more than `--tolerance`, default 0. Prove a value-identical token swap at tolerance 0, and never pass `--tolerance` for it. An older threshold summed the channels and let `#6b7280` to `#737373` (channels off by 8, 1 and 13) pass as "0% no change". The max delta prints on every line, so a shift under a tolerance someone chose for anti-aliasing still shows.
+A pixel changes when any channel moves by more than `--tolerance`, default 0. Prove a value-identical token swap at tolerance 0, and never pass `--tolerance` for it. A threshold that sums the channels lets `#6b7280` to `#737373` (channels off by 8, 1 and 13) pass as "0% no change". The max delta prints on every line, so a shift under a tolerance someone chose for anti-aliasing still shows.
 
 ## Review captures on the run branch
 

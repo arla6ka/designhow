@@ -48,7 +48,7 @@ When the route runs the build, the boss writes `.design-system/run.md` at step 2
 
 ## Ask
 > our UI is a mess, fix it
-Received 2026-09-28 10:02.
+Received 2026-03-12 10:02.
 
 ## Triage
 State: drifting (adoption_pct 41, families_with_2plus 3)
@@ -59,8 +59,8 @@ Question: none. "Fix it" on a mess counts as clearance, so the migration runs wi
 Answer:
 
 ## Route
-Full. Steps copied from references/routes.md on 2026-09-28 10:05.
-Branch: ds/2026-09-28-full, from main at 7dc8f3d. main gets no commits. Merging is the person's call.
+Full. Steps copied from references/routes.md on 2026-03-12 10:05.
+Branch: ds/2026-03-12-full, from main at 7dc8f3d. main gets no commits. Merging is the person's call.
 Clearance: the ask ("make it look like one thing"), within the session budget.
 
 ## Budget
@@ -90,7 +90,7 @@ No new writing step after 11:26. Read-only steps may run past it.
 ## Gates
 | ID | From | Question | Default | Reverses by | Status |
 |---|---|---|---|---|---|
-| G-01 | .design-system/run.md G-01 | Merge 14 body grays into text.default? | merge | keep them as listed exceptions | applied on ds/2026-09-28-full |
+| G-01 | .design-system/run.md G-01 | Merge 14 body grays into text.default? | merge | keep them as listed exceptions | applied on ds/2026-03-12-full |
 
 ## Resume
 Next action: save step 2's status line to returns/migrate-audit.md and check plan.md.
@@ -138,7 +138,7 @@ A fresh agent with this skill and the repo does this, in order:
 `.design-system/close.md` is the one file the report takes its counts from, for the boss and the build alike. Under the boss, the boss writes it at close and takes in the build's close rows and a migration's `.migration/<run>/close.md`, which stays the migration's own record, after `triage/after/` and the clean-clone check, and changes no count in the report without changing it here first. One row per count, each with its unit and the file or command it came from.
 
 ```markdown
-# Close: ds/2026-09-28-full at 4be21c0
+# Close: ds/2026-03-12-full at 4be21c0
 
 | Count | Unit | Before | After | Source |
 |---|---|---|---|---|
@@ -170,13 +170,13 @@ Written into the Report section from `close.md`. The final chat message is these
 ## Report
 
 ### What changed
-7 of 8 screens now use one button, one input and one set of grays, on ds/2026-09-28-full.
+7 of 8 screens now use one button, one input and one set of grays, on ds/2026-03-12-full.
 /help looks the same because it already used the shared pieces. Raw color lines in product
 code went from 80 to 12: 9 in /billing and 3 in components/Chart.tsx. Before and after:
 .design-system/review/index.html.
 
 ### Checks
-npm run check (clean clone of ds/2026-09-28-full): exit 0, 14 existing violations in scripts/check-allowlist.json (committed)
+npm run check (clean clone of ds/2026-03-12-full): exit 0, 14 existing violations in scripts/check-allowlist.json (committed)
 node scripts/check-spec.mjs docs/system: exit 0, 6 specs
 npm run build: exit 0
 
@@ -186,7 +186,7 @@ G-01: 14 body grays merged into text.default. Default: merge.
 6 more in state.md#gates.
 
 ### Next
-"Merge ds/2026-09-28-full, but keep the blue Sign in button (reverse G-04)."
+"Merge ds/2026-03-12-full, but keep the blue Sign in button (reverse G-04)."
 ```
 
 On a read-only route the checks part reads `Checks: n/a (read-only route)`, What changed says no screen changed because the ask was to look, and Next is the smallest writing ask that follows.

@@ -1,6 +1,6 @@
 # Running it on your platform
 
-Checked on 2026-09-27. Agent tools change often, so confirm names and flags against current docs before a long run.
+Checked in March 2026. Agent tools change often, so confirm names and flags against current docs before a long run.
 
 The pattern needs four things from a platform. It must start an agent with a brief, give that agent its own checkout, tell the coordinator when the agent finishes, and let the coordinator read what the agent wrote. Everything else lives in the run folder, so it works the same everywhere.
 
@@ -55,7 +55,7 @@ xargs -P "$CAP" -I{} bash -c '
   s={}
   n=$(ls "$RUN/briefs/$s".*.md | wc -l | tr -d " ")
   wt=../app-wt/$s
-  [ -d "$wt" ] || git worktree add "$wt" -b "migrate/$s" "$(git rev-parse ds/2026-09-28-migrate)"
+  [ -d "$wt" ] || git worktree add "$wt" -b "migrate/$s" "$(git rev-parse ds/2026-03-12-migrate)"
   out="$RUN/inbox/$s.$n.captures"; mkdir -p "$out"
   (cd "$wt" && your-agent-cli "$(cat "$RUN/briefs/$s.$n.md")" > "$RUN/inbox/$s.$n.stdout.txt" 2> "$RUN/inbox/$s.$n.log") || true
   sed -n "/^Status:/p;/^Branch:/p;/^## Files changed/,/^## Captures/p" "$RUN/inbox/$s.$n.stdout.txt" > "$RUN/inbox/$s.$n.md"

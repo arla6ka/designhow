@@ -76,7 +76,7 @@ Target system: @acme/ui 4.2.0, commit 7f3c2e19ab04
 Parity mode: mapped
 Budget: 16 hours wall clock. Stop spawning at 11 hours.
 Window cap: 8
-Run branch: ds/2026-09-28-migrate, from main at 3e1f0a2. Merging into main is the person's call.
+Run branch: ds/2026-03-12-migrate, from main at 3e1f0a2. Merging into main is the person's call.
 May look broken mid-run: /settings/* until settings-shell lands
 Platform: subagents with worktree isolation
 ```
@@ -122,9 +122,9 @@ The verifier returns its verdict as its final message and writes no verdict file
 
 ```
 when	surface	commit	verdict	visual	a11y	behavior	delta	review	verifier	evidence
-2026-09-27T14:02Z	billing-invoices	5be1c0a93f21	verified	mapped 0 unexplained	adds only (D-07)	6/6	Paid badge 7.1 to 4.9:1	0 blocking	model-b	verdicts/billing-invoices.5be1c0a93f21.md
-2026-09-27T14:40Z	integration	c03d9e7a1b55	checks-only	-	-	build,types,lint,routes 200	-	-	worker	inventory/counts.txt
-2026-09-27T15:10Z	billing-invoices	d41e07c2a9b3	reopened	-	-	-	-	-	coordinator	commit d41e07c touched app/(product)/billing/invoices/page.tsx
+2026-03-12T14:02Z	billing-invoices	5be1c0a93f21	verified	mapped 0 unexplained	adds only (D-07)	6/6	Paid badge 7.1 to 4.9:1	0 blocking	model-b	verdicts/billing-invoices.5be1c0a93f21.md
+2026-03-12T14:40Z	integration	c03d9e7a1b55	checks-only	-	-	build,types,lint,routes 200	-	-	worker	inventory/counts.txt
+2026-03-12T15:10Z	billing-invoices	d41e07c2a9b3	reopened	-	-	-	-	-	coordinator	commit d41e07c touched app/(product)/billing/invoices/page.tsx
 ```
 
 A new commit that touches a surface's `paths` voids its earlier rows and gets a `reopened` row. The `verifier` column names the agent, never the worker that wrote the commit, or `coordinator` for a `self-verified` row. The ledger answers "was this verified" at a given commit. The chat history does not.
@@ -150,7 +150,7 @@ One entry per question that needs a person. Write the gate before asking, and ke
 
 ```markdown
 ## G-04. settings-profile uses a date input the system lacks
-Opened: 2026-09-27T11:20Z. Asked: system owner.
+Opened: 2026-03-12T11:20Z. Asked: system owner.
 Blocks: settings-profile, settings-billing-address. Everything else continues.
 Options:
   A. Owner adds DateField to @acme/ui. Surfaces wait for it.
@@ -165,8 +165,8 @@ Rows are only ever added. To correct a mistaken entry, add a row that replaces i
 
 ```
 when	phase	what	because	evidence	outcome
-2026-09-27T10:05Z	pilot	split billing-invoices export modal into its own surface	worker hit the time limit twice on modal states	inbox/billing-invoices.1.md	new row billing-export
-2026-09-27T12:30Z	sweep	added Tooltip wrapper rename to codemod	5 of 7 failures were the same missing rename	lever/codemod.mjs@3e1a	reran 7, 6 verified
+2026-03-12T10:05Z	pilot	split billing-invoices export modal into its own surface	worker hit the time limit twice on modal states	inbox/billing-invoices.1.md	new row billing-export
+2026-03-12T12:30Z	sweep	added Tooltip wrapper rename to codemod	5 of 7 failures were the same missing rename	lever/codemod.mjs@3e1a	reran 7, 6 verified
 ```
 
 ## agents.tsv

@@ -51,7 +51,7 @@ Read-only work fans out on any host that has subagents: a triage scout per app, 
 
 The coordinator owns the dev server. It starts one server before the first step that needs a browser, names its port in every brief, and keeps it running until every worker has returned. It never stops the server while a worker is live.
 
-Next 16 refuses a second `next dev` in the same folder, so a worker never starts a dev server in the coordinator's checkout. If the shared server is down, the worker returns `Status: blocked: server down` at once. The coordinator restarts the server and sends the same brief again. A worker in its own APFS clone or worktree may run its own server there, when the host allows one, and its return names the port.
+Next 16 refuses a second `next dev` in the same folder, so a worker never starts a dev server in the coordinator's checkout. If the shared server is down, the worker returns `Status: blocked: server down` at once. The coordinator restarts the server and sends the same brief again. A worker in its own clone or worktree may run its own server there, when the host allows one, and its return names the port.
 
 ## Without worktrees
 

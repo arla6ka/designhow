@@ -62,7 +62,7 @@ A person checks each `NEEDS REVIEW` marker, each Guessed at line, and each confl
 ### Fewer than two uses
 
 - **One real use.** Write the whole entry. Mark Usage `NEEDS REVIEW (one real use)`, return `Status: ready-with-gaps (1 real use)`, and add a gate: "Second real use. Default: publish as is and recheck Usage when a second screen uses it."
-- **Planned uses.** In seed or greenfield work, or when a coordinator passes uses from a pilot or brief, accept them. Mark each `(planned)` under Examples, with no call-site code, and source it to the brief. They fill the count to two. With fewer than two real uses the status stays ready-with-gaps.
+- **Planned uses.** In seed or new-app work, or when a coordinator passes uses from a pilot or brief, accept them. Mark each `(planned)` under Examples, with no call-site code, and source it to the brief. They fill the count to two. With fewer than two real uses the status stays ready-with-gaps.
 - A deprecated predecessor's call site counts as a real use when the migration map sends it to this component. Say so in its Sources line.
 
 These finish the entry and end it with a question:

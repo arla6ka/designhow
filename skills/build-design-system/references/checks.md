@@ -69,13 +69,13 @@ Add each `trap/` or `rule/` from the specs that a regex or AST query can see, un
 
 ## Exempting stock files
 
-Stock files the team never edited carry upstream's raw values, and those are not drift. Exempt them by name, never by a folder glob such as `components/ui/*.tsx`. A glob exempts every new file someone drops into the folder, which is where drift goes first. In one run, raw hex in a new `components/ui/invoice-row.tsx` passed because of a glob.
+Stock files the team never edited carry upstream's raw values, and those are not drift. Exempt them by name, never by a folder glob such as `components/ui/*.tsx`. A glob exempts every new file someone drops into the folder, which is where drift goes first, so raw hex in a new `components/ui/invoice-row.tsx` would pass.
 
 The drift list is `scripts/ui-drift.tsv`, with the columns `file`, `status` (`stock`, `customized` or `forked`), `sha256` and `note`. Every row carries a hash, whatever its status, so any edit to a primitive shows up as a reviewed drift-list change. The check exempts a `stock` row from the other rules only while its hash matches. A `customized` or `forked` file is scanned like product code, and its hash is checked too. Any mismatch fails `rule/stock-edit`. `--hash-stock` fills empty hash cells and never changes one. After a reviewed edit, `--rehash <file> --note "<what changed and why>"` records the new hash and writes the note into the row. It refuses to run without a note. Check the row's status in the same commit. A new file in the ui folder is checked and needs a registry entry.
 
 A customized file still carries upstream's own literals, such as base-nova's `rounded-[min(var(--radius-md),10px)]` and `text-[0.8rem]` in `button.tsx`. They are upstream's, not drift. Save upstream's copy once with `--save-stock <file> <upstream>`, where `<upstream>` is the JSON from `npx shadcn@latest view <item>` or a plain file. It lands at `scripts/ui-stock/<file>.stock` and is committed with the drift list. A finding from a literal-value rule (raw value, named color, arbitrary value, palette, px) on a line identical to a stock line, whitespace aside, is exempt, and the report counts the exemptions. Every line the team changed or added is scanned like product code. `rule/token-parity` is never exempt, since a variable upstream reads and the app never defines is broken either way. A `forked` file gets no stock copy, since the team owns every line.
 
-In one run, a customized row carried no hash, so `bg-popover` changed to `bg-white` in the customized Dialog and the check passed. That edit breaks dark mode.
+A customized row with no hash lets an edit through unseen, such as `bg-popover` changed to `bg-white` in a customized Dialog, which breaks dark mode.
 
 ## Palette use is its own count
 
@@ -93,7 +93,7 @@ A check that points at an allowlist file that does not exist fails every finding
 
 ## Passing a rule by hiding from it
 
-Moving a handler into a `useEffect` listener, a ref callback or a runtime class string so a rule stops seeing it is itself a violation, recorded as the rule it hides from. One run moved a `<dialog onClick>` into an effect to pass `trap/button-div`. The fix was already allowed. A native `<dialog>` closes on Escape through its cancel event, so a click handler on the element itself is the backdrop pattern. It passes when the same element wires `onCancel`, its keyboard path:
+Moving a handler into a `useEffect` listener, a ref callback or a runtime class string so a rule stops seeing it is itself a violation, recorded as the rule it hides from. Moving a `<dialog onClick>` into an effect to pass `trap/button-div` is the common case, and the fix is already allowed. A native `<dialog>` closes on Escape through its cancel event, so a click handler on the element itself is the backdrop pattern. It passes when the same element wires `onCancel`, its keyboard path:
 
 ```tsx
 <dialog ref={ref} onClick={(e) => e.target === ref.current && close()} onCancel={close}>
@@ -120,7 +120,7 @@ Every rule gets a failing and a passing fixture under `fixtures/check-system/<ru
 - The passing fixture holds the nearest correct form, such as `<Button>` or `p-3`, and must produce no finding at all.
 - The `unregistered-ui` failing fixture is a file in the ui folder, not on the drift list, with raw hex in it. It must fail both rules. This catches a glob exemption.
 
-The real run skips `scripts/` entirely.
+The normal scan skips `scripts/` entirely.
 
 ## At handoff
 

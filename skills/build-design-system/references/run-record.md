@@ -45,7 +45,7 @@ Written in phase 1, with the counts filled in after phase 2.
 ```markdown
 ## Frame
 Mode: build. Foundation: raw (base-raw.md)
-Run branch: ds/2026-09-28-build, from main at 7dc8f3d. Nothing commits to main. Merging is the person's call.
+Run branch: ds/2026-03-12-build, from main at 7dc8f3d. Nothing commits to main. Merging is the person's call.
 Target: apps/web (Next.js 16, Tailwind v4, CSS variables in app/globals.css)
 Themes: light, dark (data-theme attribute)
 Viewports: 390, 1280
@@ -136,11 +136,11 @@ One row per unit of work that needs a verdict: each component family, the delete
 ```markdown
 | Unit | Owner | Branch | Commit | Verdict | Evidence |
 |---|---|---|---|---|---|
-| family:button | coordinator | ds/2026-09-28-build | 4f5e6d7 | verified | .design-system/evidence/button/ |
-| family:select | worker-2 | ds/2026-09-28-build-select, merged into the run branch | 8a9b0c1 | verified with gaps | gap: no indeterminate example |
-| check:raw-values | coordinator | ds/2026-09-28-build | 2d3e4f5 | verified | fixtures fail 6/6, pass 6/6 |
-| pilot:invite | coordinator | ds/2026-09-28-build | 6a7b8c9 | failed | 2 unintended diffs at 390 dark |
-| surface:/login | coordinator | ds/2026-09-28-build | 9d8e7f6 | verified | review/login-*.png, traces.tsv row G-01 |
+| family:button | coordinator | ds/2026-03-12-build | 4f5e6d7 | verified | .design-system/evidence/button/ |
+| family:select | worker-2 | ds/2026-03-12-build-select, merged into the run branch | 8a9b0c1 | verified with gaps | gap: no indeterminate example |
+| check:raw-values | coordinator | ds/2026-03-12-build | 2d3e4f5 | verified | fixtures fail 6/6, pass 6/6 |
+| pilot:invite | coordinator | ds/2026-03-12-build | 6a7b8c9 | failed | 2 unintended diffs at 390 dark |
+| surface:/login | coordinator | ds/2026-03-12-build | 9d8e7f6 | verified | review/login-*.png, traces.tsv row G-01 |
 ```
 
 Verdicts are `verified`, `verified with gaps`, `failed` and `blocked`. A new commit on the branch voids the row until it is checked again.
@@ -163,7 +163,7 @@ node <skills>/build-design-system/scripts/montage.mjs --diff → exit 0, 8 surfa
 Pilot traps: trap/loading-layout-shift Send invite 101x36 idle, 101x36 pending (evidence/button/loading-box.txt)
 
 ### Screens
-Changed on ds/2026-09-28-build: /login (G-01), /settings/billing (G-03), /team (pilot). Unchanged: /empty and /404, which held no drifted values, and /reports, which the budget did not reach. Review page: .design-system/review/index.html.
+Changed on ds/2026-03-12-build: /login (G-01), /settings/billing (G-03), /team (pilot). Unchanged: /empty and /404, which held no drifted values, and /reports, which the budget did not reach. Review page: .design-system/review/index.html.
 
 ### What exists
 Token source tokens/ · generated app/tokens.css, app/theme.css (npm run tokens) · components components/ui/ ·
@@ -199,10 +199,10 @@ Largest routes: /settings/billing 61, /dashboard 48. Hand to migrate-design-syst
 The final message is the report's four parts, in this order. The first line is one plain sentence that answers the ask. Then it says which screens changed and which did not, and why. Every count in it, such as what is left or allowlisted, comes from one file, `.design-system/close.md` (`coordinator-path.md`, Close), and it names what is still raw instead of saying "every screen". No skill names the person did not use, no process narration and no skill friction. Those stay in this file.
 
 ```
-The app now looks like one product on a branch you can merge: ds/2026-09-28-build changes 6 of 8 screens to one button, one text color and one field style. /empty and /404 look the same because they held no drifted values. Before and after pictures: .design-system/review/index.html.
+The app now looks like one product on a branch you can merge: ds/2026-03-12-build changes 6 of 8 screens to one button, one text color and one field style. /empty and /404 look the same because they held no drifted values. Before and after pictures: .design-system/review/index.html.
 Checks: npm run check exit 0 (clean clone). npm run build exit 0, and all 8 routes answer 200 on the production server. Still raw: 23 allowlisted values in app/billing/page.tsx and app/reports/page.tsx. The check does not see contrast, focus or layout; the review covered those on /team.
 Gates, each already applied on the branch: 14 body grays become one text color (G-01). Sidebar secondary text reuses text.inverse (G-02). Combobox stays apart from Select (G-04).
-Next: "Merge ds/2026-09-28-build." To undo one, name it: "Merge ds/2026-09-28-build, but keep the 14 grays separate (reverse G-01)."
+Next: "Merge ds/2026-03-12-build." To undo one, name it: "Merge ds/2026-03-12-build, but keep the 14 grays separate (reverse G-01)."
 ```
 
 The gates are the ones that change what a screen shows or does, at most 3, each with the default the branch applied. The Next prompt clears every open gate at once and never asks for a step the run could have done, such as re-pinning a plan or rerunning a script. It carries no process dispute, such as which record or verifier to trust. That goes in the run record. Each claim comes from a command run in this session. A red check is stated, never left out.

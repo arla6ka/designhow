@@ -152,7 +152,7 @@ Put it in the Frame message with the default already applied. The run goes on un
 ```
 Triage: no token source, 412 raw color lines, 3 button families, 18 routes.
 Plan: build a system from the app and prove it on the invite flow, then write
-a plan for the other 17 screens. All work goes on branch ds/2026-09-28-build.
+a plan for the other 17 screens. All work goes on branch ds/2026-03-12-build.
 Budget: 2 hours, 4 workers.
 Screens: only the invite flow will look different. The other 17 stay unchanged
 unless you reply "Go, 2h", which lets me move them too, one per commit.
