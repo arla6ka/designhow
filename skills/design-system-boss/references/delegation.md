@@ -82,10 +82,10 @@ Numbered, one rule each, written into the state file before the first brief and 
 ```
 0. (empty; write STOP: <reason> here to halt every new brief)
 1. Write only inside this step's SCOPE, and write your artifacts there too. .design-system/boss/ belongs to the coordinator.
-2. Use only the colors, fonts, shadows, gradients, motion, logos and product names the app already has.
+2. Use only the colors, fonts, shadows, gradients, motion, logos and product names the app already has, or that a design source draws once the person chose to follow it (the Frame).
 3. Baselines, fixtures and checks stay as written. Fix the code instead.
 4. Leave uncommitted changes and branches you did not create exactly as they are.
-5. Commit only to the run branch <branch>. No merge, deploy, publish, force-push, stash, reset or clean.
+5. Commit only to the run branch <branch>, locally. No push, PR, merge, deploy, publish, force-push, stash, reset or clean unless the person asked for it in this session.
 6. Put questions in your own record as gates with a default, then finish the run.
 7. Your final message is your status line, then the files you wrote, then your report. Write no report file, but keep writing a sibling record (run.md, a migration run folder) if you have one.
 8. If you coordinate your own workers, run each in the foreground or block on it until it returns. Never return or end your turn while one is still running, since the host kills or orphans it.
@@ -95,9 +95,10 @@ Numbered, one rule each, written into the state file before the first brief and 
 12. What the team needs after the run (check scripts, check-spec, docs generator, docs) goes in the repo, never only in .design-system/ or a skill folder. On a minimal footprint nothing is vendored, and the repo's own lint, typecheck and build are the check.
 13. Scratch files (probe scripts, one-off captures, logs) go in .design-system/tmp/, which is ignored and deleted at close. Never in the repo root, scripts/ or a record folder.
 14. The allowlists (scripts/check-allowlist.json, a migration's allowlist.tsv) belong to the coordinator. Never edit them. Report shrink candidates in your final message.
+15. The person's bans, listed under these orders, hold in every file you write: code, copy, docs, examples and the showcase. The only exception is a Don't: line that shows the ban.
 ```
 
-Project rules from AGENTS.md or CLAUDE.md go under these as their own lines, quoted with their file.
+Project rules from AGENTS.md or CLAUDE.md go under these as their own lines, quoted with their file. The person's bans follow, quoted word for word with the time they were stated.
 
 ## The step brief
 

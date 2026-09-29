@@ -1,6 +1,6 @@
 # Traps
 
-> For the team setting this up: two parts. The first lists behavior traps that hold in any app, per component family, each with a stable ID. The second is a method for finding the visual habits that make this app look unfinished or generated, and turning each into a rule with the app's own evidence. It carries no list of visual preferences, because a rule that holds in one product is taste in another. Add behavior traps under their family. Retire one by marking it `retired` with the reason, so old citations still resolve.
+> For the team setting this up: two parts. The first lists behavior traps that hold in any app, per component family, each with a stable ID. The second is a method for finding the visual habits that make this app look unfinished or generated, and turning each into a rule with the app's own evidence. It carries no list of visual preferences of its own, because a rule that holds in one product is taste in another. The person's stated bans are not imported taste. They go in as rules grounded in the person's words, and outrank the app's majority. Add behavior traps under their family. Retire one by marking it `retired` with the reason, so old citations still resolve.
 
 Contents
 

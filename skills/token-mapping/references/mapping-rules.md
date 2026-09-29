@@ -137,7 +137,7 @@ The mapping table's columns are value, location, job, token, class and reason. S
 ```markdown
 ## Summary
 Mostly. 25 of 30 rows land on a token, and the 2 gaps are both component heights.
-Rows 30 occurrences (raw 22, palette 8) · Exact 21 · Semantic 4 · Ambiguous 3 · Gap 2 · Do not use 1
+Rows 30 occurrences (raw 22, palette 8). Exact 21, Semantic 4, Ambiguous 3, Gap 2, Do not use 1.
 Not mapped: token + alpha 5, graphic 3 (excluded).
 Mode: light. Dark not mapped.
 

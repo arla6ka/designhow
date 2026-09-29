@@ -10,6 +10,7 @@ Triage is cheap on purpose: one script, a few file reads, no browser and no suba
 - The app's state
 - The ask's intent
 - The one question
+- Standing questions
 - Blind spots
 
 ## Running the script
@@ -157,9 +158,19 @@ Budget: 2 hours, 4 workers.
 Screens: only the invite flow will look different. The other 17 stay unchanged
 unless you reply "Go, 2h", which lets me move them too, one per commit.
 Question: none.
+Bans: none named yet. Name any you never want to see, such as uppercase labels.
 ```
 
 Budget and clearance are not this question. The Frame asks for both as the one reply `Go, <budget>`. With no live reader, the Frame goes into the report.
+
+## Standing questions
+
+Two questions go in every Frame on a writing route, beside the one question, each with its default applied. Their answers change every file a worker writes, so a late answer means rewriting those files.
+
+- **Bans.** "Anything you never want to see in the UI, its copy or the docs?" Offer the common ones with none selected: uppercase labels, middle-dot or bullet separators, em dashes, exclamation marks, emoji, gradients. Record each answer word for word as a standing order and as a `rule/ban-<slug>` the check scans (`build-design-system/references/checks.md`, Bans). With no answer, record "none named". A ban stated later becomes a standing order at once, and the next commit sweeps every file for it.
+- **Design source.** When the person named a design file, brand kit or mockups: "How closely should the system follow it: reference only, partial, or pixel fidelity?" The default is reference only, which keeps the current look. A closer answer runs through a sample first (`build-design-system/references/modes.md`, Following a design source).
+
+When the person asks to be asked, or the route builds or hardens a system, send a batch of up to six in the same message. Each is multiple choice, with the recommended option first and already applied, and the run continues under the defaults. Ask only what changes files a worker writes: the branch to work on and whether anything besides product code is committed, the primary action color and how much brand color the product carries, the typeface and its license, the icon set and its style, and where the person reviews the system (an in-app route, a docs site or a component workbench).
 
 ## Blind spots
 

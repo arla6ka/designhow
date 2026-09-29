@@ -9,7 +9,7 @@ This skill turns the UI an app ships into semantic tokens, canonical components,
 
 It runs in one of three modes (`references/modes.md`). Build extracts a system from an app that has none. Harden fills the states, specs and checks of a weak component layer. Seed starts a system for a new app. Each mode reads the base reference for the app's foundation (`base-*.md`), which wins over the general references and holds the stack-specific commands.
 
-Every writing run works on a run branch cut from HEAD, and merging is the person's call (terms in `references/run-record.md`, Terms). The run applies every decided gate default there, with captures per surface, so Next is a plain merge. Moving screens beyond that needs clearance (`references/coordinator-path.md`). The run never picks a visual direction, publishes or deploys. It runs sibling skills instead of restating them: `token-mapping` for folding values into tokens, `component-docs` for component prose, `design-review` for the pilot.
+Every writing run works on a run branch, the one the person named for the work or one cut from HEAD, commits locally, and leaves merging to the person (terms in `references/run-record.md`, Terms). The run applies every decided gate default there, with captures per surface, so Next is a plain merge. Moving screens beyond that needs clearance (`references/coordinator-path.md`). The run never picks a visual direction, publishes or deploys. It runs sibling skills instead of restating them: `token-mapping` for folding values into tokens, `component-docs` for component prose, `design-review` for the pilot.
 
 Success is what the person asked for, in their words, and the first visible change answers that complaint. Every claim that something is fixed, passes or works names the command that proved it this session.
 
@@ -66,7 +66,7 @@ Make and record any decision a reversible change can settle, including fixes to 
 
 1. Read the agent instructions, manifest, style entry points, theme providers and route tree. Name the mode and foundation, and load the base reference.
 2. Write the complaint in the person's words, and the first visible change that answers it. Choose the pilot and themes. The viewports are the narrowest and widest widths the app supports, default 390 and 1280 px (a common phone and laptop).
-3. Write the predicate with blanks for counts, and the standing orders, per `references/run-record.md`.
+3. Write the predicate with blanks for counts, and the standing orders, per `references/run-record.md`. Ask the standing questions (`design-system-boss/references/triage.md`) unless a coordinator already did: the person's bans, which go in the standing orders word for word and in the check's `bans` (`references/checks.md`, Bans), and how closely to follow a design source (`references/modes.md`).
 4. Set up the repo for the footprint (`references/coordinator-path.md`, Start). On a minimal footprint, copy nothing. Otherwise copy into `scripts/` only what the repo's check runs: `check-system.mjs`, `check-spec.mjs`, `gen-docs.mjs`, `props-table.mjs` and `copy-check.mjs`. Fixtures, capture, pixdiff and montage run from `<skills>/build-design-system/scripts/`. Copy `references/spec-template.md` to `docs/system/`. Run `node scripts/check-system.mjs --init` and read its guesses. Nothing in `package.json` reads from `.design-system/` or a skill folder.
 5. Size the fan-out. In a small layer, by default under about 15 component files and one theme, the coordinator writes the components and only specs fan out, because a brief costs more than the code. Otherwise families fan out too, one per worker. Record the Frame and known gates, and start phase 2 without waiting.
 
@@ -142,9 +142,10 @@ Gate with a default and keep working:
 
 Hard lines:
 
-- Use only the colors, fonts, shadows, gradients and motion the app already has.
+- Use only the colors, fonts, shadows, gradients and motion the app already has, or that a design source draws once the person chose to follow it and confirmed the sample (`references/modes.md`).
+- The person's bans hold in code, copy, docs, examples and the showcase, except on a `Don't:` line.
 - Baselines, fixtures and checks stay as written. Fix the code instead.
-- Nothing lands on the branch the run started on. The codemod runs on the pilot, cleared surfaces and wherever a decided gate default reaches. Elsewhere only identical-value swaps land.
+- Nothing lands on the branch the run started on, unless the person named it as the run branch. The codemod runs on the pilot, cleared surfaces and wherever a decided gate default reaches. Elsewhere only identical-value swaps land.
 - One writer per file. Workers never write the token source, generated files, registry, barrel, migration map, or any foundation config file the base reference names.
 - Resetting a customized foundation component to its upstream version is a gate. On a clean-up or drift ask, its default is to revert the drifted upstream lines (base reference).
 - Accessibility and contrast results come from rendered output, never from source alone.

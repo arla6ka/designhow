@@ -293,6 +293,7 @@ function groundKind(g) {
   if (/^single use \S+:\d+/.test(g)) return "single use";
   if (/^measured .*\d/.test(g)) return "measured";
   if ((m = /^principle (wcag|platform|heuristic|input): \S/.exec(g))) return m[1] !== "wcag" || /\d+\.\d+(\.\d+)?/.test(g) ? "principle" : null;
+  if (/^person ["\u201c].+["\u201d]/.test(g)) return "person";
   if (/^gate G-\d+ default/.test(g)) return "gate";
   return null;
 }
@@ -405,7 +406,7 @@ for (const file of files) {
     if (p.hasEvidence) {
       const bad = p.grounds.filter((g) => !groundKind(g));
       const counting = p.grounds.filter((g) => { const k = groundKind(g); return k && k !== "gate"; });
-      if (bad.length || !counting.length) fail(d.line, "spec/rule-shape", `${d.id} needs a ground: app n/m, single use file:line, measured <value>, principle <kind>: <name>${bad.length ? ` (not a ground: '${bad[0].slice(0, 60)}')` : ""}`);
+      if (bad.length || !counting.length) fail(d.line, "spec/rule-shape", `${d.id} needs a ground: app n/m, single use file:line, measured <value>, principle <kind>: <name>, person "<their words>"${bad.length ? ` (not a ground: '${bad[0].slice(0, 60)}')` : ""}`);
     }
     const ck = p.hasCheck ? p.check.replace(/\.$/, "").trim() : "";
     if (!/^(lint|test|probe|review)\b/.test(ck) || (!/^review\b/.test(ck) && !/^(lint|test|probe)\s+\S/.test(ck)))

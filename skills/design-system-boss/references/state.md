@@ -37,7 +37,7 @@ One file, `.design-system/boss/state.md`, written only by the boss. A person rea
   index.html               one montage index, before beside after, tracked
 ```
 
-Sibling records live where the siblings put them, `.design-system/run.md` for the build and `.migration/<run>/` for a migration. The run commits its records, `review/` included. `.gitignore` lists only `.design-system/review/**/*.png` and `.design-system/tmp/`, so captures stay out of commits and the traces, reports and montage page stay in. On a minimal footprint all of `.design-system/` and `.migration/` stays untracked, listed in `.git/info/exclude`. The check, check-spec, the docs generator and the docs live in the repo's `scripts/` and `docs/`, so the repo works once these folders are gone.
+Sibling records live where the siblings put them, `.design-system/run.md` for the build and `.migration/<run>/` for a migration. The run commits its records, `review/` included. `.gitignore` lists only `.design-system/review/**/*.png` and `.design-system/tmp/`, so captures stay out of commits and the traces, reports and montage page stay in. On a minimal footprint all of `.design-system/` and `.migration/` stays untracked, listed in `.git/info/exclude`. So does it when the person wants only product changes committed, with installed skill folders beside them. Whatever the team needs later, the checks, generators, decisions log and project skills included, still goes in the repo. The check, check-spec, the docs generator and the docs live in the repo's `scripts/` and `docs/`, so the repo works once these folders are gone.
 
 When the route runs the build, the boss writes the `.design-system/run.md` skeleton before any brief names it, from `build-design-system/references/run-record.md`. It holds the File shape headings, the Frame with the run branch, budget and clearance, the standing orders (the boss's list with the build's lines under it), and the gates known so far. Phases, Ledger and Handoff stay empty. From the first build brief on, the build's coordinator seat owns the file.
 
@@ -56,6 +56,8 @@ Intent: full ("fix it")
 Host: flat subagents, worktrees yes, browser yes
 Signals: triage/signals.tsv
 Question: none. "Fix it" on a mess counts as clearance, so the migration runs within the budget.
+Bans: "no uppercase labels, no em dashes" (the person, 10:03), in the standing orders word for word.
+Design source: none named.
 Answer:
 
 ## Route
@@ -65,8 +67,10 @@ Clearance: the ask ("make it look like one thing"), within the session budget.
 
 ## Budget
 Session 2h (host), 4 workers in flight. Phase caps from routes.md:
-triage and Frame 6m (10:08) · build 48m (10:56), audit beside it · migration 36m (11:32) ·
-review 12m, beside the migration · close 18m, never cut.
+- triage and Frame 6m (10:08)
+- build 48m (10:56), audit beside it
+- migration 36m (11:32), review 12m beside it
+- close 18m, never cut
 No new writing step after 11:26. Read-only steps may run past it.
 
 ## Standing orders

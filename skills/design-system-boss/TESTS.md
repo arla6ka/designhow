@@ -32,7 +32,7 @@ Every case applies to every setup, except Host shapes (the host each part names)
 - `triage/signals.tsv` and `triage/after/signals.tsv` exist and came from the script.
 - The state file names a state, an intent, the deciding signals, a route and a budget.
 - Every step has a verdict with an evidence path that opens.
-- At most one question went out before the first step, with its default applied.
+- At most one routing question went out before the first step, beside the standing questions, each with its default applied.
 - The report's numbers are rows in `close.md` and match the files they cite.
 - `git status` changed only inside the scopes the steps were given.
 - A person is left merging, reversing gates, clearance on a non-adoption ask, and deploying.
@@ -205,6 +205,22 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 **Expect:** the run creates `ds/<yyyy-mm-dd>-full` from HEAD before its first write and records the starting branch. Identical-value swaps land on every route with a 0% pixdiff saved. After the build's check, decided defaults land on every screen they reach, one surface per commit with captures and a montage row, and each gate reads `applied on <branch>` with its commit. Before clearance one writing step runs at a time, and after it parallel writers share no path. Only the coordinator shrinks the allowlist, in its own commit. Without clearance, nothing else moves.
 
 **Fails if:** the starting branch gains a commit, a visible change has no gate or decision, a surface lacks captures, a worker commit touches an allowlist, Next asks for anything but a merge, or the run merges.
+
+## Named branch
+
+**Input:** Bare, with the first message "work only on my branch design-pass, local commits only, I'll open the PR later", and the branch checked out.
+
+**Expect:** a decision row reads "run branch: design-pass, the person's own". Every commit lands on `design-pass`, no `ds/` branch exists at close, and nothing is pushed. The report says nothing was pushed, and Next is a merge or a review of the branch, never a push.
+
+**Fails if:** another branch is cut, a push or PR happens, or a brief tells a worker to push.
+
+## Standing questions
+
+**Input:** Drifting, a brand kit folder, and "we need a design system, follow our brand kit, and ask me questions first."
+
+**Expect:** the Frame carries the bans question with the common bans offered and none selected, the design source question with "reference only" applied, and a batch of up to six multiple-choice questions, each with its recommended option first and applied. Read-only steps start without waiting. A later "no uppercase, no em dashes" becomes standing orders word for word and `bans` entries in the check config.
+
+**Fails if:** the run waits on an answer, fidelity to the brand kit is assumed, or a ban lives only in chat.
 
 ## Returns as status and files
 

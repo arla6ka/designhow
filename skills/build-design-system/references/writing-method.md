@@ -8,6 +8,7 @@ Contents
 - Deriving rules per slot
 - Pending and status text
 - The verb chain
+- House bans
 - Banned words
 - What the check enforces
 
@@ -59,9 +60,15 @@ An action that asks for confirmation or reports a result uses one verb in all th
 
 Declare each chain in the writing page's `## Verb chains` table. `copy-check.mjs --suggest-chains` lists candidates: files where a `confirm-action` or `button` row sits beside a `toast` or `notice` row. Every `confirm-action` row belongs to a declared chain, or is listed with its reason in the table's `Exempt` rows.
 
+## House bans
+
+Before the first component, the writing page lists the person's bans from the Frame under `### Across slots`, one rule each: casing (such as no uppercase labels), separators (such as no middle dots), punctuation (such as no em dashes or exclamation marks), weights and words. Each is grounded `person "<their words>", <date>`. The coordinator obeys them in its own code, copy and showcase chrome, since the first family is the pattern workers copy. Each ban also goes in the standing orders word for word, and in `bans` in `scripts/check-system.config.json` (`checks.md`, Bans).
+
+Generic filler that makes copy read as machine-written goes on the Banned words table whether or not the app uses it, such as "seamlessly", "leverage", "unlock", "delve", "robust" and "effortless". Ground each as `principle heuristic: aesthetic and minimalist design`, under one gate whose default keeps the list, so the person can strike any.
+
 ## Banned words
 
-The team sets the list from its own copy, never from another product. Read the inventory for filler (apology, hedging, words that could go without changing the message) and for synonyms that compete with the app's chosen term. A word goes on the list when most of the app's rows already avoid it, or when a principle grounds it and a gate records the decision. Each row names what to write instead.
+The team sets the list from its own copy and the person's bans, never from another product. Read the inventory for filler (apology, hedging, words that could go without changing the message) and for synonyms that compete with the app's chosen term. A word goes on the list when most of the app's rows already avoid it, or when a principle grounds it and a gate records the decision. Each row names what to write instead.
 
 ## What the check enforces
 

@@ -77,6 +77,10 @@ Config keys (all optional, JSON)
   aliases        {"@/": "src/"}                 default: from tsconfig paths
   deprecated     extra deprecated import paths, beside registry "replaces"
   rulesOff       rule ids to skip
+  bans           the person's bans, each {"id":"rule/ban-<slug>","pattern":"<regex>","why":"<their words>"},
+                 scanned in UI code (comments skipped) and in the banDocs pages. A line
+                 holding "Don't:" or the ban's own id describes the ban and passes
+  banDocs        folders of Markdown pages the bans also scan  ["docs/system"]
 
 Fixture files end in .fixture (button.tsx.fixture), so tsc, lint and the
 framework never compile them. The self-test reads them under their inner name.
@@ -144,6 +148,8 @@ const DEFAULTS = {
   aliases: null,
   deprecated: [],
   rulesOff: [],
+  bans: [],
+  banDocs: ["docs/system"],
   stockDir: "scripts/ui-stock",
 };
 
@@ -822,6 +828,7 @@ function scan(cfg, only) {
   const files = only || listFiles(cfg);
   const drift = (rel, d, why) => { if (!cfg.off.has("rule/stock-edit")) report({ file: rel, line: 1, rule: "rule/stock-edit", detail: why }); };
   for (const rel of files) {
+    if (/\.mdx?$/.test(rel)) continue;
     const d = cfg.drift.get(rel);
     if (d) {
       // every drift-list row carries a hash, so any edit to a primitive shows up as a reviewed drift-list change
@@ -841,9 +848,36 @@ function scan(cfg, only) {
       if (!cfg.registered.has(rel) && !cfg.drift.has(rel)) report({ file: rel, line: 1, rule: "rule/unregistered-ui", detail: `not in ${cfg.registry} and not in ${cfg.driftList}` });
     }
   }
+  checkBans(cfg, files, report, !!only);
   // allowlist key: the literal, without whitespace runs or (file:line) pointers, so it survives edits elsewhere
   for (const f of findings) f.key = f.detail.replace(/\s*\([^()]*:\d+\)/g, "").replace(/\s+/g, " ");
   return findings;
+}
+
+// The person's bans (config bans), such as a middle dot or an em dash, in UI code with comments stripped and in
+// the docs pages. A line holding "Don't:" or the ban's own id describes the ban, so it passes.
+function checkBans(cfg, files, report, onlyGiven) {
+  const bans = (cfg.bans || []).filter((b) => b && b.id && b.pattern && !cfg.off.has(b.id)).map((b) => ({ ...b, re: new RegExp(b.pattern, b.flags || "u") }));
+  if (!bans.length) return;
+  const docs = [];
+  if (!onlyGiven) {
+    const walk = (rel) => {
+      const st = statSync(join(cfg.root, rel), { throwIfNoEntry: false });
+      if (!st) return;
+      if (st.isDirectory()) { for (const e of readdirSync(join(cfg.root, rel)).sort()) walk(`${rel}/${e}`); return; }
+      if (/\.mdx?$/.test(rel) && !/(^|\/)spec-template\.md$/.test(rel)) docs.push(rel);
+    };
+    for (const d of cfg.banDocs || []) walk(posix(d).replace(/^\.\//, "").replace(/\/$/, ""));
+  }
+  for (const rel of [...new Set([...files, ...docs])]) {
+    const md = /\.mdx?$/.test(rel);
+    if (!md && !CODE_EXT.test(rel) && !CSS_EXT.test(rel)) continue;
+    const text = md ? readFileSync(join(cfg.root, rel), "utf8") : lex(readRel(cfg, rel), CODE_EXT.test(rel)).code;
+    text.split("\n").forEach((l, i) => {
+      if (/Don['\u2019]t:/.test(l)) return;
+      for (const b of bans) if (b.re.test(l) && !l.includes(b.id)) report({ file: rel, line: i + 1, rule: b.id, detail: `${b.why || "banned by the person"}: ${l.trim().slice(0, 60)}` });
+    });
+  }
 }
 
 // ---------- self-test ----------

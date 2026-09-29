@@ -9,11 +9,11 @@ Read this page, not every file. At each step, open only what the Open column nam
 | 3 | Read AGENTS.md or CLAUDE.md | the repo's own file |
 | 4 | Pick the state, the intent and the foundation | `references/triage.md`, "The app's state", "The ask's intent", "The foundation" |
 | 5 | Pick the route | `SKILL.md`, "Routing table" |
-| 6 | On a writing route, create the run branch from HEAD | nothing |
+| 6 | On a writing route, pick the run branch: the one the person named for this work, else a new one from HEAD | `SKILL.md`, "The branch model" |
 | 7 | Copy the route's steps and set the phase caps | `references/routes.md`, the route's section and "Budget" |
 | 8 | Probe subagents, nesting, browser and shell. On a flat host, switch to the track below after step 10 | `references/delegation.md`, "What the host can do" |
 | 9 | Write the state file with the standing orders, the build's `.design-system/run.md` skeleton when the route runs the build, and the ignore entries for the footprint | `references/state.md`, "The state file" and "The run folder"; `references/delegation.md`, "Standing orders" |
-| 10 | Send the Frame, or put it in the report when nobody is reading | `references/triage.md`, "The one question" |
+| 10 | Send the Frame with the standing questions, or put it in the report when nobody is reading | `references/triage.md`, "The one question" and "Standing questions" |
 | 11 | Brief and run each step | `references/delegation.md`, "The step brief"; `SKILL.md`, Procedure, "Run the steps" |
 | 12 | Save each return's status line and file list to `returns/<step>.md` | `references/delegation.md`, "Saving a return" |
 | 13 | Check each return and write its verdict | `references/delegation.md`, "Checking a return" |

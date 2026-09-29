@@ -11,7 +11,7 @@ It never designs the system. A missing token or component is a request to the sy
 
 ## The run branch
 
-A writing run works on its run branch, `ds/<yyyy-mm-dd>-migrate` or the one a coordinator passes. Surfaces land there one per commit, each verified. Decided gate defaults land there too, codemods on non-pilot surfaces and color moves included, so Next is a plain merge.
+A writing run works on its run branch: the one the person named for the work, the one a coordinator passes, or `ds/<yyyy-mm-dd>-migrate`. Surfaces land there one per commit, each verified, and nothing is pushed unless the person asks. Decided gate defaults land there too, codemods on non-pilot surfaces and color moves included, so Next is a plain merge.
 
 Migration beyond decided defaults needs clearance. Adoption asks such as "the screens ignore it", or "fix it" aimed at a mess, count as clearance within the session budget (`design-system-boss/references/triage.md` lists them). A visible change needs a gate or decision behind it, before and after captures, and a montage row in `.design-system/review/` (`references/verification.md`).
 

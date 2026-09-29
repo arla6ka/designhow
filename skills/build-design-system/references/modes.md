@@ -6,6 +6,7 @@ Contents
 
 - Picking the mode
 - What decides a question
+- Following a design source
 - Seed
 - Harden
 - What changes in the handoff
@@ -24,15 +25,35 @@ Triage names the mode. When nobody ran triage, read the repo with the boss's rul
 
 When sources disagree, take the first that settles it:
 
-1. What the person asked for in this run.
+1. What the person asked for in this run, including the taste they stated: their bans, the references they named, and how closely to follow a design source. Their taste is a ground for rules (`rule-method.md`, Grounds).
 2. Project rules in AGENTS.md or CLAUDE.md.
-3. Gates already answered, and decisions already in the run record.
+3. Gates already answered, and decisions already in the run record or the committed decisions log (`coordinator-path.md`, Review, decide, fix).
 4. The system's own specs and docs, once they exist.
 5. Shipped code in the same area of the app. It shows what users see today, not that it is right. A pattern shipped on one screen is a candidate, not a rule.
-6. A design spec or old docs.
+6. A design spec or old docs, unless the person chose partial or pixel fidelity (below).
 7. General guidance, including `traps.md`.
 
 A conflict between two sources at the same level is a gate.
+
+## Following a design source
+
+A design file, brand kit or mockups the person gives may be a reference or the target. The Frame asks which (`design-system-boss/references/triage.md`, Standing questions). The default is reference only, because the person may want the current look, and a full restyle is expensive to undo.
+
+| Answer | What the source decides |
+|---|---|
+| Reference only | Nothing by itself. Its values and structures are candidates, and a disagreement with the app is a gate whose default keeps the app |
+| Partial | The structures and values the person names, such as "cards and tables", at rank 2 in the list above. The rest stays with the app |
+| Pixel fidelity | Structure and look wherever it draws, at rank 2. Shipped code still decides behavior and data |
+
+Above reference only, before restyling anything:
+
+1. Read the source in small pieces. List its top-level frames with a small script first, since a whole-file read can time out or drop the connection, and separate product mockups from marketing art.
+2. Record the drawing scale. Mockups are often drawn above 1x, so divide by the hairline width, and record the factor as a decision.
+3. List each recurring structure in `.design-system/inventory/design-structures.md`: name, frame or node id, parts, spacing, surface and edge, type size, and the component that will carry it.
+4. Restyle a sample of one or two components toward the source. Capture each beside a crop of its frame at the same scale, in both themes, and show the person.
+5. Restyle the rest only after the person confirms the sample. With nobody answering, the rest is a gate whose default keeps the current look, and the sample stays on the branch under it.
+
+When the person says to keep the current look, at the sample or later, the restyle stops, and the sample reverts in its own commit. Marketing-only treatments in the source, such as illustration or display type, stay out of product UI and are listed on the brand page.
 
 ## Seed
 

@@ -2,11 +2,11 @@
 
 One entry skill for the other five. Say something vague, like "our UI is a mess, fix it", and it runs a triage script over the repo. The script works out the foundation (shadcn, a package library, the team's own package, or hand-rolled code), whether a system exists, whether it has specs, and whether the code follows it. Then the boss picks a route: seed a new system, build one from the app, harden a weak one, migrate, map values, document, review or audit. It runs each step through the sibling that owns it, with subagents where the host has them, and keeps one state file a new session can resume from. Its final message is a report built from files: one sentence that answers the ask with numbers, which screens changed, each check with its exit code, the gates that matter most, and the next step as a prompt, usually a merge.
 
-It never writes product code when it can spawn subagents, never invents brand values, never commits to the branch it started on, and never migrates past the decided defaults without clearance, which an adoption ask like "nobody uses our components" gives.
+It never writes product code when it can spawn subagents, never invents brand values, never commits to a branch you did not name for the work, never pushes unasked, and never migrates past the decided defaults without clearance, which an adoption ask like "nobody uses our components" gives.
 
 ## Use as-is
 
-Install it with its siblings: `npx skills add arla6ka/designhow`. By hand, copy the folder next to the other five in `.agents/skills/`, or `.claude/skills/` for Claude Code. Then say what you want in your own words. The boss reads the repo before it asks anything, and it asks at most one question.
+Install it with its siblings: `npx skills add arla6ka/designhow`. By hand, copy the folder next to the other five in `.agents/skills/`, or `.claude/skills/` for Claude Code. Then say what you want in your own words. The boss reads the repo before it asks anything. It asks at most one routing question, plus your bans and how closely to follow a design source, each with a default already applied.
 
 Agents often skip an installed skill when the ask does not name it. If yours do, add load conditions to AGENTS.md that name the work, not the skill's topic:
 
@@ -31,11 +31,11 @@ It needs file access, a shell and `rg` (ripgrep). A browser and subagents are op
 Keep these unless your setup really differs.
 
 - Triage by script. A route chosen from the prompt's wording alone sends a "fix it" ask to whichever skill's description sounded closest.
-- One question, with a default. A run that waits on three answers produces nothing.
+- One routing question, with a default, and the standing questions answered by defaults until you reply. A run that waits on three answers produces nothing.
 - The boss never writes product code when it can spawn subagents. Once it starts editing, it stops reading returns, and every step behind it waits. On a host without subagents it takes a sibling's seat and follows that sibling's rules.
 - No worker outlives the boss. A worker left running keeps writing into a repo nobody checks.
 - One writing step at a time. Build and migrate touching the same files at once produce two versions of each.
-- Every writing run works on its own branch, and merging it is the person's call. Every decided gate default lands there with captures, so the next step is a merge. Migration beyond those defaults needs clearance, a budget from a person or an ask that is itself about adoption.
+- Every writing run works on its own branch, or on the one you named for the work, and merging it is the person's call. Every decided gate default lands there with captures, so the next step is a merge. Migration beyond those defaults needs clearance, a budget from a person or an ask that is itself about adoption.
 - Verdicts from files. A sibling's summary is a claim until its check command runs again.
 - One state file, one writer. The boss's context will be lost, and the next agent has only the file.
 

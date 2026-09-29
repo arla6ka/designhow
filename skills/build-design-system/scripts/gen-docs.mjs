@@ -302,7 +302,7 @@ function definitions(text) {
   }
   return out;
 }
-const GROUND_KINDS = [["app", /^app \d+\/\d+ \S/], ["single use", /^single use \S+:\d+/], ["measured", /^measured .*\d/], ["principle", /^principle (wcag|platform|heuristic|input): \S/]];
+const GROUND_KINDS = [["app", /^app \d+\/\d+ \S/], ["single use", /^single use \S+:\d+/], ["measured", /^measured .*\d/], ["principle", /^principle (wcag|platform|heuristic|input): \S/], ["person", /^person ["\u201c].+["\u201d]/]];
 function groundsOf(text) {
   const e = text.indexOf("Evidence: ");
   if (e < 0) return "";

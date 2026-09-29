@@ -15,7 +15,7 @@ Surface, run branch, identical-value swap, decision, gate, clearance and footpri
 
 Done means the route's last step has returned, every step has a verdict in `.design-system/boss/state.md`, and the report is written from files. Success is what the person asked for, in their words, and the first visible change answers that complaint. Every claim that something is fixed, passes or works names the command that proved it and its result from this session.
 
-**The branch model.** Every writing run works on its own run branch and never commits to the branch it started on. Every decided gate default lands there with before and after captures, codemods on non-pilot screens and color moves included, so Next is a plain merge. Moving surfaces beyond that needs clearance. Merging is always the person's call.
+**The branch model.** Every writing run works on a run branch. When the person names a branch for this work, that branch is the run branch and no other is cut. Otherwise the run cuts its own and never commits to the branch it started on. Every decided gate default lands there with before and after captures, codemods on non-pilot screens and color moves included, so Next is a plain merge. Moving surfaces beyond that needs clearance. Commits stay local until the person asks for a push or a PR in this session, and a PR named as the end goal is not that ask. Merging is always the person's call.
 
 Checkable:
 
@@ -23,7 +23,7 @@ Checkable:
 - The route in the state file is the one the routing table gives, or a decision row says why it differs.
 - Every step has a verdict naming the file that proves it.
 - Every gate from every sibling record is in the state file's Gates table, with its default, source path and the run-branch commit that applied it.
-- On a writing route, the starting branch has no new commits, and every changed surface has its captures in `.design-system/review/` and a montage row. The check exits 0 on a clean clone of the run branch, after the repo's own prerequisites for its typecheck, with existing violations in a committed allowlist. On a minimal footprint the repo's own lint, typecheck and build are the check. A red check is a failed run.
+- On a writing route, the starting branch has no new commits unless the person named it, nothing was pushed unasked, and every changed surface has its captures in `.design-system/review/` and a montage row. The check exits 0 on a clean clone of the run branch, after the repo's own prerequisites for its typecheck, with existing violations in a committed allowlist. On a minimal footprint the repo's own lint, typecheck and build are the check. A red check is a failed run.
 - No worker is still running when the boss hands back.
 - `git status` before and after is saved, and nothing changed outside the steps' scopes. `.design-system/tmp/` is gone, and every untracked path is committed or named in a decision row.
 
@@ -104,7 +104,7 @@ Never:
 
 - Write product code when it can spawn subagents. On a host without subagents, the boss takes a sibling's seat and follows that sibling's coordinator rules, recorded as one decision row.
 - Hand back with live workers. If the host forces it, record each in `state.md`.
-- Commit to the starting branch, merge the run branch, deploy, publish or force-push.
+- Commit to a branch the person did not name for the work, push unasked, merge the run branch, deploy, publish or force-push.
 - Discard work this run did not create: no stash, reset, clean or checkout over other branches, uncommitted changes or files outside a step's scope.
 - Invent brand. New colors, fonts, logos, product names or a new visual direction are gates, even when the ask says "make it modern".
 - Loosen a sibling's predicate, edit a baseline or check to pass, or edit a sibling skill.

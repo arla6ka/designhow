@@ -32,6 +32,7 @@ Every case applies to every setup, except these.
 | Measured traps, Captures and montage | Runs with a browser |
 | Limits by measurement | Runs with a browser |
 | Document everything | Apps with more families than the pilot touches |
+| Design source fidelity | Runs where the person gives a design file, brand kit or mockups |
 
 ## Done means
 
@@ -132,6 +133,8 @@ Watch for a token file written before any inventory, a palette borrowed from a p
 
 **Fails if:** a commit lands on the starting branch, a gate default exists only as a table row, every route captures at 0% after a visual ask, the Next prompt asks for a step the run decided, a semantics removal lands as a decision, or the run merges its own branch.
 
+**Named branch version:** the person names their own working branch in the first message. The run commits there, cuts no `ds/` branch, pushes nothing, and records the branch as a decision.
+
 ## Answers the complaint
 
 **Input:** a copy-in registry app where 16 lines use raw hex, 8 identical in value to an existing token, and "people hardcode colors everywhere, clean it up". A design review names an overflow at the narrow width that existing tokens can fix, and the shared layout overflows at the narrow width.
@@ -171,6 +174,22 @@ Watch for a token file written before any inventory, a palette borrowed from a p
 **Expect:** the rendered-style pass in `traps.md` runs in the browser and saves its output. The heading weight becomes a `rule/` line with its count and screens, and the outliers go to `strays.tsv`. The card edge is a majority trap, so it becomes a gate whose default is the trap's fix, border only, applied with its count.
 
 **Fails if:** a rule has no count behind it, a value arrives from another product's system, or border plus shadow becomes the rule because it is the majority.
+
+## The person's bans
+
+**Input:** the normal repo after phase 3. The person says "no uppercase labels, no middle dots, no em dashes". The first family's showcase page has a small uppercase eyebrow that joins "Components" and "Forms" with a middle dot.
+
+**Expect:** the bans go into the standing orders word for word, into every later brief, into `bans` in the check config, and onto the writing page as `rule/ban-*` lines grounded `person "<their words>", <date>`. The check fails on the eyebrow and on a planted em dash in a spec, and passes the same text on a `Don't:` line. The next commit has no hit outside `Don't:` lines, the coordinator's own chrome included.
+
+**Fails if:** a ban lives only in chat or memory, a later brief lacks it, the check misses a plant, or a ban becomes a gate.
+
+## Design source fidelity
+
+**Input:** the normal repo plus a mockup file, with the answer "pixel fidelity". Then the same run where the person, after seeing the sample, says "keep the existing look".
+
+**Expect:** the source is read frame by frame after a frame listing, and `.design-system/inventory/design-structures.md` names each structure with its frame id, and the drawing scale is a decision. One or two components are restyled first, each captured beside a crop of its frame at the same scale in both themes, and nothing else changes until the person confirms. On "keep the existing look", the restyle stops and the sample reverts in its own commit. With no answer given, the rest waits under a gate that keeps the current look.
+
+**Fails if:** more than two components change before the sample is confirmed, the source decides behavior or data, fidelity is assumed with no answer, or the revert touches other files.
 
 ## Rules by the method
 

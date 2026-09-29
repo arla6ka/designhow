@@ -6,6 +6,7 @@ Contents
 
 - The starter
 - What the check covers
+- Bans
 - Exempting stock files
 - Palette use is its own count
 - The allowlist
@@ -64,11 +65,16 @@ One command, such as `npm run check`, runs every rule below and exits nonzero on
 | `rule/stock-edit` | A file on the drift list, stock, customized or forked, whose hash differs from its row in `scripts/ui-drift.tsv` | yes |
 | `rule/unregistered-ui` | A file directly in the ui folder with no registry entry and no drift-list row | yes |
 | `rule/deprecated-import` | An import of a path the registry lists under `replaces`, or the config's `deprecated` | yes |
+| `rule/ban-<slug>` | A pattern the person banned, from the config's `bans`, in UI code or a docs page (Bans, below) | yes, once `bans` lists one |
 | `spec/*` | `node scripts/check-spec.mjs docs/system` | separate script |
 | docs | `node scripts/gen-docs.mjs --check`: every twin, the rules page, the index and `llms.txt` match a fresh generation | separate script |
 | `copy/*` | `node scripts/copy-check.mjs`, once `docs/system/writing.md` exists: a stale copy inventory, and strings that break the writing page (`writing-method.md`) | separate script |
 
 Add each `trap/` or `rule/` from the specs that a regex or AST query can see, under its own ID, with fixtures. A rule a script cannot see shows its own `Check:` clause, or "review", on the generated rules page.
+
+## Bans
+
+Every ban the person states in the Frame or later becomes one entry in `bans` in `scripts/check-system.config.json`, with its rule id, a pattern and the person's words: `{"id": "rule/ban-middle-dot", "pattern": "\u00b7", "why": "no middle-dot separators"}`. The check scans UI code with comments stripped, and the Markdown pages under `banDocs` (default `docs/system`), so specs, foundation pages and the showcase's copy are covered. A line holding `Don't:` or the ban's own id describes the ban and passes. A casing ban needs a pattern that sees the casing, such as a class or style that uppercases text. Add the entry in the same commit as the standing order, and see it fail once on a planted line.
 
 ## Exempting stock files
 

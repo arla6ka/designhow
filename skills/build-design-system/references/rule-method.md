@@ -64,6 +64,7 @@ Every rule rests on at least one ground, cited after `Evidence:`. A rule with no
 | Single use | `single use <file:line>, <why it generalizes>` | One call site, stated as one. Pair it with a measurement or a principle, or the rule ships as `NEEDS REVIEW` |
 | Measurement | `measured <value>, <evidence path or command>` | A probe, script or computed style on this app, saved under `.design-system/evidence/<component>/` and cited by path |
 | Principle | `principle <kind>: <name and mechanism>` | `wcag` with the criterion number, `platform` with the native element or OS convention, `heuristic` with the named usability heuristic, `input` with the input model. Say how it applies here |
+| Person | `person "<their words>", <date>` | A ban or preference the person stated in this run, quoted. It outranks the app's majority (`modes.md`, What decides a question) and needs no second ground |
 
 A principle sets a direction. A number comes from the app or a measurement, unless the principle states one, as a WCAG criterion does.
 
@@ -118,7 +119,7 @@ Each test cell holds `pass` or `n/a: <reason>`. The verdict is `ship`, `rewritte
 - **Taste without a reason.** A "because" that repeats the rule ("because it looks cleaner") fails the negation test.
 - **Rules no one can check.** If nothing can tell a violation from a pass, the rule is decoration.
 - **Overruling the majority without a gate.** A rule grounded only in a principle that contradicts what most call sites do changes shipped screens. It is a gate with the principle as its default, never a silent rule.
-- **Importing another product's rules.** A number or literal from another system is not a ground. Derive this app's own.
+- **Importing another product's rules unasked.** A number or literal from another system is not a ground. Derive this app's own. A public guide the person named sets a direction, like a principle, and never supplies wording or values.
 
 ## Worked derivation
 

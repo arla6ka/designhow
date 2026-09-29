@@ -21,7 +21,7 @@ Contents
 These words mean the same thing in every design.how skill. Other files point here instead of redefining them.
 
 - **Surface.** One route, or the shared layout every route renders (named `shared`), with its states from `surfaces.tsv`. It is the unit of capture, commit and verdict.
-- **Run branch.** `ds/<yyyy-mm-dd>-<route>`, cut from HEAD at the start. Every write lands on it. Nothing commits to the starting branch, and merging is the person's call.
+- **Run branch.** `ds/<yyyy-mm-dd>-<route>`, cut from HEAD at the start. Every write lands on it. Nothing commits to the starting branch, and merging is the person's call. When the person names a branch for this work, or created one for it in this session, that branch is the run branch and no other is cut. Record "run branch: <name>, the person's own" as a decision. Commits stay local until the person asks for a push or a PR.
 - **Identical-value swap.** A raw literal replaced by a token that holds exactly its value, proven by a pixel diff of 0 on every route it touches. It needs no clearance.
 - **Decision.** A choice a reversible change settles, made and recorded with its evidence. Fixes to broken behavior, adds-only accessibility changes and merges inside tolerance are decisions.
 - **Gate.** A product or brand choice a person could reasonably answer either way. It carries a default, the run applies that default on the run branch, and the person reverses it by naming it at merge.
@@ -58,7 +58,8 @@ Written in phase 1, with counts filled in after phase 2. The values below are on
 ```markdown
 ## Frame
 Mode: build. Foundation: raw (base-raw.md)
-Run branch: ds/2026-03-12-build, from main at 7dc8f3d. Nothing commits to main. Merging is the person's call.
+Run branch: ds/2026-03-12-build, from main at 7dc8f3d. Nothing commits to main. Nothing is pushed. Merging is the person's call.
+Bans: "no uppercase labels" (the person, 10:03). Design source: none named.
 Target: apps/web (CSS variables in styles/globals.css)
 Themes: light, dark (data-theme attribute)
 Viewports: 390, 1280 (the app's narrowest and widest supported widths)
@@ -81,15 +82,16 @@ One numbered list per run, one rule per line, pasted word for word into every br
 ## Standing orders
 1. Write only inside your brief's SCOPE.
 2. Tokens, generated files, the barrel, registry.json, the migration map and the check's config, allowlist and drift list belong to the coordinator. Report allowlist shrink candidates; never edit the allowlist.
-3. Use only the colors, fonts, shadows, gradients and motion the app already has.
+3. Use only the colors, fonts, shadows, gradients and motion the app already has, or that the design source the Frame follows draws.
 4. Baselines, fixtures and checks stay as written. Fix the code instead.
 5. Examples use inert data. No requests on mount.
 6. Report with the REPORT block, commands and exit codes pasted, not summarized.
 7. Return your report as your final message, as text. Write no report file, and never write into a coordinator file.
 8. Browser commands use absolute paths and your own browser session name, spelled out on every line.
-9. Commit only to the run branch, never to the branch the run started on.
+9. Commit only to the run branch, locally, never to a branch the person did not name for the work. No push or PR unless the person asked for one.
 10. Swap a raw literal for a token of exactly the same value on any route once pixdiff at tolerance 0 shows 0% for that route. Decided gate defaults land wherever they reach. Other changes outside the pilot land only on cleared surfaces. Each is one surface per commit, with before and after captures in .design-system/review/ (images gitignored, traces.tsv and reports committed) and a traces.tsv row.
 11. What the team needs after the run (scripts, config, specs, generated docs) goes in the repo, never only in .design-system/ or a skill folder.
+12. The person's bans, quoted below, hold in code, copy, docs, examples and the showcase, except on a Don't: line.
 ```
 
 ## Phases
@@ -175,9 +177,10 @@ Pilot traps: trap/loading-layout-shift, Send invite 101x36 idle and pending (evi
 Changed on ds/2026-03-12-build: /login (G-01), /settings/billing (G-02), /team (pilot). Unchanged: /empty and /404, which held no drifted values, and /reports, which the budget did not reach. Review page: .design-system/review/index.html.
 
 ### What exists
-Token source tokens/, generated styles/tokens.css (npm run tokens) · components components/ui/ · registry.json ·
-specs docs/system/ · twins, rules and llms.txt in public/ (scripts/gen-docs.mjs) · checks in npm run check ·
-AGENTS.md block · codemod scripts/codemod-system.mjs · migration map .design-system/migration-map.json
+- Token source tokens/, generated styles/tokens.css (npm run tokens)
+- Components components/ui/, registry.json, specs docs/system/
+- Twins, rules and llms.txt in public/ (scripts/gen-docs.mjs), checks in npm run check
+- AGENTS.md block, codemod scripts/codemod-system.mjs, migration map .design-system/migration-map.json
 
 ### Readiness
 | Component | Grade | Reason |
