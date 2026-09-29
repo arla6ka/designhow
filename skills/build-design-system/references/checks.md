@@ -120,6 +120,8 @@ Every report ends with "The check cannot see", from `--list-blind-spots` (`blind
 - Run it yourself and read its exit code. Before handoff, run it again on a clean clone: a fresh `git clone` of the branch with its dependencies installed, and no `.design-system/` or skill folder.
 - If the check uses a linter, a linter crash fails the check. Never drop the linter from the command to get a green result. Fix its config, or remove the rules that depend on it, and say so in a decision row.
 - A rule the repo's own linter can already express may live there instead, with the same rule ID in its message. For example, ESLint's `no-restricted-imports` with the deprecated import paths, or Stylelint's `color-no-hex` for CSS.
+- Every index, twin or table derived from other files is generated, never written by hand, and the check runs its generator with `--check`, which also fails on a duplicate rule ID. A hand-written index drifts within the hour.
+- List generated output in the formatter's ignore file, or format it in the generator with the repo's formatter and config, before writing or comparing. Otherwise the first formatter run makes `--check` fail for good. Run the formatter from the repo root with the repo's own binary, since one run inside a container or another folder may pick up another config. Formatters can move backticks in inline code that holds backticks, so write such examples as fenced blocks, and rerun the docs check after formatting.
 - If CI exists, read its config and confirm the command is in it. With no CI, say "runs locally, not in CI". Claiming the check blocks merges needs the CI config.
 
 ## Proving each rule

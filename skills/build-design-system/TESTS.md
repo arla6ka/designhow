@@ -267,6 +267,14 @@ Watch for a token file written before any inventory, a palette borrowed from a p
 
 **Fails if:** any edit passes, a Props table is hand-written, or `--check` needs the write run's flags.
 
+## Review, decide, fix
+
+**Input:** after a fan-out of four spec writers, one page says a menu opens instantly and another gives it a 150ms fade, two specs name the in-flight prop `loading` and `pending`, a showcase page uses a raw hex, and someone hand-edited the rules index.
+
+**Expect:** four read-only lens reports, each naming the commit it read, list the conflict with both `path:line` sides, the two prop names, the hex and the stale index. `docs/system/decisions.md` is committed with its precedence at the top and one decision per conflict, the rename included. The fix workers own disjoint files, write against the decided names, and the code worker lists the call sites its rename breaks. `gen-docs.mjs --check` fails on the hand-edited index until it is regenerated. Afterward both menu pages and the code agree.
+
+**Fails if:** a decision lives only in the run record, a fix worker edits a file another owns, a review changes a file, or the index stays hand-written.
+
 ## Generated docs
 
 **Input:** after phase 7, delete `## States` from one page, swap `## Props` and `## Variants` in another, hand-edit a twin, and add `.docs h2 { font-size: 32px }` to a docs site where an example renders an `h2`. Run once with a budget too small for everything.

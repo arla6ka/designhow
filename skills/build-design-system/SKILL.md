@@ -115,7 +115,8 @@ Docs are generated, never hand-written.
 1. Each family's spec landed with it in phase 4. Run `component-docs` for any canonical component still without one, with its code, variants and real uses, to the spec template. Write the foundation pages from `references/system-structure.md`, and the writing page by `references/writing-method.md`.
 2. Write `docs/system/coverage-gaps.md` from the open gates, each row with its "Meanwhile".
 3. Run `node scripts/gen-docs.mjs`, with `--name` on the first run. It writes the twins, the rules page, the index and `llms.txt`.
-4. An optional HTML docs site adds `check-docs-leak.mjs` to the check.
+4. Review, decide, fix (`references/coordinator-path.md`), then regenerate.
+5. An optional HTML docs site adds `check-docs-leak.mjs` to the check.
 
 ### 8. Handoff
 

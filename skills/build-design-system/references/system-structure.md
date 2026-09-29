@@ -74,6 +74,7 @@ docs/system/rule-tests/<component>.tsv        the four rule tests per rule (rule
 docs/system/copy-inventory.tsv   every user-facing string by slot (scripts/copy-check.mjs --extract)
 docs/system/vague-words.txt      optional additions to the words a rule may not lean on
 docs/system/coverage-gaps.md     hand-written list of undecided areas
+docs/system/decisions.md         settled conflicts between pages, specs and code, with precedence (coordinator-path.md, Review, decide, fix)
 scripts/gen-docs.config.json     gen-docs settings (name, paths), written by its first run
 public/system/<slug>.md          generated twins           (scripts/gen-docs.mjs)
 public/system/rules.md           generated rules page
@@ -294,7 +295,7 @@ Agents often skip available skills and docs, so a one-line pointer is not enough
 ## UI work
 
 Before you add or change a component, a screen, a style, a token, or copy in the UI:
-1. Read public/llms.txt, then public/system/rules.md and the twin in public/system/ of each component you touch.
+1. Read public/llms.txt, then public/system/rules.md, docs/system/decisions.md and the twin in public/system/ of each component you touch.
 2. If the task is in public/system/coverage-gaps.md, follow that row's Meanwhile and name the gap in your final message.
 3. Use a registry component and the tokens in styles/globals.css. If none fits, open a gate before writing one.
 Before you finish: run `npm run check`, and capture the changed screens at 390 and 1280.
@@ -325,6 +326,7 @@ Add these to the phase 5 check. The first three run on every system. The rest ap
 | Each component | The spec passes `check-spec.mjs`, its twin is fresh, and the registry entry points at the source, the spec and the twin |
 | Each pattern | Examples use registry components only, the named screens exist |
 | Rules and coverage gaps | `rules.md` is fresh, every coverage gap names what to do meanwhile |
+| Decisions | `docs/system/decisions.md` is committed, opens with its precedence, and every page and component each decision names says or does it |
 | Twins and `llms.txt` | `gen-docs.mjs --check` exits 0, every `llms.txt` link loads |
 | AGENTS.md | The load-conditions block names real paths and the real check command |
 | HTML docs site, optional | The Done line under Component pages holds, and `check-docs-leak.mjs` exits 0 |

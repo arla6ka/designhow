@@ -24,7 +24,7 @@ The shares are defaults. Move time between phases when the app calls for it, and
 | 5 Checks | 10% | `checks.md` | never cut. Hits past the cap go to the allowlist |
 | 6 Pilot | 10% | `browser.md` (Compare after a change, Measuring a loading state) | never cut |
 | 6 Surfaces, when cleared | 20% | "Surfaces on the run branch" below | the rest go in Next, by name |
-| 7 Docs | 10% | `system-structure.md`, `spec-template.md`, `writing-method.md`, and "Document everything" below when the ask names it | the HTML docs site, then families past the pilot's. Generated docs never |
+| 7 Docs | 10% | `system-structure.md`, `spec-template.md`, `writing-method.md`, "Review, decide, fix" below, and "Document everything" when the ask names it | the HTML docs site, then families past the pilot's. Generated docs and the review never |
 | 8 Handoff | 5% | `run-record.md` (Handoff report) | nothing |
 
 With no clearance, the surfaces share goes to components and docs, except the time decided gate defaults need. Landing them is exempt from the spawn stop, because it is cheap and it is what makes screens change.
@@ -60,6 +60,24 @@ By default, specs cover the pilot's families, and build adds the families the st
 3. Fan out one spec worker per family, with the spec-worker variant in `worker-brief.md` and `rule-method.md`, in the rolling window. A family whose code still needs work gets the family template instead.
 4. Review each report as usual. Also open its `rule-tests` file and rerun one two-agent test yourself.
 5. At the docs cap, stop starting families. Each family not reached is one handoff line naming its members and call-site counts.
+
+## Review, decide, fix
+
+Scopes stop two writers from touching one file, not from answering one question two ways on two pages. So after any fan-out of more than three writers, and again before the handoff, the run reviews itself, settles each conflict once, then fixes every side.
+
+1. **Review.** Four read-only workers side by side, one lens each, each writing `.design-system/review/lens-<name>.md` with the commit it read on its first line, a count table, then findings by topic, worst first. Every finding gives each side's `path:line` with a short quote, a severity (`conflict`, `wrong`, `stale`, `missing`, `nit`) and a proposed answer by the precedence below.
+   - Cross-page conflicts: the same topic answered two ways, such as durations, sizes, item limits, prop and tone names, the disabled pattern, empty values, or which component does a job. Also "use X instead" that points at nothing, and duplicate or dangling rule IDs.
+   - Specs against code: every prop, default, constant, token, key and ARIA claim a spec makes holds at HEAD.
+   - Format and bans: headings, the rule shape, counts, sources, and every ban in prose, tables and examples outside `Don't:` lines.
+   - Showcase against rules: the showcase obeys the rules it shows, since agents copy it.
+2. **Decide.** The coordinator writes one numbered decision per conflict in `docs/system/decisions.md`, committed, never only in the run record, since agents in later sessions read the repo. A rename of a prop, tone or token is a decision too, so every fix worker writes against the new name at once. Mark findings on files that changed since a lens's commit as stale.
+3. **Fix.** One worker per ownership set, side by side, each reading the decisions first and its lens findings second: code (the component folder, tokens, utility config), foundation and writing pages, specs split by an explicit file list, and the showcase. Docs workers never compile. The code worker lists every call site its renames break, with file and line, for the showcase worker. Then regenerate the indexes, run every check, look at a few pages in both themes, and commit per worker.
+
+The decisions page opens with its precedence: the person's direct words, then this page, then the foundation pages, then the specs, then the code. To change a decision, edit it here and fix every page and component it names in the same change. One line per decision:
+
+```markdown
+- D12 Menus: open and close instantly, with no fade. Menu, Select and Combobox pages say so, and their components use the `instant` motion preset. Overrides the dialog page, which is a different surface.
+```
 
 ## Sibling skills under this coordinator
 

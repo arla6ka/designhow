@@ -37,7 +37,7 @@ Three records, one writer each. `state.md` gets a Steps row and a decision row p
 | F6 | Components: the first family's worker, then one worker per family on disjoint paths | nothing new | `component-contract.md`, `traps.md` |
 | F7 | Checks: one worker. The check exits 0 before the pilot | `build-design-system/references/checks.md`, "The check has to run" | `checks.md` |
 | F8 | Pilot: one worker fixes every trap in the pilot's files, with before and after numbers | nothing new | `browser.md` "Compare after a change" |
-| F9 | Docs: spec workers on disjoint families | nothing new | `system-structure.md`, `spec-template.md` |
+| F9 | Docs: spec workers on disjoint families, then four review lenses, the decisions log and one fix wave by file ownership | `build-design-system/references/coordinator-path.md`, "Review, decide, fix" | `system-structure.md`, `spec-template.md` |
 | F10 | Build handoff, then check the build as Build step 3 | `build-design-system/references/run-record.md`, "Handoff report"; `system-structure.md`, "Done, page by page" | |
 | F11 | Decision row "Boss holds the migrate seat: flat host". Load `migrate-design-system`. Reconcile the audit's gates with the build's, and re-pin if the build moved what `plan.md` names | `migrate-design-system/SKILL.md`, "Procedure" steps 3 to 11 | |
 | F12 | Baselines and shared layer: one worker each, in sequence | nothing new | `verification.md` "Baselines", "Integration checks, runtime checks and the final sweep" |
