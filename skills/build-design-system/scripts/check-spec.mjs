@@ -32,9 +32,10 @@ import { fileURLToPath } from "node:url";
 import { execFileSync, execSync, spawnSync } from "node:child_process";
 
 const SECTIONS = ["Description", "Examples", "Variants", "States", "Props", "Usage", "Accessibility", "Tokens", "Related"];
-const USAGE = ["When to use", "When not to use", "Behavior", "Limits", "Content", "Best practices"];
+const USAGE = ["When to use", "When not to use", "Rules", "Content", "Anti-slop", "Limits"];
 const OLD_USAGE = ["Use it when", "Use something else when", "Writing", "Do and don't"];
-const RULE_SECTIONS = ["Behavior", "Limits", "Content", "Best practices"];
+const PREV_USAGE = ["Behavior", "Best practices"];
+const RULE_SECTIONS = ["Rules", "Content", "Anti-slop", "Limits"];
 // Foundation page slugs. Keep equal to FOUNDATIONS in gen-docs.mjs.
 const FOUNDATIONS = ["colors", "typography", "materials", "layout", "spacing", "radius", "elevation", "motion", "icons", "brand", "writing"];
 const HARD_WORDS = ["appropriate", "appropriately", "consistent", "consistently", "properly", "as needed", "user-friendly", "should consider"];
@@ -247,14 +248,16 @@ function usageSections(lines) {
 // Parse one rule section into definitions, citations, gated rules, Not applicable lines and other items.
 function parseRuleSection(sec) {
   const defs = [], cites = [], gated = [], badGated = [], na = [], review = [], other = [];
-  let cur = null, inDont = false;
+  let cur = null, inPair = null;
   for (const { t, line } of sec.lines) {
     const def = DEF_RE.exec(t);
-    if (def) { cur = { id: def[1], parts: [def[2].trim()], line, dont: null, section: sec.name }; defs.push(cur); inDont = false; continue; }
-    if (!t.trim() || /^#/.test(t)) { cur = null; inDont = false; continue; }
-    if (cur && /^\s{2,}Don't:/.test(t)) { cur.dont = { line, text: t.trim().replace(/^Don't:\s*/, "") }; inDont = true; continue; }
-    if (cur && /^\s{2,}\S/.test(t)) { if (inDont) cur.dont.text += " " + t.trim(); else cur.parts.push(t.trim()); continue; }
-    cur = null; inDont = false;
+    if (def) { cur = { id: def[1], parts: [def[2].trim()], line, dont: null, do: null, section: sec.name }; defs.push(cur); inPair = null; continue; }
+    if (!t.trim() || /^#/.test(t)) { cur = null; inPair = null; continue; }
+    // The Don't and Do pair under a rule, as a nested list: "  - Don't: `<snippet>`" then "  - Do: `<snippet>`"
+    const pair = /^\s{2,}(?:[-*]\s+)?(Don['\u2019]t|Do):\s*(.*)$/.exec(t);
+    if (cur && pair) { inPair = pair[1] === "Do" ? "do" : "dont"; cur[inPair] = { line, text: pair[2].trim() }; continue; }
+    if (cur && /^\s{2,}\S/.test(t)) { if (inPair) cur[inPair].text += " " + t.trim(); else cur.parts.push(t.trim()); continue; }
+    cur = null; inPair = null;
     const c = CITE_RE.exec(t);
     if (c) { cites.push({ id: c[1], line }); continue; }
     if (/^[-*] Gated:/i.test(t)) { const g = GATED_RE.exec(t); if (g) gated.push({ id: g[1], gate: g[2], line }); else badGated.push({ line, t: t.trim() }); continue; }
@@ -466,7 +469,7 @@ for (const file of files) {
     fail(h2[0]?.line ?? 1, "spec/sections", `H2s must be ${SECTIONS.join(", ")} in order. Found: ${names.join(", ") || "none"}`);
   const usage = h3.filter((s) => s.h2 === "Usage").map((s) => s.name);
   if (usage.join("|") !== USAGE.join("|"))
-    fail(body("Usage")?.start ?? 1, "spec/usage-h3", `Usage H3s must be ${USAGE.join(", ")}. Found: ${usage.join(", ") || "none"}${usage.some((u) => OLD_USAGE.includes(u)) ? ". Older headings: see system-structure.md, Where the older component-docs headings land" : ""}`);
+    fail(body("Usage")?.start ?? 1, "spec/usage-h3", `Usage H3s must be ${USAGE.join(", ")}. Found: ${usage.join(", ") || "none"}${usage.some((u) => OLD_USAGE.includes(u)) ? ". Older headings: see system-structure.md, Where the older component-docs headings land" : usage.some((u) => PREV_USAGE.includes(u)) ? ". Behavior and Best practices merge into Rules: see spec-template.md, Moving an older spec" : ""}`);
 
   // spec/usage-empty
   for (const name of USAGE) {
@@ -498,11 +501,10 @@ for (const file of files) {
     for (const d of lim.defs) { const p = ruleParts(d.text); if (!/\d/.test(p.action) || !p.grounds.some((g) => groundKind(g) === "measured")) fail(d.line, "spec/limits", `${d.id} is a limit with no measured ground`); }
     for (const r of lim.review) fail(r.line, "spec/limits", `'${r.t.slice(0, 60)}' is NEEDS REVIEW, still unanswered`);
   }
-  // spec/best-practices
-  const bp = parsed.get("Best practices");
-  if (bp) {
-    if (bp.defs.length > 5) fail(bySec.get("Best practices").line, "spec/best-practices", `Best practices holds ${bp.defs.length} rules, at most 5`);
-    for (const d of bp.defs) if (!d.dont || !d.dont.text.trim()) fail(d.line, "spec/best-practices", `${d.id} needs a Don't: line with the violating snippet`);
+  // spec/dont-do: every rule on a component page carries the pair a person and an agent both read
+  for (const d of defs) {
+    if (!d.dont || !d.dont.text.trim()) fail(d.line, "spec/dont-do", `${d.id} needs a "  - Don't:" line with the snippet that breaks it`);
+    if (!d.do || !d.do.text.trim()) fail(d.line, "spec/dont-do", `${d.id} needs a "  - Do:" line with the same case written correctly`);
   }
 
   // spec/placeholder, outside fenced blocks

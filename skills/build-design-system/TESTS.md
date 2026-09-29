@@ -195,9 +195,11 @@ Watch for a token file written before any inventory, a palette borrowed from a p
 
 **Input:** the normal repo after phase 4. A Select with 3 call sites, the longest list 9 options. A Tooltip with one call site. Plant one draft rule per defect in the Select spec: "Keep option lists short", "Use Select when appropriate", "Don't use placeholder text as a label", and a rule contradicting 3 of 3 call sites with only a principle behind it.
 
-**Expect:** every Behavior, Limits, Content and Best practices line has the rule shape from `references/rule-method.md`, with a `rule/select-<slug>` ID. The first two drafts are rewritten with a number, the third names what to do instead, and the fourth becomes a gate with the principle as its default. The Tooltip's rules say single use and add a measurement or principle, or ship `NEEDS REVIEW`. `docs/system/rule-tests/select.tsv` has a row per rule with all four tests, and the report counts shipped, rewritten and gated rules. `check-spec.mjs` fails each planted draft under its rule ID.
+**Expect:** every Rules, Content, Anti-slop and Limits line has the rule shape from `references/rule-method.md`, with a `rule/select-<slug>` ID and a nested Don't and Do line of real code. The first two drafts are rewritten with a number, the third names what to do instead, and the fourth becomes a gate with the principle as its default. The Tooltip's rules say single use and add a measurement or principle, or ship `NEEDS REVIEW`. `docs/system/rule-tests/select.tsv` has a row per rule with all four tests, and the report counts shipped, rewritten and gated rules. `check-spec.mjs` fails each planted draft under its rule ID.
 
-**Fails if:** a rule ships with no ground, a vague word survives, a don't has no instead, a rule overrules the app's majority with no gate, or a two-agent test is claimed with no subagent run in the transcript.
+**Fails if:** a rule ships with no ground or no Don't and Do pair, a vague word survives, a don't has no instead, a rule overrules the app's majority with no gate, or a two-agent test is claimed with no subagent run in the transcript.
+
+**Timing version:** the ask says the system is for agents. The first family's commit holds its component, tests, showcase page and spec with every rule in the final shape, and the person sees that page before any other family starts. Every later family lands its rules in its own commit, and phase 7 writes no rule by hand.
 
 ## Limits by measurement
 
@@ -257,9 +259,9 @@ Watch for a token file written before any inventory, a palette borrowed from a p
 
 ## Spec check proves itself
 
-**Input:** after phase 4, blank the Trigger cell of one state row, change a precedence line to "Loading and invalid: which one?", edit a line a committed spec cites, add a call site the spec's count misses, and add a prop with a doc comment to a component's props type. Then drop `Check:` from one rule, add "as needed" to another, delete one example file, and delete one `rule-tests` row.
+**Input:** after phase 4, blank the Trigger cell of one state row, change a precedence line to "Loading and invalid: which one?", edit a line a committed spec cites, add a call site the spec's count misses, and add a prop with a doc comment to a component's props type. Then drop `Check:` from one rule, add "as needed" to another, delete one rule's `Do:` line, delete one example file, and delete one `rule-tests` row.
 
-**Expect:** `check-spec.mjs` exits 1 and names each line under `spec/states-empty`, `spec/precedence`, `spec/stale-cite`, `spec/call-sites`, `spec/rule-shape`, `spec/vague-word`, `spec/examples` and `spec/rule-tests`. `gen-docs.mjs --check` fails until gen-docs reruns, and the regenerated Props table carries the doc comment. Restoring the files gives exit 0. The check runs from the CI command.
+**Expect:** `check-spec.mjs` exits 1 and names each line under `spec/states-empty`, `spec/precedence`, `spec/stale-cite`, `spec/call-sites`, `spec/rule-shape`, `spec/vague-word`, `spec/dont-do`, `spec/examples` and `spec/rule-tests`. `gen-docs.mjs --check` fails until gen-docs reruns, and the regenerated Props table carries the doc comment. Restoring the files gives exit 0. The check runs from the CI command.
 
 **Fails if:** any edit passes, a Props table is hand-written, or `--check` needs the write run's flags.
 

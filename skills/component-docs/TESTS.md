@@ -228,9 +228,9 @@ Watch for a made-up section order, usage examples that sound right and were not 
 
 **Input:** "document the Select" in a repo with two call sites (6 and 9 options), a stories file, and a running dev server.
 
-**Expect:** Usage has the six H3s in order. Every When not to use line names another component and says "instead". Every Behavior, Limits, Content and Best practices line has a `rule/select-<slug>` ID, a condition, a reason, an `Evidence:` ground (call sites, a measurement with its path, or a named principle) and a `Check:`. The Limits number comes from growing the option count on a real instance, sits below the break, and cites the saved file. Each Best practices rule has a `Don't:` line. Guessed at lists any rule that rests on a principle alone.
+**Expect:** Usage has the six H3s in order: When to use, When not to use, Rules, Content, Anti-slop, Limits. Every When not to use line names another component and says "instead". Every rule line has a `rule/select-<slug>` ID, a condition, a reason, an `Evidence:` ground (call sites, a measurement with its path, or a named principle) and a `Check:`, then a nested `Don't:` and `Do:` line of real code against the component's import. The Limits number comes from growing the option count on a real instance, sits below the break, and cites the saved file. Anti-slop comes from one fresh agent's attempt compared with the call sites, or says `Not applicable` with the reason. Guessed at lists any rule that rests on a principle alone.
 
-**Fails if:** a rule says "appropriate", "consistent" or "as needed", a limit has no measurement and no `NEEDS REVIEW (not measured)`, a don't has no instead, or a rule states a number no source or measurement gave.
+**Fails if:** a rule says "appropriate", "consistent" or "as needed", a limit has no measurement and no `NEEDS REVIEW (not measured)`, a don't has no instead, a rule lacks its Don't or Do line, a snippet uses a prop the component does not have, or a rule states a number no source or measurement gave.
 
 ## Rule method without the sibling
 

@@ -165,7 +165,7 @@ This is the skeleton every component page and its twin follow. `component-docs` 
 3. `## Variants`. One subsection per variant axis (size, tone, shape). Each shows every value side by side in one live example. When two axes interact, add one matrix example, the way Geist compares every type at every size.
 4. `## States`. One live example per state a reader can trigger: loading, disabled, invalid, open, and so on. Each says what the user can do in that state. When states overlap, say which wins.
 5. `## Props`. A table generated from the component's types by `scripts/props-table.mjs`, which `gen-docs.mjs` runs for every component page whose registry entry names a source file: name, type, default, and a one-line purpose from the prop's doc comment. Props inherited from the DOM or a library are summarized in one "Also accepts" line. The spec's Props section holds notes only, and a hand-written table there is replaced in the twin. The script uses the repo's `typescript` when it resolves and a regex over the props type when it does not, so keep `typescript` installed wherever the check runs.
-6. `## Usage`. Rules for choosing and using the component, in six H3s in this order: `### When to use`, `### When not to use` (each line names the alternative), `### Behavior`, `### Limits`, `### Content`, `### Best practices`. Every rule line has the shape and a ground from `references/rule-method.md`.
+6. `## Usage`. Rules for choosing and using the component, in six H3s in this order: `### When to use`, `### When not to use` (each line names the alternative), `### Rules`, `### Content`, `### Anti-slop`, `### Limits`. Every rule line has the shape, a ground and its Don't and Do pair from `references/rule-method.md`. The page renders each pair labeled, below its rule.
 7. `## Accessibility`. The native element or behavior primitive it rests on, the keyboard path (keys, effect, where focus goes after), the accessible name in every variant, and contrast ratios measured in each theme. Mark anything not verified `NEEDS REVIEW`.
 8. `## Tokens`. The semantic tokens the component reads, taken from its styles, each linked to its foundation page.
 9. `## Related`. Each alternative, with the situation where it is the better pick.
@@ -180,7 +180,8 @@ Where the older `component-docs` headings land, for teams moving existing entrie
 | Behavior | States |
 | Use it when, Use something else when | Usage: When to use, When not to use |
 | Writing | Usage: Content |
-| Do and don't | Usage: Best practices, each pair rewritten as a rule |
+| Do and don't | Usage: Rules, each pair rewritten as a rule with its Don't and Do lines |
+| Behavior and Best practices, as Usage H3s in earlier specs | Usage: Rules (`spec-template.md`, Moving an older spec) |
 
 Examples import from the same path product code uses. A copy of the component inside the docs folder is a defect, because it drifts on the first change. Render both the component and its source text from the one example file, so every code block on the page compiles.
 

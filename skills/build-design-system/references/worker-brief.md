@@ -70,6 +70,8 @@ Reference implementation: <path to the first family's component, examples, tests
 Contract: <paste component-contract.md, or give its path if the worker can read it>
 Foundation and base reference: <foundation from triage, and base-shadcn.md, base-library.md or base-raw.md>
 Spec: <paste spec-template.md and spec-example-combobox.md, or their paths>
+Exemplar spec: <path to the first family's finished spec>. Match its headings,
+rule shape and depth. The template is the fallback only when none exists
 Rule method: <path to rule-method.md, and writing-method.md when the family renders copy>
 Traps for this family: <paste the rows from traps.md>
 Gates that touch this family and their defaults: <list, or "none">
@@ -79,8 +81,9 @@ ACCEPTANCE
 - Example files per the spec's Example files table: every variant value and state
   with a visual or behavior difference, and one composition, each complete and
   importing from <import path>
-- Every Usage rule has its ID, shape, ground and check (rule-method.md), and a
-  row in docs/system/rule-tests/<component>.tsv with verdict ship or gate
+- Every Usage rule has its ID, shape, ground, check and Don't and Do lines
+  (rule-method.md), and a row in docs/system/rule-tests/<component>.tsv with
+  verdict ship or gate. The rules land with the component, not later
 - Tests pass: <test command>
 - Every trap you mark fixed has measured before and after numbers in
   .design-system/evidence/<family>/, such as the button box idle and pending
@@ -163,6 +166,8 @@ Real uses: <paste call sites: file:line, screen, variant, state>
 Traps for this family: <paste the rows from traps.md>
 Gates and decisions that touch it, with defaults: <list, or "none">
 Template and worked example: <paths to spec-template.md and spec-example-combobox.md>
+Exemplar spec: <path to the first family's finished spec>. Match its headings,
+rule shape and depth. The template is the fallback only when none exists
 Rule method: <paths to rule-method.md, and writing-method.md with docs/system/writing.md when it exists>
 Copy rows for these components: <paste their rows from docs/system/copy-inventory.tsv, or "none yet">
 Foundation and base reference: <foundation from triage, and the base-*.md path>

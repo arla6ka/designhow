@@ -8,13 +8,14 @@ Contents
 - The fixed questions
 - The template
 - Answering well
+- Moving an older spec
 - What the check enforces
 
 ## Where specs live and who fills them
 
 One file per component at `docs/system/<component>.md` in the app's repo, the path `system-structure.md` gives the entry. The page and its Markdown twin render from it.
 
-In build, harden and seed modes, the coordinator fills the first spec itself as the pattern. Then it sends one component per worker with `references/worker-brief.md`, pasting this template, `rule-method.md` for the Usage rules, `spec-example-combobox.md` for depth and method, and the family's trap rows from `traps.md`. A worker fills the spec from the component's code, call sites and rendered states in this app. It never copies answers from the example, which describes a different app.
+In build, harden and seed modes, the coordinator fills the first spec itself as the pattern, in the same commit as its component, and shows its page to the person before any fan-out. Then it sends one component per worker with `references/worker-brief.md`, naming that first spec as the exemplar, pasting this template, `rule-method.md` for the Usage rules, `spec-example-combobox.md` for depth and method, and the family's trap rows from `traps.md`. A worker fills the spec from the component's code, call sites and rendered states in this app. It never copies answers from the example, which describes a different app.
 
 ## The fixed questions
 
@@ -26,7 +27,7 @@ Every spec answers each of these, or marks it `Not applicable: <reason>` or `NOT
 4. When two states hold at once, which wins? Every pair that can co-occur has an answer.
 5. Which keys do what, and where does focus go after open, close, select, submit and error?
 6. What role, accessible name, ARIA states and announcements does it expose, in every variant?
-7. The ten questions in `rule-method.md`, each answered as a rule, a row or `Not applicable: <reason>`.
+7. The eleven questions in `rule-method.md`, each answered as a rule, a row or `Not applicable: <reason>`.
 8. Which tokens does it read, per part and per state?
 9. What does a script check, and what does a person check by hand?
 10. Which traps from `traps.md` apply to its family, and where does the spec answer each?
@@ -88,19 +89,26 @@ Real uses, <n> call sites (<the rg command that counted them>):
 ### When not to use
 - <situation>. Use <Other component> instead.
 
-### Behavior
+### Rules
 - `rule/<component>-<slug>`: When <condition>, <action>, because <reason>. Evidence: <ground>. Check: <lint | test | probe | review> <what runs>.
-
-### Limits
-- `rule/<component>-<slug>`: When <count, length or size> exceeds <number>, <alternative> instead, because <what breaks>. Evidence: measured <value>, <evidence path>. Check: <lint | test | probe | review> <what runs>.
+  - Don't: `<the falsify snippet, one line>`
+  - Do: `<the same case written correctly, one line>`
 
 ### Content
 - Follows `rule/writing-<slug>`.
 - `rule/<component>-<slug>`: When <slot> <condition>, <action with a literal or template>, because <reason>. Evidence: <ground>. Check: <lint | test | probe | review> <what runs>.
+  - Don't: `<the wrong copy in the real component>`
+  - Do: `<the right copy>`
 
-### Best practices
-- `rule/<component>-<slug>`: When <condition>, <action>, because <reason>. Evidence: <ground>. Check: <lint | test | probe | review> <what runs>.
-  Don't: `<the falsify snippet, one line>`
+### Anti-slop
+- `rule/<component>-<slug>`: When <the case an agent gets wrong by default>, <action>, because <reason>. Evidence: <ground>. Check: <lint | test | probe | review> <what runs>.
+  - Don't: `<what an agent writes by default>`
+  - Do: `<what this system wants>`
+
+### Limits
+- `rule/<component>-<slug>`: When <count, length or size> exceeds <number>, <alternative> instead, because <what breaks>. Evidence: measured <value>, <evidence path>. Check: <lint | test | probe | review> <what runs>.
+  - Don't: `<the case past the limit>`
+  - Do: `<the alternative>`
 
 ## Accessibility
 Rests on <native element or library primitive>.
@@ -131,13 +139,17 @@ Rests on <native element or library primitive>.
 - **Precedence.** Write one line per pair of states that can hold at once. The usual ones are loading with invalid, disabled with focus, open with disabled, read-only with invalid and selected with disabled. Each line says which state "wins", or "both show" when the two stack without conflict. A line that asks a question, says TBD, or has no winner fails. When only one state can hold at a time, write `Not applicable: <why the states exclude each other>`, as the whole list or on one pair's line, such as `- Filled and empty: Not applicable: a field is one or the other`. `NEEDS REVIEW` still fails, because the question is open. It is how a draft waits for a person.
 - **Checked by.** Use `test`, `lint`, `screenshot`, `a11y scan`, `snapshot` or `by hand`. "By hand" is honest and goes on the verifier's list. A blank is not.
 - **Traps.** Every trap id in `traps.md` for the component's family appears on the Description line, and the section that answers it says so. A trap that does not apply is listed with `n/a` and the reason.
-- **Usage.** Follow `rule-method.md`. When to use and When not to use hold situations, not rules, and every When not to use line names a registry component or a coverage-gaps row with "instead". Behavior, Limits, Content and Best practices hold rule lines only, plus citation lines such as ``- Follows `rule/writing-verb-chain`.`` for rules another page owns, and gated lines (below). Best practices holds at most five rules, on composition, placement and density, each with the one-line violating snippet from its falsify test. An H3 with nothing to say reads `Not applicable: <reason>`. Every rule has a row in `docs/system/rule-tests/<component>.tsv`.
+- **Usage.** Follow `rule-method.md`. When to use and When not to use hold situations, not rules, and every When not to use line names a registry component or a coverage-gaps row with "instead". Rules, Content, Anti-slop and Limits hold rule lines only, plus citation lines such as ``- Follows `rule/writing-verb-chain`.`` for rules another page owns, and gated lines (below). Every rule carries a `Don't:` and a `Do:` line as a nested list, Don't first, each one line of real code against the system's import path, or real copy. The Don't is the falsify snippet. Counts that held up in practice: Rules 6 to 12, Content 2 to 6, Anti-slop 4 to 8, Limits 2 to 5. An H3 with nothing to say reads `Not applicable: <reason>`. Every rule has a row in `docs/system/rule-tests/<component>.tsv`.
 - **Gated rules.** A rule the four tests sent to a gate (`rule-method.md`) leaves the page as a definition but keeps its place as one line, on component and foundation pages alike: ``- Gated: `rule/<page>-<words>` (G-NN). <the question in plain words>``, such as ``- Gated: `rule/badge-no-icon` (G-04). Should a badge carry an icon beside its label?``. Its `rule-tests` row has the verdict `gate` and names the gate in `notes`. Nothing may cite a gated rule. A gated line counts as an answer for `spec/usage-empty`.
 - **Example files.** One row per file. Covers is `default`, `<axis>=<value>`, `state:<state>` (the registry's state name), `composition:<Parent>` or `matrix:<axis>,<axis>`. Every registry variant value and state is covered, or has a row whose File cell reads `Not applicable: <reason>`, such as a value that looks and behaves like default. Add at least one composition row, inside a parent a real call site uses, and one matrix row when the registry lists two or more variant axes. Each file is a complete module in the component's language: a first-line comment holding `Caption:` and the caption, an import of the component from the registry's import path, and one default-exported example with inert data.
 - **Real uses.** Count them with `rg -n "<Name\b"` in the check's include folders, outside the component's own folder, and cite each as `file:line`. `check-spec.mjs` recounts the tags and rereads every cited line at close, so a spec written before a surface moved fails and gets rerun.
 - **Numbers.** Measured values only. A contrast ratio comes from a tool run on the rendered page, per `browser.md`. Otherwise write `NEEDS REVIEW`.
 
 `spec-example-combobox.md` shows the depth expected and how each answer was found. Copy the method, never its values.
+
+## Moving an older spec
+
+A spec written to the earlier Usage H3s (Behavior, Limits, Content, Best practices) moves in one commit per family: Behavior and Best practices rules go under Rules in that order, Limits moves last, Anti-slop is added, and every rule gains its Don't and Do pair. IDs never change. Run `check-spec.mjs` on the family before and after.
 
 ## What the check enforces
 
@@ -146,7 +158,7 @@ Rests on <native element or library primitive>.
 | Rule | Fails when |
 |---|---|
 | `spec/sections` | The nine H2s are missing, renamed, added to or out of order |
-| `spec/usage-h3` | Usage lacks its six H3s in order: When to use, When not to use, Behavior, Limits, Content, Best practices |
+| `spec/usage-h3` | Usage lacks its six H3s in order: When to use, When not to use, Rules, Content, Anti-slop, Limits |
 | `spec/usage-empty` | An H3 under Usage has no rule, citation, gated or `Not applicable: <reason>` line, or When to use or When not to use has no item |
 | `spec/rule-id` | A rule line's ID is not `rule/<component>-<slug>`, or the ID is defined twice in `docs/system` |
 | `spec/rule-shape` | A rule line lacks "When", "because", an `Evidence:` ground, a `Check:` value, or a checkable token, or a `Gated:` line breaks its format |
@@ -155,7 +167,7 @@ Rests on <native element or library primitive>.
 | `spec/rule-cite` | A `Follows` line cites a rule ID no page in `docs/system` defines |
 | `spec/alternative` | A When not to use line names no registry component and no coverage-gaps row |
 | `spec/limits` | A Limits rule has no number or no `measured` ground |
-| `spec/best-practices` | Best practices holds more than five rules, or a rule with no `Don't:` line |
+| `spec/dont-do` | A rule has no nested `Don't:` line or no `Do:` line under it |
 | `spec/rule-tests` | A rule has no `rule-tests` row, a test cell is not `pass` or `n/a: <reason>`, or its verdict is not `ship` or `rewritten` |
 | `spec/examples` | A variant value or state has no Example files row, a composition row is missing, or a listed file is missing or incomplete |
 | `spec/placeholder` | A `<...>` from the template is left in |

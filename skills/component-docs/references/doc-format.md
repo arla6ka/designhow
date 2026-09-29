@@ -13,7 +13,7 @@ Every entry uses these nine H2s in this order. Usage holds six fixed H3s, Exampl
 3. `## Variants`
 4. `## States`
 5. `## Props`
-6. `## Usage`, holding `### When to use`, `### When not to use`, `### Behavior`, `### Limits`, `### Content` and `### Best practices`
+6. `## Usage`, holding `### When to use`, `### When not to use`, `### Rules`, `### Content`, `### Anti-slop` and `### Limits`
 7. `## Accessibility`
 8. `## Tokens`
 9. `## Related`
@@ -40,18 +40,18 @@ When the current behavior looks like a bug, write it as it is, then a `Defect:` 
 
 **Usage.** Rules a designer or agent follows before reaching for the component. Derive them with `../build-design-system/references/rule-method.md` when the sibling skill is installed. Without it, the method in short:
 
-- Ask per component: its job, what it is not for and what to use instead, where it breaks (length, count, viewport, input method, locale, data states), its limits, copy slots, states over time, input methods, accessibility contract, what it may contain or sit inside, and density and placement.
+- Ask per component: its job, what it is not for and what to use instead, where it breaks (length, count, viewport, input method, locale, data states), its limits, copy slots, states over time, input methods, accessibility contract, what it may contain or sit inside, density and placement, and what a fresh agent gets wrong with it by default.
 - Ground every rule in the app (two or more real call sites, or a stated single use), a measurement on the app (a probe or computed style, with its path), or a named principle (an accessibility criterion, a platform convention, a usability heuristic, an input model). A rule with no ground is cut.
-- Write each rule as `` - `rule/<component>-<slug>`: When <condition>, <action>, because <reason>. Evidence: <ground>. Check: <lint | test | probe | review> <what runs>. `` A don't says what to do instead. These words fail a rule: "appropriate", "consistent", "properly", "as needed", "user-friendly", "should consider".
+- Write each rule as `` - `rule/<component>-<slug>`: When <condition>, <action>, because <reason>. Evidence: <ground>. Check: <lint | test | probe | review> <what runs>. `` A don't says what to do instead. Under every rule, a nested `- Don't:` line with one line of real code that breaks it, then a `- Do:` line with the same case written correctly. These words fail a rule: "appropriate", "consistent", "properly", "as needed", "user-friendly", "should consider".
 - Test each rule before it ships. Write a violating snippet and confirm the check or a reviewer catches it. Negate the rule, and sharpen it if the opposite sounds as fine. Give it with one task to two fresh agents, and sharpen it if they diverge. Sweep every call site: each follows it or is a listed exception.
 
 The six H3s:
 
 - *When to use / When not to use.* A few lines each, two to four by default. Each is a situation a designer is in ("the user just finished an action and stays on the screen"), never a property of the component ("it floats"). Each When not to use line names the other component and says "instead". Neither is empty.
-- *Behavior.* Rules on states over time, input methods, focus and feedback.
-- *Limits.* Rules with a number set below a measured break, or `NEEDS REVIEW (not measured)` and what to measure.
+- *Rules.* Rules on states over time, input methods, focus, feedback, composition, placement and density.
 - *Content.* Rules per copy slot: casing, template, length, forbidden words. When the repo has `docs/system/writing.md`, cite its rule IDs instead of restating them. A copy rule never overrides a trap in `build-design-system/references/traps.md`. The trap's fix wins, and a conflicting copy majority becomes a gate. Pending text, for one, goes in a status region or next to the control and never replaces the action's label.
-- *Best practices.* Rules on composition, placement and density, at most five (the limit `check-spec.mjs` enforces on specs). Each is followed by an indented `Don't:` line holding the violating snippet from its test.
+- *Anti-slop.* Rules for what an agent writes by default and this app does not, found by giving one fresh agent a task with the component and comparing its code with the call sites. `Not applicable: <reason>` when nothing differs.
+- *Limits.* Rules with a number set below a measured break, or `NEEDS REVIEW (not measured)` and what to measure.
 
 **Accessibility.** The native element or library primitive it rests on, the role, which keys reach and operate it, where focus goes after, the screen reader output and its timing, and the accessible name in each variant. Say which facts came from code and which were observed on a rendered story. State a keyboard path only when a native element or named primitive fixes it, or the keys were pressed on a story. Mark anything the sources do not settle `NEEDS REVIEW`. Never write a contrast ratio no tool measured.
 
@@ -129,19 +129,29 @@ Up to three toasts stack, and a fourth removes the oldest. Code cuts a message a
 - The message is about a single form field. Use Field error instead, next to the field
 - Someone else caused the event. Use Inbox instead, so it waits for the user
 
-### Behavior
+### Rules
 - `rule/toast-error-persists`: When `tone` is `"error"`, keep the toast until it is closed or its action runs instead of timing it out, because its "Retry" is the only path back to the failed request, and `Toast.tsx:57` already ignores `duration` for it. Evidence: single use `RemoveMember.tsx:41`; principle heuristic: help users recognize, diagnose and recover from errors. Check: review.
-
-### Limits
-- `rule/toast-message-length`: When a message runs past 60 characters, put the detail on the screen instead of in the toast, because at 360px the toast cuts the message at two lines from 61 characters. Evidence: measured on the `SuccessWithUndo` story at 360px, ellipsis from 61 characters. Check: probe on `tone-success.tsx` at 360px.
+  - Don't: `<Toast tone="error" duration={6000} message="Could not remove Dana" />`
+  - Do: `<Toast tone="error" message="Could not remove Dana" action={{ label: "Retry", onAction: retry }} />`
+- `rule/toast-one-per-bulk`: When one action changes several items, send one toast with the count, as in "{count} cards archived", instead of one per item, because the stack holds 3 and drops the oldest before anyone reads it. Evidence: measured on the stories, a 4th toast removed the 1st (`MAX_TOASTS = 3`, `Toaster.tsx:12`). Check: review.
+  - Don't: ``cards.forEach((c) => toast({ message: `${c.title} archived` }))``
+  - Do: ``toast({ message: `${cards.length} cards archived` })``
 
 ### Content
 - `rule/toast-error-names-object`: When `tone` is `"error"`, name the object that failed, as in "Could not remove {name}", instead of a generic failure, because the user must know what to retry. Evidence: single use `RemoveMember.tsx:41`. Check: review.
+  - Don't: `<Toast tone="error" message="Something went wrong" />`
+  - Do: `<Toast tone="error" message="Could not remove Dana" />`
 - `rule/toast-action-label`: When a toast has an action, its label is "Undo" or "Retry" instead of "Dismiss", because the close button already dismisses. Evidence: app 2/2 action call sites. Check: lint on `action.label` string values.
+  - Don't: `action={{ label: "Dismiss", onAction: close }}`
+  - Do: `action={{ label: "Undo", onAction: undoMove }}`
 
-### Best practices
-- `rule/toast-one-per-bulk`: When one action changes several items, send one toast with the count, as in "{count} cards archived", instead of one per item, because the stack holds 3 and drops the oldest before anyone reads it. Evidence: measured on the stories, a 4th toast removed the 1st (`MAX_TOASTS = 3`, `Toaster.tsx:12`). Check: review.
-  Don't: ``cards.forEach((c) => toast({ message: `${c.title} archived` }))``
+### Anti-slop
+Not applicable: a fresh agent given "confirm that a card moved" wrote the same call as the Board screen, so nothing differs yet.
+
+### Limits
+- `rule/toast-message-length`: When a message runs past 60 characters, put the detail on the screen instead of in the toast, because at 360px the toast cuts the message at two lines from 61 characters. Evidence: measured on the `SuccessWithUndo` story at 360px, ellipsis from 61 characters. Check: probe on `tone-success.tsx` at 360px.
+  - Don't: `<Toast message="Card moved to Done. Its due date and assignee were cleared" />`
+  - Do: `<Toast message="Card moved to Done" />`, with the cleared fields shown on the card
 
 ## Accessibility
 From code: Neutral and Success render with `role="status"` and announce politely. Error renders with `role="alert"` and interrupts. The toast region is a landmark named "Notifications". Observed on the `SuccessWithUndo` story: the accessibility tree shows a status named "Card moved to Done", focus stayed on the page, and Escape closed it once focus was inside. NEEDS REVIEW. No source says whether six seconds is long enough for users who need more time, and no contrast was measured.
@@ -188,7 +198,7 @@ Elevation: `--elevation-overlay`
 - [ ] Every prop exists in the code read, with its real default
 - [ ] Every When not to use line names another component and says "instead"
 - [ ] Every rule line has an ID, condition, reason, `Evidence:` and `Check:`, and survived the four tests
-- [ ] Each Best practices rule has a `Don't:` line the check or a reviewer would catch
+- [ ] Every rule has a `Don't:` line the check or a reviewer would catch, and a `Do:` line with the same case written correctly
 - [ ] Example files covers the default, every variant value and state, and one composition, or says why not per row
 - [ ] Accessibility names the role, keys and screen reader output, or marks them `NEEDS REVIEW`
 - [ ] Every token name matches its source exactly, with palette use kept apart

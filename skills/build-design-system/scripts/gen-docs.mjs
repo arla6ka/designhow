@@ -297,7 +297,7 @@ function definitions(text) {
   for (const l of stripFences(text).split("\n")) {
     const m = /^\s*[-*]\s*`?((?:trap|rule)\/[a-z0-9-]+)`?\s*:\s*(.+)$/.exec(l);
     if (m) { cur = { id: m[1], text: m[2].trim() }; out.push(cur); continue; }
-    if (cur && /^\s{2,}\S/.test(l) && !/^\s*Don't:/.test(l) && !/^\s*[-*] /.test(l)) { cur.text += " " + l.trim(); continue; }
+    if (cur && /^\s{2,}\S/.test(l) && !/^\s*(Don't|Do):/.test(l) && !/^\s*[-*] /.test(l)) { cur.text += " " + l.trim(); continue; }
     cur = null;
   }
   return out;

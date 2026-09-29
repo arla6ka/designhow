@@ -27,7 +27,7 @@ Start the output with one status line: `Status: complete`, `Status: complete wit
 4. **Check the stops.** If one applies, return the stop shape and end the run.
 5. **Trace and compare.** Note which source supplied each example, variant, prop, state and token. Done when every difference between sources that state the same fact is a line under Conflicts.
 6. **Fill each section** from sourced facts, in order. Copy token names and example code character for character. Write each state as what the user can do or what the component does. When two states can hold at once, settle which wins from the built styles or a browser read before marking it `NEEDS REVIEW`.
-7. **Write Usage rules last,** by the rule method in `doc-format.md` (Usage). Each rule has a shape, a ground and a check, and passes the four tests or is cut.
+7. **Write Usage rules last,** by the rule method in `doc-format.md` (Usage). Each rule has a shape, a ground, a check and a Don't and Do pair, and passes the four tests or is cut.
 8. **Close out.** Fill Guessed at, then fix each failure on the review checklist.
 9. **Spec check.** The entry is a spec when the caller asks for one or the repo's entries already have a `### State precedence` section. Fill it as `doc-format.md` (When the entry is a spec) says. Pipe the entry to `node scripts/check-spec.mjs -` from the repo root, or `build-design-system/scripts/check-spec.mjs` when the repo has none. Fix each failure from a source or mark the gap. Never invent a state or a precedence to pass. Put the check's last line in the status block.
 

@@ -115,30 +115,59 @@ gen-docs writes the table from the root and `ComboboxInput` prop types. `showCle
 - The person picks several values. Use the coverage-gaps row "Multi-value choice" instead
 - The person picks an action to run, not a value for a field. Use Command instead
 
-### Behavior
+### Rules
 - `rule/combobox-debounce`: When the input text changes, start the search 150ms after the last keystroke instead of on every keystroke, because unthrottled responses arrived out of order and listed an older query's results. Evidence: app 3/3 async call sites use `SEARCH_DELAY_MS`; measured 6 requests with one out of order without the delay, 1 with it, .design-system/evidence/combobox/debounce-network.txt. Check: test `customer-picker.test.tsx` "sends one request per pause".
+  - Don't: `<ComboboxInput onChange={(e) => search(e.target.value)} />`
+  - Do: `<ComboboxInput onChange={(e) => searchLater(e.target.value)} />`, with `searchLater` debounced by `SEARCH_DELAY_MS`
 - `rule/combobox-keep-results`: When a search is in flight, keep the previous results listed with `aria-disabled` instead of clearing the list, because clearing moves the list height between 0 and 216px on every keystroke. Evidence: measured 0 to 216px per keystroke when cleared, constant when kept, .design-system/evidence/combobox/keystroke-height.json; app 3/3 async call sites. Check: test `customer-picker.test.tsx` "keeps results while loading".
+  - Don't: `{isLoading ? null : <ComboboxList items={results} />}`
+  - Do: `<ComboboxItem value={r} aria-disabled={isLoading}>{r.name}</ComboboxItem>`
 - `rule/combobox-failure-keeps-value`: When a search fails, keep the selected value and the typed text and show a "Retry" button in the status row, because the person can recover without retyping. Evidence: principle heuristic: help users recognize, diagnose and recover from errors, applied as `trap/field-keeps-input`; app 3/3 async call sites. Check: test "keeps value on failed search".
+  - Don't: `onError={() => { setValue(null); setQuery(""); }}`
+  - Do: `onError={() => setStatus("failed")}`
 - `rule/combobox-archived-disabled`: When a record is archived, list it with `aria-disabled` and the suffix "Archived" instead of hiding it, because a selected archived record then keeps a row that explains why the field is invalid. Evidence: app 11/11 call sites receive archived records from the API; gate G-07 default. Check: test "archived customer shows as disabled".
+  - Don't: `items={customers.filter((c) => !c.archived)}`
+  - Do: `<ComboboxItem value={c} aria-disabled={c.archived}>{c.name}</ComboboxItem>`
 - `rule/combobox-escape`: When `Escape` is pressed with the list open, close it and keep the typed text, and when the list is closed, reset the text to the selected value, because screen reader users expect that keyboard model. Evidence: principle platform: WAI-ARIA Authoring Practices combobox pattern, which the library implements. Check: test for the open case, review for the closed case.
-
-### Limits
-- `rule/combobox-min-options`: When a fixed list has 15 or fewer options, use Select instead of Combobox, because Select shows 15 options at 390x844 without scrolling, so typing saves nothing. Evidence: measured Select scrolls at 16 options at 390x844, .design-system/evidence/select/grow-count-390.json. Check: review, with the option count in the PR.
-- `rule/combobox-name-length`: When a record name is longer than 28 characters, truncate it with an ellipsis in the input and wrap it to at most 2 lines in the list instead of widening the popup, because a popup wider than the input runs past a 390px screen. Evidence: measured truncation at 29 characters at 390px, .design-system/evidence/combobox/grow-text-390.json; measured longest seeded name 48 characters, .design-system/evidence/combobox/seed-names.txt. Check: probe on `long-name.tsx`.
+  - Don't: `<ComboboxInput onKeyDown={(e) => e.key === "Escape" && setQuery("")} />`
+  - Do: `<ComboboxInput />`, keeping the library's Escape
+- `rule/combobox-in-field`: When a Combobox sits in a form, wrap it in `Field` with a visible `FieldLabel` instead of naming it by placeholder, because the placeholder disappears once a value is picked. Evidence: app 11/11 call sites; principle wcag: 3.3.2 Labels or Instructions. Check: lint `trap/label-unbound`.
+  - Don't: `<Combobox><ComboboxInput placeholder="Customer" /></Combobox>`
+  - Do: `<Field><FieldLabel>Customer</FieldLabel><Combobox><ComboboxInput /></Combobox></Field>`
+- `rule/combobox-stack-narrow`: When a form row would hold two Comboboxes, stack them below 640px instead of placing them side by side, because side by side at 390px each input truncates names past 14 characters. Evidence: measured 171px per input and truncation at 15 characters, .design-system/evidence/combobox/two-up-390.json; single use `src/expenses/filters.tsx:44`. Check: probe on the Expenses filters at 390.
+  - Don't: `<FormRow columns={2}><CustomerPicker /><ProjectPicker /></FormRow>`
+  - Do: `<FormRow columns={{ base: 1, md: 2 }}><CustomerPicker /><ProjectPicker /></FormRow>`
+- `rule/combobox-not-in-popover`: When a Combobox is needed inside a `Popover` or `Menu`, move the task into a `Dialog` instead, because Escape in the nested list closed both layers and sent focus to the page body. Evidence: measured 1 Escape closing 2 layers with focus on `body`, .design-system/evidence/combobox/nested-popover.txt. Check: review.
+  - Don't: `<PopoverContent><Combobox items={projects} /></PopoverContent>`
+  - Do: `<DialogContent><Combobox items={projects} /></DialogContent>`
 
 ### Content
 - Follows `rule/writing-record-names`.
 - `rule/combobox-placeholder`: When the input is empty, the placeholder reads "Search {objects}" instead of "Select…", because the placeholder is the only cue that typing filters the list. Evidence: app 9/11 call sites, the two "Select…" placeholders on strays.tsv. Check: lint `rule/combobox-placeholder` on the `placeholder` prop.
+  - Don't: `<ComboboxInput placeholder="Select…" />`
+  - Do: `<ComboboxInput placeholder="Search customers" />`
 - `rule/combobox-empty-row`: When a search returns nothing, the empty row reads "No {objects} match '{query}'", because repeating the query shows a typo without looking back at the input. Evidence: app 3/3 async call sites. Check: test "empty row repeats the query".
+  - Don't: `<ComboboxEmpty>No results</ComboboxEmpty>`
+  - Do: `<ComboboxEmpty>No customers match '{query}'</ComboboxEmpty>`
 - `rule/combobox-status-copy`: When the status row shows, it reads "Searching…" while loading and "{Object} search failed" on failure, with the action "Retry", because each names what happened or what the press does. Evidence: app 3/3 async call sites; principle heuristic: help users recognize, diagnose and recover from errors. Check: test on `loading.tsx` and `load-failed.tsx`.
+  - Don't: `<ComboboxStatus>Loading...</ComboboxStatus>`
+  - Do: `<ComboboxStatus>Searching…</ComboboxStatus>`
 
-### Best practices
-- `rule/combobox-in-field`: When a Combobox sits in a form, wrap it in `Field` with a visible `FieldLabel` instead of naming it by placeholder, because the placeholder disappears once a value is picked. Evidence: app 11/11 call sites; principle wcag: 3.3.2 Labels or Instructions. Check: lint `trap/label-unbound`.
-  Don't: `<Combobox><ComboboxInput placeholder="Customer" /></Combobox>`
-- `rule/combobox-stack-narrow`: When a form row would hold two Comboboxes, stack them below 640px instead of placing them side by side, because side by side at 390px each input truncates names past 14 characters. Evidence: measured 171px per input and truncation at 15 characters, .design-system/evidence/combobox/two-up-390.json; single use `src/expenses/filters.tsx:44`. Check: probe on the Expenses filters at 390.
-  Don't: `<FormRow columns={2}><CustomerPicker /><ProjectPicker /></FormRow>`
-- `rule/combobox-not-in-popover`: When a Combobox is needed inside a `Popover` or `Menu`, move the task into a `Dialog` instead, because Escape in the nested list closed both layers and sent focus to the page body. Evidence: measured 1 Escape closing 2 layers with focus on `body`, .design-system/evidence/combobox/nested-popover.txt. Check: review.
-  Don't: `<PopoverContent><Combobox items={projects} /></PopoverContent>`
+### Anti-slop
+- `rule/combobox-server-search`: When the records are customers or projects, send the typed text to the search request through `onSearch` and list what it returns instead of filtering an array passed as `items`, because an account in the seed data holds 12,000 customers and a preloaded list took 2.4s to open. Evidence: measured 2.4s to first open with 12,000 seeded customers, .design-system/evidence/combobox/preload-open.txt; app 3/3 async call sites. Check: review.
+  - Don't: `<Combobox items={allCustomers} />`
+  - Do: `<CustomerPicker onSearch={searchCustomers} />`
+- `rule/combobox-no-hand-built`: When a picker needs a search box, use `Combobox` instead of a `Popover` holding an `Input` and a list, because a fresh agent's hand-built picker exposed no listbox and ignored Down Arrow. Evidence: measured 0 listbox roles and no arrow-key handling in a fresh agent's picker, .design-system/evidence/combobox/fresh-agent-snapshot.txt; app 11/11 pickers use Combobox. Check: lint on `PopoverContent` holding an `Input`.
+  - Don't: `<PopoverContent><Input /><ul>{items}</ul></PopoverContent>`
+  - Do: `<Combobox items={projects}><ComboboxInput /></Combobox>`
+
+### Limits
+- `rule/combobox-min-options`: When a fixed list has 15 or fewer options, use Select instead of Combobox, because Select shows 15 options at 390x844 without scrolling, so typing saves nothing. Evidence: measured Select scrolls at 16 options at 390x844, .design-system/evidence/select/grow-count-390.json. Check: review, with the option count in the PR.
+  - Don't: `<Combobox items={["Net 7", "Net 14", "Net 30"]} />`
+  - Do: `<Select items={["Net 7", "Net 14", "Net 30"]} />`
+- `rule/combobox-name-length`: When a record name is longer than 28 characters, truncate it with an ellipsis in the input and wrap it to at most 2 lines in the list instead of widening the popup, because a popup wider than the input runs past a 390px screen. Evidence: measured truncation at 29 characters at 390px, .design-system/evidence/combobox/grow-text-390.json; measured longest seeded name 48 characters, .design-system/evidence/combobox/seed-names.txt. Check: probe on `long-name.tsx`.
+  - Don't: `<ComboboxContent className="w-max">`
+  - Do: `<ComboboxContent>`, with each item wrapping to 2 lines
 
 ## Accessibility
 Rests on the library's combobox. The input keeps focus throughout, and the popup never takes it.
@@ -198,13 +227,15 @@ Each question from `spec-template.md`, with what the worker ran or read in Acme 
 
 **6. ARIA.** An accessibility snapshot of the field gave roles and properties per part, and an automated WCAG A and AA scan found no violations. A snapshot cannot show the status row's announcement, so it went to the by-hand list.
 
-**7. Usage, by the ten questions in `rule-method.md`.**
+**7. Usage, by the eleven questions in `rule-method.md`.**
 
 - *Job and not for.* The call sites split into records that grow (customers, projects) and fixed lists (regions, currencies, payment terms). `rg -n "<RadioGroup\b" src` found 7 fixed choice fields with 4 or fewer options, 6 of them radios, which became the RadioGroup line. Multi-value choice has no component, so the line names its coverage-gaps row instead of promising a spec.
 - *Where it breaks and limits.* `probe.mjs --grow --dimension count` on Select at 390x844 found the popup scrolls at 16 options, so 15 is Select's ceiling and Combobox's floor. `--dimension text` on the Bill to input found truncation at 29 characters. The longest seeded name is 48, so the rule says what happens instead of banning long names.
 - *States over time.* The network log for a typed query with the delay set to 0 showed 6 requests and one response out of order. That measurement, not the constant in the code, is why the debounce is a rule. List height per keystroke came from the same run.
 - *Copy slots.* The worker read the `placeholder`, `empty-title` and `status` rows for Combobox in `docs/system/copy-inventory.tsv`, found 9 of 11 placeholders in one shape, and cited the writing page's record-names rule instead of restating it. "Searching…" sits in the status row, a live region, and never replaces a label.
 - *Composition and density.* The Expenses filters are the one place two Comboboxes share a row, so that rule carries a single-use note plus a measurement. The nested Popover case was built as a throwaway example in the evidence folder, run once, and recorded.
+- *Slop.* A fresh agent given only "add a project picker to the expense form" loaded every project up front and built a Popover with an Input inside. Its snapshot and the open time on the seed data became the two Anti-slop rules.
+- *Don't and Do.* Each Don't is the rule's falsify snippet, written with the real parts, and each Do is the same case the way the call sites write it.
 
 **Rule tests.** Each rule went through the four tests, recorded in `docs/system/rule-tests/combobox.tsv`. Three rows:
 

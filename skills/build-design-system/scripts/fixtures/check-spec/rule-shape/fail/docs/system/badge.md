@@ -49,20 +49,28 @@ Notes only.
 ### When not to use
 - The status needs an action. Use Button instead
 
-### Behavior
+### Rules
 - `rule/badge-hover`: When the pointer rests on a Badge, show no hover fill instead of a darker one, because a badge takes no action. Evidence: it looks calmer. Check: review.
+  - Don't: `<Badge className="hover:bg-muted">Draft</Badge>`
+  - Do: `<Badge>Draft</Badge>`
 - `rule/badge-focus`: When a Badge sits in a focused row, keep `tabIndex` unset, because focus belongs to the row. Evidence: principle input: one tab stop per row. Check: eyeball it.
+  - Don't: `<Badge tabIndex={0}>Draft</Badge>`
+  - Do: `<Badge>Draft</Badge>`
 - Keep badges calm.
-
-### Limits
-- `rule/badge-max-chars`: When a label runs past 12 characters, use plain text instead of a Badge, because at 13 characters the badge wraps in the 96px status column at 390px. Evidence: measured wrap at 13 characters, .design-system/evidence/badge/grow-text-390.json. Check: probe on `default.tsx`.
+- `rule/badge-one-per-row`: When a row holds a status, show 1 Badge per row instead of stacking two, because two badges push the row to 2 lines at 390px. Evidence: app 2/2 call sites; measured 2 lines with 2 badges at 390px, .design-system/evidence/badge/two-up.json. Check: review.
+  - Don't: `<Badge>Draft</Badge><Badge>Overdue</Badge>`
+  - Do: `<Badge tone="danger">Overdue</Badge>`
 
 ### Content
 - Follows `rule/writing-status-case`.
 
-### Best practices
-- `rule/badge-one-per-row`: When a row holds a status, show 1 Badge per row instead of stacking two, because two badges push the row to 2 lines at 390px. Evidence: app 2/2 call sites; measured 2 lines with 2 badges at 390px, .design-system/evidence/badge/two-up.json. Check: review.
-  Don't: `<Badge>Draft</Badge><Badge>Overdue</Badge>`
+### Anti-slop
+Not applicable: a badge takes one short label and one tone, and no call site shows a default an agent reaches for wrongly.
+
+### Limits
+- `rule/badge-max-chars`: When a label runs past 12 characters, use plain text instead of a Badge, because at 13 characters the badge wraps in the 96px status column at 390px. Evidence: measured wrap at 13 characters, .design-system/evidence/badge/grow-text-390.json. Check: probe on `default.tsx`.
+  - Don't: `<Badge>Awaiting approval</Badge>`
+  - Do: `<span>Awaiting approval</span>`
 
 ## Accessibility
 Rests on a `span` with text.

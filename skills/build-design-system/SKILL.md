@@ -60,7 +60,7 @@ Before phase 1, create the run branch and `.design-system/run.md` per `reference
 
 After any shared UI or token edit, load every route with `capture.mjs --status` and require success. Type checks miss runtime breaks between server and client code (`references/browser.md`).
 
-Make and record any decision a reversible change can settle, including fixes to broken behavior and accessibility changes that only add semantics. Removing or restructuring semantics is a gate (`references/traps.md`, Adds-only accessibility changes). So are brand, product vocabulary, visible change on shipped screens and intentional behavior changes. At a cap, cut the HTML docs site, then specs past the pilot's families. Never cut the pilot, the check, the AGENTS.md block or the generated docs.
+Make and record any decision a reversible change can settle, including fixes to broken behavior and accessibility changes that only add semantics. Removing or restructuring semantics is a gate (`references/traps.md`, Adds-only accessibility changes). So are brand, product vocabulary, visible change on shipped screens and intentional behavior changes. At a cap, cut the HTML docs site, then specs past the pilot's families, never the rules of a family that landed. Never cut the pilot, the check, the AGENTS.md block or the generated docs.
 
 ### 1. Frame
 
@@ -90,7 +90,7 @@ Make and record any decision a reversible change can settle, including fixes to 
 ### 4. Components
 
 1. Pick each family's canonical implementation by `references/component-contract.md`. When the ask names states, every component gets its missing states, not only the pilot's.
-2. Do the most-used family first, end to end, spec included, with its rows from `references/traps.md` and Usage rules by `references/rule-method.md`. It is the pattern the briefs point to.
+2. Do the most-used family first, end to end: component, tests, showcase page and spec, with its rows from `references/traps.md` and Usage rules in the final shape by `references/rule-method.md`, in one commit. Show its page to the person before fan-out. It is the exemplar every brief points to, and every later family lands its rules in its own commit.
 3. Write its old-to-new map and a codemod. Move one pilot screen by hand, run the codemod on a pristine copy, and fix it until the two diffs match. With no duplicates, skip the codemod and record why.
 4. Fan out the other families the pilot and the strays touch with `references/worker-brief.md`, in a rolling window. Review each report as the brief says, and reject any diff outside its scope.
 5. Mark replaced implementations deprecated. Never deprecate a stock foundation component, only the wrapper that duplicates it.
@@ -112,7 +112,7 @@ Follow `references/checks.md`. Prove the shipped rules with `check-system.mjs --
 
 Docs are generated, never hand-written.
 
-1. Run `component-docs` per component with its code, variants and real uses, to write `docs/system/<component>.md` to the spec template. Write the foundation pages from `references/system-structure.md`, and the writing page by `references/writing-method.md`.
+1. Each family's spec landed with it in phase 4. Run `component-docs` for any canonical component still without one, with its code, variants and real uses, to the spec template. Write the foundation pages from `references/system-structure.md`, and the writing page by `references/writing-method.md`.
 2. Write `docs/system/coverage-gaps.md` from the open gates, each row with its "Meanwhile".
 3. Run `node scripts/gen-docs.mjs`, with `--name` on the first run. It writes the twins, the rules page, the index and `llms.txt`.
 4. An optional HTML docs site adds `check-docs-leak.mjs` to the check.

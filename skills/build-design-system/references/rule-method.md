@@ -22,12 +22,14 @@ A spec's `## Usage` holds six H3s, in this order (`spec-template.md`):
 |---|---|
 | `### When to use` | Situations, one per line |
 | `### When not to use` | Situations, each naming the alternative |
-| `### Behavior` | Rules on states over time, input methods, focus and feedback |
-| `### Limits` | Measured rules on count, length and size |
+| `### Rules` | Rules on states over time, input methods, focus, feedback, composition, placement and density |
 | `### Content` | Rules per copy slot, citing `writing.md` rules where one applies |
-| `### Best practices` | Up to five rules on composition, placement and density, the ones a reader must not miss |
+| `### Anti-slop` | Rules for what an agent gets wrong with this component by default, such as a label in capitals, a second primary action or an icon beside every item |
+| `### Limits` | Measured rules on count, length and size |
 
 Accessibility answers stay in `## Accessibility`. A rule lives in one place. Other sections cite its ID.
+
+Rules are written with their component, in the same commit, not in a docs pass after it. The page shows them at its end, rendered from the spec, so what a person reviews is what an agent reads.
 
 ## Order of work
 
@@ -45,14 +47,15 @@ Ask every question for every primitive. An answer becomes a rule, a table row, o
 
 1. **Job.** What does it do, in one sentence a user would recognize, and which job is it mistaken for? Goes in Description and When to use.
 2. **Not for.** Which neighboring jobs belong to another component, and what observable condition sends a user there? Goes in When not to use, and Related links back.
-3. **Where it breaks.** Grow each dimension until something fails: content length, item count, nesting, viewport width, input method, locale (longer strings, right to left), and data states (empty, one, many, slow, failed, stale). Goes in Limits and Behavior.
+3. **Where it breaks.** Grow each dimension until something fails: content length, item count, nesting, viewport width, input method, locale (longer strings, right to left), and data states (empty, one, many, slow, failed, stale). Goes in Limits and Rules.
 4. **Limits.** At each break, what number does the alternative take over at? Goes in Limits, measured.
 5. **Copy slots.** Which text does it render (label, title, body, action, placeholder, helper, error, empty, tooltip, status)? For each, what casing, grammar template, length and forbidden words hold? Goes in Content.
-6. **States over time.** Idle, pending, success, failure and recovery. What does the user see and do in each, and how long does feedback stay? Does anything persist, time out, undo, or survive a reload? What happens to a second press while pending, and where is focus? Goes in Behavior, with the mechanics in the States table.
-7. **Input methods.** Walk the full task with pointer, touch, keyboard and a screen reader. What can one method not reach (hover-only, right-click-only, drag-only), and what is its other path? Goes in Behavior and Keyboard.
+6. **States over time.** Idle, pending, success, failure and recovery. What does the user see and do in each, and how long does feedback stay? Does anything persist, time out, undo, or survive a reload? What happens to a second press while pending, and where is focus? Goes in Rules, with the mechanics in the States table.
+7. **Input methods.** Walk the full task with pointer, touch, keyboard and a screen reader. What can one method not reach (hover-only, right-click-only, drag-only), and what is its other path? Goes in Rules and Keyboard.
 8. **Accessibility contract.** Role, accessible name in every variant, announcements and their timing, focus after each transition, contrast as drawn, target size, motion. Goes in Accessibility.
-9. **Composition.** What may it contain, and what may it sit inside? Which pairings break focus, nesting or semantics? Goes in Best practices, and one example file shows the main pairing.
-10. **Density and placement.** How many may share a screen, a row or a container? Where does it sit relative to what it acts on? Goes in Best practices or Limits.
+9. **Composition.** What may it contain, and what may it sit inside? Which pairings break focus, nesting or semantics? Goes in Rules, and one example file shows the main pairing.
+10. **Density and placement.** How many may share a screen, a row or a container? Where does it sit relative to what it acts on? Goes in Rules or Limits.
+11. **Slop.** What would a fresh agent write for this component with no docs, and where does it differ from this app? Try it: give one fresh agent a task that uses the component and nothing else, and compare its code with the app's call sites. Each difference that matters is an Anti-slop rule, or `Not applicable: <reason>`.
 
 ## Grounds
 
@@ -76,7 +79,11 @@ Each rule is one list item:
 
 ```markdown
 - `rule/<component>-<slug>`: When <observable condition>, <do or don't action>, because <reason>. Evidence: <ground>[; <ground>]. Check: <lint | test | probe | review> <what runs>.
+  - Don't: `<the smallest code that breaks the rule, with the real component API>`
+  - Do: `<the same case written correctly>`
 ```
+
+Every rule has the pair, Don't first, as a nested list. Both are one line of real code against the system's import path, or real copy, and the Don't is the falsify snippet. The docs page renders them as a labeled pair, so a person scanning the page and an agent reading the twin see the same thing.
 
 - The ID is `rule/` plus the component's registry id, a hyphen and a slug of lowercase words: `rule/segmented-max-options`. Foundation pages use their slug, as in `rule/writing-verb-chain`. IDs never change once shipped.
 - The condition is observable in code or on screen: a count, a prop value, a state, a viewport, a slot.
@@ -145,6 +152,8 @@ It reports `overflow at 5: scrollWidth 402 > clientWidth 358`. Four options fit 
 
 ```markdown
 - `rule/segmented-max-options`: When a choice has more than 4 options, use Select instead of SegmentedControl, because at 5 options with the app's longest label the control overflows its container at 390px. Evidence: measured overflow at 5 options (402 > 358px), .design-system/evidence/segmented/grow-count-390.json; app 3/3 call sites use 2 to 3 options; principle platform: native select. Check: lint `rule/segmented-max-options` counts `SegmentedItem` children.
+  - Don't: `<SegmentedControl>{views.map((v) => <SegmentedItem key={v}>{v}</SegmentedItem>)}</SegmentedControl>` with 5 views
+  - Do: `<Select items={views} />`
 ```
 
 **Tests.** Falsify: a fixture with 5 items fails the lint, and 4 pass. Negation: "keep SegmentedControl past 4 options" contradicts the measurement. Two agents: given "add a view switch for Day, Week, Fortnight, Month and Year", both pick Select. Sweep: 3 of 3 call sites comply. Verdict `ship`.
