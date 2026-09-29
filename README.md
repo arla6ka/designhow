@@ -1,3 +1,38 @@
-# designhow
+<a href="https://design.how">
+<img width="360" alt="design.how" src="https://design.how/opengraph-image" />
+</a>
 
-Install with `npx skills add arla6ka/designhow`, then ask your agent to build a design system from your app.
+# Skills for Design Systems
+
+Skills that turn the UI your app already ships into a design system your coding agent can use, then move every screen onto it.
+
+Agents copy whatever is in the repo. If it has three buttons, forty grays and a token file half the code ignores, every new screen picks a different one. More agents spread the mess faster.
+
+These skills come from building design systems for startups that raised millions. They read your app first, keep its look, and give agents components they can import, rules they can find, and checks that fail when they guess.
+
+Follow along at [design.how](https://design.how).
+
+## Install
+
+```bash
+npx skills@latest add arla6ka/skills
+```
+
+For Claude.ai, download the skills at [design.how](https://design.how/skills) and upload the zips in the `claude-ai` folder, one per skill.
+
+## Why use it?
+
+An agent with no system picks a button at random, invents a gray, skips the loading state and says it's done. It never checks the screens it didn't open.
+
+Each skill swaps a guess for a step it can prove. It screenshots every route before the first edit, maps values to tokens by what they do, writes rules with a Don't and a Do, and runs checks that fail when a screen drifts. Nothing lands on your branch until you merge.
+
+## Reference
+
+- **[design-system-boss](./skills/design-system-boss/SKILL.md)**. Start here. Say what's wrong in plain words, and it reads the repo, picks a route and runs the other skills in order.
+- **[build-design-system](./skills/build-design-system/SKILL.md)**. Builds tokens, one canonical component per family, docs and checks from the app you have, and proves them on one real flow.
+- **[migrate-design-system](./skills/migrate-design-system/SKILL.md)**. Moves every screen onto the system with parallel workers, each checked against its before screenshot. Start with audit mode, which changes nothing.
+- **[token-mapping](./skills/token-mapping/SKILL.md)**. Maps hex codes and pixel values to your tokens by purpose, so an 8px radius never stands in for an 8px gap. It never edits.
+- **[component-docs](./skills/component-docs/SKILL.md)**. Writes a component's docs from its code and two real uses in your product, with the rules right next to the examples.
+- **[design-review](./skills/design-review/SKILL.md)**. Reviews a screen or flow, including the states a screenshot misses, and ranks what's actually broken.
+
+MIT licensed.

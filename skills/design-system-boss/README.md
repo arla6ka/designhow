@@ -6,7 +6,7 @@ It never writes product code when it can spawn subagents, never invents brand va
 
 ## Use as-is
 
-Install it with its siblings: `npx skills add arla6ka/designhow`. By hand, copy the folder next to the other five in `.agents/skills/`, or `.claude/skills/` for Claude Code. Then say what you want in your own words. The boss reads the repo before it asks anything. It asks at most one routing question, plus your bans and how closely to follow a design source, each with a default already applied.
+Install it with its siblings: `npx skills add arla6ka/skills`. By hand, copy the folder next to the other five in `.agents/skills/`, or `.claude/skills/` for Claude Code. Then say what you want in your own words. The boss reads the repo before it asks anything. It asks at most one routing question, plus your bans and how closely to follow a design source, each with a default already applied.
 
 Agents often skip an installed skill when the ask does not name it. If yours do, add load conditions to AGENTS.md that name the work, not the skill's topic:
 
