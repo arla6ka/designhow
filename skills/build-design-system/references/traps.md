@@ -1,6 +1,6 @@
 # Traps
 
-> For the team setting this up: two parts. The first lists behavior traps that hold in any app, per component family, each with a stable ID. The second is a method for finding the visual habits that make this app look unfinished or generated, and turning each into a rule with the app's own evidence. It carries no list of visual preferences of its own, because a rule that holds in one product is taste in another. The person's stated bans are not imported taste. They go in as rules grounded in the person's words, and outrank the app's majority. Add behavior traps under their family. Retire one by marking it `retired` with the reason, so old citations still resolve.
+Two parts. The first lists behavior traps that hold in any app, per component family, each with a stable ID. The second finds the visual habits that make this app look unfinished and turns each into a rule with the app's own evidence. It carries no visual preferences of its own, because a rule that holds in one product is taste in another. The person's stated bans go in as rules grounded in their words and outrank the app's majority. Add traps under their family. Retire one by marking it `retired` with the reason, so old citations still resolve.
 
 Contents
 
@@ -17,20 +17,30 @@ Specs cite trap IDs on their `Traps checked:` line and answer each one in the se
 
 ## Adds-only accessibility changes
 
-Every skill in this set sorts accessibility-tree changes by this one rule. On the run branch, a change that only adds semantics lands as a decision. Examples are an accessible name, a role on a custom control, `aria-current`, `aria-invalid` or `aria-describedby`, table semantics for tabular data, and a dialog's label. A change that removes, renames or restructures existing semantics is a gate. A review ranks an adds-only fix as a finding and hands every other tree change to a person.
+Every skill in this set sorts accessibility-tree changes by this one rule. On the run branch, a change that only adds semantics lands as a decision. Examples are an accessible name, a role on a custom control, `aria-current`, `aria-invalid` or `aria-describedby`, table semantics for tabular data, and a dialog's label. A change that removes, renames or restructures existing semantics is a gate. A review ranks an adds-only fix as a finding and hands every other tree change to a person. The rule covers the accessibility tree only. Contrast, target size and keyboard problems are ranked findings.
 
 ## Behavior traps by family
 
-Most are about what the user can do, not how it looks, so they hold everywhere. Where a row says "Measured", that measurement finds the trap and proves the fix (`browser.md`).
+Where a row says "Measured", that measurement finds the trap and proves the fix (`browser.md`).
 
 A trap outranks the app's majority. When a trap is the majority pattern, or a rule derived from copy or any other inventory conflicts with a trap's fix, the fix wins. The conflict becomes a gate whose default is the fix, with the count.
+
+When a person describes a symptom instead of a component, start here:
+
+| They say | Look at |
+|---|---|
+| "It feels laggy" or "slow to respond" | `trap/touch-tap-highlight`, `trap/motion-restart`, `trap/motion-layout-property` |
+| "It jumps" | `trap/weight-shift`, `trap/numbers-shift`, `trap/loading-layout-shift`, `trap/motion-origin` |
+| "It's fine on my laptop, not my phone" | `trap/touch-hover-flash`, `trap/touch-input-zoom`, `trap/touch-autofocus`, `trap/viewport-height`, `trap/safe-area` |
+| "I can't click it" | `trap/decor-pointer`, `trap/list-dead-gap`, `trap/menu-diagonal`, `trap/motion-blocks-input` |
+| "Scrolling or swiping feels wrong" | `trap/scroll-chain`, `trap/gesture-drag`, `trap/gesture-axes` |
 
 | ID | Family | Trap | What the spec must say |
 |---|---|---|---|
 | `trap/button-div` | Actions | A `div` or `span` with a click handler | Rendered on `button`, or `a` when it navigates. A native `<dialog>` may take the backdrop click when it also wires its cancel event (`checks.md`) |
 | `trap/control-height` | Actions, Text entry, Choice | Buttons, inputs and selects that sit side by side at different heights | The one control height token they share at each size. Measured on the render, never read from source: `montage.mjs` fails a changed surface whose side-by-side controls differ by more than 1px |
 | `trap/button-icon-name` | Actions | An icon-only button with no accessible name | Where the name comes from in every variant |
-| `trap/icon-optical-size` | Actions, Text entry, Choice, Feedback | An icon reads bigger or heavier than the text or control beside it, often right after a switch from an outline set to a filled one, since filled glyphs fill their box | The icon size per control size, set so the glyph's ink is no taller than the label's cap height and about 60% of the control at most. Measured: the ink box of the rendered path against the label's cap height, per control size (`browser.md`, Measuring optical alignment). Rederived after any icon set change |
+| `trap/icon-optical-size` | Actions, Text entry, Choice, Feedback | An icon reads bigger or heavier than the text or control beside it, often right after a switch from an outline set to a filled one, since filled glyphs fill their box | The icon size per control size, set so the glyph's ink is no taller than the label's cap height. Measured: the ink box of the rendered path against the label's cap height, per control size (`browser.md`, Measuring optical alignment). Rederived after any icon set change |
 | `trap/icon-optical-align` | Actions, Text entry, Choice, Feedback, Navigation | An icon is centered by its box, not by what the eye sees, so it reads high or low. Or one global nudge meant for icons beside text also moves icons that sit alone in a box | Two contexts, two references. An icon beside text centers its ink on the label's cap height. An icon alone in its own box (icon button, chip remove, input slot, checkbox mark, select chevron) centers its ink on that box and gets no text lift. A glyph drawn off center (a side chevron, a check, a triangle) gets its own offset from its measured ink. Each correction is scoped to one context, never global. Measured per context, then decided on zoomed crops (`browser.md`, Measuring optical alignment) |
 | `trap/button-type` | Actions | Buttons in a form default to submit and fire twice | The `type` default, and why |
 | `trap/submit-repeat` | Actions, Forms | A pending submit still accepts a second click or Enter, so the request goes out twice | What blocks a repeat while the request is in flight, and what the control shows meanwhile (`trap/loading-label-swap`) |
@@ -38,8 +48,8 @@ A trap outranks the app's majority. When a trap is the majority pattern, or a ru
 | `trap/focus-ring-shape` | Actions, Text entry, Choice | The focus ring ignores the control's corners or gets clipped by a parent, so it reads as a stray box | How the ring is drawn so it follows the radius, its offset, and that no ancestor's overflow cuts it. Checked with the keyboard on the smallest radius the system uses |
 | `trap/link-wraps-button` | Actions, Navigation | A link wraps a button, or a button wraps a link. Two tab stops and two roles for one action, and invalid HTML | Which one element renders. Default fix: one element, either a link styled with the Button's styles or a Button that renders as the link (the base reference names the library's way). Measured by `check-system.mjs`, and in the probe as one control where there were two |
 | `trap/loading-layout-shift` | Actions, Feedback | Loading swaps or appends content, such as a spinner, a skeleton or an ellipsis, and the box changes size | The loading state keeps the element's box, and what blocks repeat actions. Measured idle and pending (`browser.md`, Measuring a loading state). Any change in size fails |
-| `trap/loading-label-swap` | Actions, Feedback | The action's label is replaced while it runs, such as `{saving ? "Saving…" : "Save"}`. The box shifts and a screen reader hears a new name mid-action | Default fix: keep the label, show the control's loading state (a spinner beside the label), set `aria-busy`, and block the repeat in the handler. Pending text goes in a status or live region or next to the control, never in place of the label. A control blocked while pending keeps focus, so prefer a focusable disabled state such as `aria-disabled` and never let focus drop to the page. Measured: the box and the accessible name, idle and pending (`browser.md`, Measuring a loading state). The montage lists a swap as a removed and an added control, and `check-system.mjs` flags a label ternary on a loading state |
-| `trap/button-label-wrap` | Actions | At the narrow width a button's label wraps, so the button stands taller than its neighbors | Default fix: `white-space: nowrap` on the Button, plus a shorter label or a full-width button at small widths. Measured at the narrow width: `probe.mjs` lists every button whose label runs to 2 or more lines (`wrappedButtons`), and the montage fails a new one. The line count decides, not a height ratio, since the ratio moves with line height |
+| `trap/loading-label-swap` | Actions, Feedback | The action's label is replaced while it runs, such as `{saving ? "Saving…" : "Save"}`. The box shifts and a screen reader hears a new name mid-action | Default fix: keep the label, show the control's loading state (a spinner beside the label), set `aria-busy`, and block the repeat in the handler. Pending text goes in a status or live region or next to the control, never in place of the label. A control blocked while pending keeps focus, so prefer a focusable disabled state such as `aria-disabled` and never let focus drop to the page. Measured: the box and the accessible name, idle and pending (`browser.md`, Measuring a loading state). `check-system.mjs` flags a label ternary on a loading state |
+| `trap/button-label-wrap` | Actions | At the narrow width a button's label wraps, so the button stands taller than its neighbors | Default fix: `white-space: nowrap` on the Button, plus a shorter label or a full-width button at small widths. Measured at the narrow width: `probe.mjs` lists every button whose label runs to 2 or more lines (`wrappedButtons`), and the montage fails a new one |
 | `trap/field-label` | Text entry, Choice | The placeholder or the current value is the only name | The visible label and how it is tied to the control |
 | `trap/field-input-type` | Text entry | A field with the wrong or no `type`, `autocomplete` or `inputmode`, so phones show the wrong keyboard, password managers skip it, and spellcheck underlines emails and codes | The `type`, `autocomplete` token and `inputmode` for each field kind the system ships, and where spellcheck and autocorrect are off |
 | `trap/field-affix-focus` | Text entry | An icon, prefix or suffix drawn beside the input instead of inside its box, so clicking it does nothing and the focus ring skips it | That affixes sit inside the field's hit area and a click on them focuses the input, unless the affix is its own button with its own name |
@@ -65,32 +75,43 @@ A trap outranks the app's majority. When a trap is the majority pattern, or a ru
 | `trap/tooltip-essential` | Floating hints | Information only a tooltip holds, lost on touch | What the tooltip repeats, and where the essential text lives |
 | `trap/tooltip-disabled-trigger` | Floating hints, Actions | A tooltip explains why a button is disabled, but a disabled button takes no focus or hover, so keyboard and touch users never see it | Where the reason lives instead: visible text near the control, or an `aria-disabled` control that stays focusable and carries the reason |
 | `trap/tooltip-interactive` | Floating hints | A hover tooltip holds a link or button, which disappears before the pointer or keyboard reaches it | That hover tooltips hold text only. Anything interactive moves to a popover opened on click |
+| `trap/tooltip-group-delay` | Floating hints | Every tooltip in a toolbar waits and animates in, so moving along the row waits at every item | That the first tooltip in a group waits, and neighbors opened while one is showing appear at once without animation |
 | `trap/toast-errors` | Feedback | An error that needs action shown only in a toast that times out | Which errors persist, and where |
+| `trap/toast-timer` | Feedback | An auto-dismissing message keeps counting while the pointer is on it, focus is inside it, or the tab is hidden, so people lose it mid-read | That the timer pauses on hover, on focus inside and while the page is hidden, and how long it stays. A message that must be read or acted on persists (`trap/toast-errors`) |
 | `trap/live-region-double` | Feedback | Two layers announce the same message | Which layer announces |
 | `trap/tabs-routes` | Navigation | Tabs that change the URL built as a tablist | Whether it switches panels or navigates |
 | `trap/current-unmarked` | Navigation | The current page or tab looks different and is not marked | `aria-current` or `aria-selected` on it |
-| `trap/narrow-hidden-nav` | Navigation, Data | At the narrow width, nav links or table columns sit past the edge of a box that scrolls or clips them, or are hidden with no menu button, and nothing on screen says more is there. | Never a silent change: it is a gate listing each hidden item, defaulting to a visible cue such as a wrapping nav, a menu button, a "More" item or a fade at the clipped edge. Measured at the narrow width by `probe.mjs` (`clipped`: items less than half inside their clipping box or past the viewport, and nav hidden with no visible menu button). The montage fails a newly hidden item unless its trace row names a gate |
+| `trap/narrow-hidden-nav` | Navigation, Data | At the narrow width, nav links or table columns sit past the edge of a box that scrolls or clips them, or are hidden with no menu button, and nothing on screen says more is there. | A gate listing each hidden item, defaulting to a visible cue such as a wrapping nav, a menu button, a "More" item or a fade at the clipped edge. Measured at the narrow width by `probe.mjs` (`clipped`: items less than half inside their clipping box, and nav hidden with no visible menu button). The montage fails a newly hidden item unless its trace row names a gate |
 | `trap/link-cue` | Navigation | A link in the main content with no resting cue: the text color around it and no underline | Its resting cue, a color apart from the text or an underline. A change to link color or underline is a gate listing every surface it touches. `montage.mjs` measures the cue before and after |
 | `trap/touch-hover-flash` | All interactive | Hover styles apply on touch, so a tap flashes the hover state or leaves it stuck until the next tap elsewhere | That hover styles apply only where hover exists (`@media (hover: hover)`), and what shows on press instead |
-| `trap/touch-input-zoom` | Text entry | Input text smaller than the phone's zoom threshold, so iOS zooms the page on focus and leaves it zoomed | The input text size at touch widths, at or above 16px, even when the desktop size is smaller |
+| `trap/touch-input-zoom` | Text entry | Input text smaller than the phone's zoom threshold, so iOS zooms the page on focus and leaves it zoomed | The input text size at touch widths, at or above 16px, even when the desktop size is smaller, never by disabling pinch zoom in the viewport meta |
 | `trap/touch-autofocus` | Text entry, Overlays | A field that takes focus on load or when a dialog opens on a phone, so the keyboard covers the screen before the user asked | Which surfaces autofocus, and that touch devices skip it unless typing is the only thing to do there |
-| `trap/touch-tap-highlight` | All interactive | The system tap highlight is removed and nothing replaces it, so a tap gives no feedback until the action lands | The pressed state each control shows on touch when the tap highlight is off |
+| `trap/touch-tap-highlight` | All interactive | The system tap highlight is removed and nothing replaces it, or the pressed state shows only on release, so a tap gives no feedback until the action lands | The pressed state each control shows from pointer-down, and that drags and sliders update under the pointer, not on release |
+| `trap/viewport-height` | Containers, Overlays | A full-height shell or sheet sized to the large viewport, so its bottom actions sit under the browser bar or the software keyboard | `dvh` (or `svh` when the height must not change while scrolling), never `vh`. Dynamic units ignore the software keyboard, so what must stay reachable uses the visual viewport or `interactive-widget=resizes-content` |
+| `trap/safe-area` | Containers, Navigation | An edge-to-edge layout puts controls under the notch, the rounded corners or the home indicator | Which surfaces pad by `env(safe-area-inset-*)`, which is nonzero only with `viewport-fit=cover`, and that fixed bars include them |
+| `trap/scroll-chain` | Containers, Overlays, Menus | Scrolling to the end of an inner panel, sheet or menu starts scrolling the page behind it | Which scroll areas stop the chain (`overscroll-behavior`), and that an open modal locks the page scroll |
 | `trap/table-divs` | Data | A table built from divs | The table element, or the grid role and its keyboard model |
 | `trap/numbers-shift` | Data, Feedback | Numbers that change in place, such as timers, counters, prices or table columns, set in proportional figures, so digits jitter and columns don't line up | Tabular figures (`font-variant-numeric: tabular-nums`) where numbers update or align in columns, when the font has them |
 | `trap/illustration-announced` | Media, Containers | An illustration built from HTML elements is read out by screen readers as a string of fragments | Its name as one image (`role="img"` with `aria-label`), or `aria-hidden` when it is decoration |
-| `trap/reduced-motion-ignored` | Feedback, Overlays | Animations still run when the OS asks for reduced motion: spinners, enter animations on dialogs and toasts, skeleton shimmer | Default fix: wrap the animation in `@media (prefers-reduced-motion: no-preference)`, or swap movement for an opacity fade under `reduce`. A loading state keeps a static cue, such as the spinner's still frame and `aria-busy`. Measured by `probe.mjs` under `reduce`, which lists animations over 1ms still running or holding their end state (`motion`), right after a state function runs. The montage fails a new one |
+| `trap/reduced-motion-ignored` | Feedback, Overlays | Animations still run when the OS asks for reduced motion: spinners, enter animations on dialogs and toasts, skeleton shimmer | Default fix: under `reduce`, drop the movement and keep the opacity or color change that explains the state. Movement that carries no meaning goes behind `@media (prefers-reduced-motion: no-preference)`. A loading state keeps a static cue, such as the spinner's still frame and `aria-busy`. Measured by `probe.mjs` under `reduce` (`motion`: animations over 1ms still running after a state function runs, skipping opacity-only and color-only keyframes). The montage fails a new one |
 | `trap/decor-pointer` | Containers, Feedback | A decorative layer, such as a glow, gradient or overlay shape, sits above content and takes the clicks, hovers or text selection meant for what is under it | That decorative layers set `pointer-events: none` and never cover a control's hit area |
 | `trap/loop-offscreen` | Feedback, Media | A looping animation or video keeps running when it is scrolled away or the tab is hidden, spending CPU, GPU and battery | That loops pause when out of view or in a hidden tab, and resume where they stopped |
 | `trap/theme-transition` | Foundations | Switching the theme fires every hover and state transition on the page at once | That a theme switch turns transitions off for its own frame, so colors change at once |
+| `trap/motion-restart` | Feedback, Overlays, Toggles | Triggering an animated element again mid-flight restarts it from its start value or waits for it to finish | That a retrigger continues from the element's current position toward the new target. Measured (`browser.md`, Measuring motion) |
+| `trap/motion-origin` | Overlays, Menus, Floating hints | A menu or popover grows from its own center instead of from the control that opened it, or exits along a different path than it entered | Which surfaces grow from their trigger and which stay centered (dialogs), and that exit reverses entry |
+| `trap/motion-layout-property` | Feedback, Containers | Animation on width, height, top, left, margin or padding, or a transition on every property, so layout runs every frame and the motion stutters on slow devices. Or a CSS variable animated on an ancestor, so every descendant restyles each frame | The animated properties, limited to transform and opacity unless a named exception says why, and never a transition on every property |
+| `trap/motion-blocks-input` | Overlays, Feedback, Data | An entrance animation that ignores clicks until it finishes | That animated elements take input at once |
+| `trap/gesture-drag` | Overlays, Containers, Choice | A drag drops when the pointer leaves, snaps to the finger's center, jumps on a second touch, or decides on distance alone so a flick bounces back | Pointer capture, the grab offset kept, extra touches ignored, release decided on speed or distance, and pulling past a boundary moves a fraction of the pointer's distance |
+| `trap/gesture-axes` | Overlays, Containers, Choice | The element and the page both move on the same swipe, or a small wobble commits to the wrong direction | Which axis the element owns (`touch-action`), and how far the pointer moves before a direction is chosen |
 | `trap/color-only-status` | Data, Feedback | Status told by color alone | The text or icon that carries it |
-| `trap/surface-double-edge` | Containers | One surface draws its edge twice, with a border and a shadow, and nobody decided whether both are meant | Which edge the surface uses. Default: a border on resting surfaces (cards, panels, inputs), a shadow only on raised or overlay ones (menus, popovers, dialogs, toasts). When most resting surfaces draw both, that is a gate with this default, not a rule |
+| `trap/surface-double-edge` | Containers | One surface draws its edge twice, with a border and a shadow, and nobody decided whether both are meant | Which edge the surface uses. Default: a border on resting surfaces (cards, panels, inputs), a shadow only on raised or overlay ones (menus, popovers, dialogs, toasts). When most resting surfaces draw both, that is a gate with this default |
 | `trap/surface-matches-parent` | Containers | A panel's fill equals the background behind it, so a hairline border is its only edge and the panel reads as a stroke on the page | Which surface token the panel uses, one step off its parent. Default fix: the next surface token, or no fill when a border-only panel is the decision. Measured by `probe.mjs` (`flatSurfaces`: an opaque fill within 2 of the background behind it, a border of 1px or less, no shadow) |
 
 A family with no rows here still gets a spec. Its traps come from the app, through the method below.
 
 ## Finding this app's visual slop
 
-Polish is consistency with the app's own decisions. Find those decisions, then find where the app breaks them. Run this in harden and build, before specs are filled, and again in `design-review` when criterion 10 comes up.
+Find the app's own decisions, then where the app breaks them. Run this in harden and build before specs are filled, and in `design-review` for criterion 10.
 
 1. **Measure what the app does.** On the routes with the most traffic, collect computed styles per text role and per surface. Save a script like this as a file, such as `/abs/repo/.design-system/scripts/rendered-type.js`, and run it on each route with a browser tool (`browser.md`, Tool how-to):
 
@@ -104,7 +125,7 @@ Polish is consistency with the app's own decisions. Find those decisions, then f
    Object.entries(seen).sort((a, b) => b[1] - a[1]);
    ```
 
-   Do the same for surfaces (border, shadow, radius and background of every element with a border or shadow). Save each output under `.design-system/inventory/rendered/`.
+   Do the same for the border, shadow, radius and background of every element with a border or shadow. Save each output under `.design-system/inventory/rendered/`.
 
 2. **Read the pattern.** For each job, such as body text, a section heading, a button label, a resting card or a floating menu, write down what most of the app does. That majority is the candidate rule. A job with no majority is a gate.
 
@@ -116,15 +137,16 @@ Polish is consistency with the app's own decisions. Find those decisions, then f
    - Is a color, gradient or shadow used on one screen only?
    - Do some hovers animate color while others change instantly?
    - Is the space above a heading the same as the space below it on some screens and different on others?
+   - Do surfaces with the same job use different durations or curves?
    - Does a treatment appear only on screens built recently, or only in one team's area?
 
    Each yes is a finding with its count and its screens.
 
-4. **Compare structure with a strong reference.** Open Geist's foundation pages (https://vercel.com/geist/introduction) and ask whether the app has a named role for each thing Geist separates, such as surface levels, text emphasis steps and control heights. Take the structure only, never Geist's values.
+4. **Compare structure with Geist's foundation pages** (https://vercel.com/geist/introduction). Ask whether the app has a named role for each thing Geist separates, such as surface levels, text emphasis steps and control heights. Take the structure only, never Geist's values.
 
 5. **Check the render.** Confirm each finding on a capture at every width and theme, per `browser.md`.
 
-6. **Decide.** A break where the majority is clear becomes a rule, and the outliers go on the stray list for migration. A break with no majority is a gate with the most common value as its default. A majority that is itself a trap from the table above never becomes a rule. It becomes a gate that defaults to the trap's fix, such as border plus shadow on 5 of 5 cards. Never settle one by importing a preference from outside the app.
+6. **Decide.** A break where the majority is clear becomes a rule, and the outliers go on the stray list for migration. A break with no majority is a gate with the most common value as its default. A majority that is itself a trap from the table above becomes a gate that defaults to the trap's fix, such as border plus shadow on 5 of 5 cards. Never settle one with a preference from outside the app.
 
 ## Writing a derived rule
 
@@ -134,7 +156,7 @@ Each rule the method produces goes where it applies: foundation rules under the 
 - `rule/typography-heading-weight`: When text is a section heading, render it at weight 600 instead of 700, because 41 of 47 headings already do and two weights for one role read as two levels. Evidence: app 41/47 h2 elements on 12 routes, rendered/type.txt, outliers /billing and /reports on strays.tsv. Check: lint on weight 700 in headings.
 ```
 
-A rule with no ground is cut. A rule a script can test gets a check with the same ID in the enforcement phase.
+A rule with no ground is cut. A rule a script can test gets a check with the same ID.
 
 ## Coverage gaps
 

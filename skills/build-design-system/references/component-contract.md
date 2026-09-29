@@ -1,6 +1,6 @@
 # Component contract
 
-> For the team setting this up: this is what "canonical" means in this skill. Tighten it to your behavior library and test runner. Keep the rule that a component is not ready until every section below is met or has a recorded gap. Where the base reference says otherwise, it wins. The spec each component gets is in `spec-template.md`.
+This is what "canonical" means in this skill. A component is not ready until every section below is met or has a recorded gap. Where the base reference says otherwise, it wins. The spec each component gets is in `spec-template.md`.
 
 Contents
 
@@ -31,9 +31,23 @@ Record the ranking in the run record, one line per candidate, so a reviewer sees
 
 ## API
 
+Before the first family, derive the app's own prop vocabulary from `components.tsv` and write it to `docs/system/decisions.md`, because every family worker writes against it at once (`coordinator-path.md`, Lock before fan-out). Take the majority form for each:
+
+- the variant axis names, such as `variant`, `tone` or `intent`, and the size scale, such as `sm`, `md`, `lg`
+- boolean naming (`disabled` or `isDisabled`) and event naming (`onChange` or `onValueChange`)
+- the value and change pair for controlled use (`value` with `onValueChange`)
+- slots against props for named regions, and how a component renders as another element (`asChild`, `render` or `as`)
+
+A split with no majority is a gate. Then:
+
 - Props describe purpose: `tone="danger"`, not `red`. `size="sm"`, not `small={true}`.
-- Mutually exclusive options are one union prop, not several booleans. `variant: "primary" | "secondary" | "ghost"`, never `primary` and `ghost` as separate booleans that can both be true.
-- Include only the variants the inventory found in use. A variant nobody uses today is a guess about tomorrow.
+- Mutually exclusive options are one union prop, not several booleans. `variant: "primary" | "secondary" | "ghost"`, never `primary` and `ghost` as separate booleans that can both be true. The same holds for state: one `status` of idle, pending, success or error, not `isLoading` and `isError` that can both be true.
+- Components called from anywhere, such as toasts and dialog managers, have:
+  - one host mounted near the root
+  - a call that is safe to repeat, where the same id updates instead of duplicating
+  - rendering in a portal at the root or in the top layer, so no ancestor's stacking context or overflow clips it
+  - the app's resolved theme
+- Include only the variants the inventory found in use, and count a style override passed at two or more call sites as a missing variant.
 - Pass through native attributes of the root element (`type`, `disabled`, `aria-*`, `name`, `form`), and let a ref reach the root in whatever form the framework and foundation use. The form itself is never a defect.
 - Keep native defaults unless the family's existing behavior differs. If every inventoried button inside a form sets `type="button"`, the canonical default is `button` and the docs say so.
 - Controlled and uncontrolled use both work where the native element supports both.
@@ -69,6 +83,8 @@ Controls that sit together share one control height token per size, so a row of 
 - Pointer targets meet WCAG 2.5.8, at least 24 by 24 CSS px, with spacing so expanded hit areas do not overlap. When the brief says mobile first, primary actions and standalone buttons are at least 44px tall at phone widths, as a decision, following the common touch-target guideline.
 - Color is never the only signal for a state. Invalid fields carry text, not only a red border.
 - Motion respects `prefers-reduced-motion`.
+- Each theme sets `color-scheme`, so native controls and scrollbars match it. State stays visible under `forced-colors: active`, drawn with borders or system colors instead of fills alone.
+- A surface with blur or translucency switches to an opaque fill under `prefers-reduced-transparency: reduce` and `prefers-contrast: more`, and is readable with the blur removed, since not every browser reports reduced transparency.
 - Status changes that the user did not trigger by focus are announced once, by one layer.
 
 Contrast is measured by a script against the rendered colors in each theme, to WCAG AA by default: 4.5:1 for text, 3:1 for large text. Non-text parts that identify a control or its state need 3:1 against what sits next to them (WCAG 1.4.11): input and checkbox borders, the focus ring as drawn with its alpha, and a checked or selected fill. Record the measured ratio. Never write a ratio you did not measure.

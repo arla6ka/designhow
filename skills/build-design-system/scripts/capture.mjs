@@ -58,6 +58,9 @@ Options
                        export default { error: async (page) => { ... } }
                        A listed state with no function is reported as not captured
   --full               full-page screenshots (default: the viewport)
+  --mobile             Playwright only. isMobile and hasTouch on, for a review of a phone
+  --storage-state <f>  Playwright only. A storage state file the person provides, to reach
+                       signed-in screens. Never a real account's session
   --via <tool>         playwright (default) or agent-browser. agent-browser captures
                        the load state only, and runs as --session <name>
   --session <name>     agent-browser session (default ds-capture)
@@ -73,7 +76,7 @@ Exit 2 on bad input or no browser.`;
 
 const argv = process.argv.slice(2);
 if (!argv.length || argv.includes("--help") || argv.includes("-h")) { console.log(HELP); process.exit(argv.length ? 0 : 2); }
-const KNOWN = new Set(["--height", "--root", "--base", "--kind", "--out", "--routes", "--surfaces", "--widths", "--themes", "--theme-via", "--states", "--full", "--via", "--session", "--status", "--no-probe", "--expect-status"]);
+const KNOWN = new Set(["--height", "--root", "--base", "--kind", "--out", "--routes", "--surfaces", "--widths", "--themes", "--theme-via", "--states", "--full", "--via", "--session", "--status", "--no-probe", "--expect-status", "--mobile", "--storage-state"]);
 const bad = argv.filter((a) => a.startsWith("--") && !KNOWN.has(a));
 if (bad.length) { console.error(`capture: unknown ${bad.join(", ")}\n\n${HELP}`); process.exit(2); }
 const val = (f, d) => { const i = argv.indexOf(f); return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith("--") ? argv[i + 1] : d; };
@@ -99,6 +102,9 @@ const tool = val("--via", "playwright");
 if (!/^(playwright|agent-browser)$/.test(tool)) die("--via is playwright or agent-browser");
 const session = val("--session", "ds-capture");
 const probe = !argv.includes("--no-probe");
+const storageState = val("--storage-state") && resolve(val("--storage-state"));
+if (storageState && !existsSync(storageState)) die(`no storage state at ${storageState}`);
+if (tool !== "playwright" && (storageState || argv.includes("--mobile"))) die("--mobile and --storage-state need --via playwright");
 const root = repoRoot(val("--root"), val("--out") || val("--surfaces") || val("--states"));
 
 const slug = (p) => p.replace(/[?#].*$/, "").replace(/^\/+|\/+$/g, "").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase() || "home";
@@ -114,7 +120,7 @@ else if (val("--surfaces")) {
   const head = rows.shift().map((h) => h.trim().toLowerCase());
   const col = (...n) => head.findIndex((h) => n.includes(h));
   const cs = col("surface"), cr = col("route", "path", "url"), ct = col("states"), cx = col("status", "expect", "expectstatus");
-  if (cs < 0 || cr < 0) die(`${p} needs a header row with surface and route columns. migrate's surfaces.tsv holds path globs, not routes: pass --routes instead`);
+  if (cs < 0 || cr < 0) die(`${p} needs a header row with surface and route columns. A surfaces file with no route column cannot be captured: pass --routes instead`);
   surfaces = rows.map((r) => ({ surface: r[cs].trim(), route: r[cr].trim(), states: ct >= 0 ? (r[ct] || "").split(",").map((s) => s.trim()).filter((s) => s && s !== "-" && s !== "default") : [], expect: cx >= 0 && /^\d{3}$/.test((r[cx] || "").trim()) ? Number(r[cx].trim()) : 200 }));
 } else die("give --routes or --surfaces");
 for (const e of list("--expect-status") || []) {
@@ -158,7 +164,7 @@ if (tool === "playwright") {
     for (const t of themes) for (const w of widths) for (const state of ["", ...s.states]) {
       const step = state ? steps[`${s.surface}.${state}`] || steps[state] : null;
       if (state && typeof step !== "function") { missed.push(`${s.surface}.${state}: no function for it in --states`); continue; }
-      const ctx = await browser.newContext({ viewport: { width: w, height }, colorScheme: via === "media" ? (t === "dark" ? "dark" : "light") : "light", reducedMotion: "reduce" });
+      const ctx = await browser.newContext({ viewport: { width: w, height }, colorScheme: via === "media" ? (t === "dark" ? "dark" : "light") : "light", reducedMotion: "reduce", ...(argv.includes("--mobile") ? { isMobile: true, hasTouch: true } : {}), ...(storageState ? { storageState } : {}) });
       const page = await ctx.newPage();
       try {
         await page.clock.install({ time: new Date("2026-01-01T09:00:00Z") });
@@ -184,7 +190,7 @@ if (tool === "playwright") {
   const ab = (...a) => spawnSync("agent-browser", ["--session", session, ...a], { encoding: "utf8" });
   const abIn = (input, ...a) => spawnSync("agent-browser", ["--session", session, ...a], { encoding: "utf8", input });
   if (spawnSync("agent-browser", ["--version"], { encoding: "utf8" }).status !== 0) die("agent-browser is not installed. Drop --via or install it");
-  const freeze = join(root, ".design-system/tmp/capture-freeze.js");
+  const freeze = join(root, `.design-system/tmp/${session}/capture-freeze.js`);
   mkdirSync(dirname(freeze), { recursive: true });
   writeFileSync(freeze, `${FREEZE}\nDate.now = () => 1767258000000;\n`);
   let first = true;

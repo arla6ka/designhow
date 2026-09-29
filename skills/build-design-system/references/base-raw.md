@@ -1,6 +1,6 @@
 # Base: hand-rolled
 
-> For the team setting this up: read this when triage reports `foundation` as `raw`, meaning the app's components were written by hand with no component library or copy-in registry. The defaults in `token-architecture.md`, `component-contract.md` and `system-structure.md` were written for this case, so this page is short. It says what those files assume and where hand-rolled apps usually surprise them.
+Read this when triage reports `foundation` as `raw`, meaning the app's components were written by hand with no component library or copy-in registry. The defaults in `token-architecture.md`, `component-contract.md` and `system-structure.md` were written for this case, so this page is short. It says what those files assume and where hand-rolled apps usually surprise them.
 
 Contents
 

@@ -1,6 +1,6 @@
 # Base: shadcn
 
-> For the team setting this up: read this when triage reports `foundation` as `shadcn` or `shadcn+registry`, or when seed mode starts from shadcn defaults. It overrides the defaults in `token-architecture.md`, `component-contract.md` and `system-structure.md` where they differ, and says so at each point. Install shadcn's own skill (`npx skills add shadcn/ui`) beside these. It carries the composition rules with correct and incorrect pairs, and this page does not restate them.
+Read this when triage reports `foundation` as `shadcn` or `shadcn+registry`, or when seed mode starts from shadcn defaults. It overrides `token-architecture.md`, `component-contract.md` and `system-structure.md` where they differ. shadcn's own skill (`npx skills add shadcn/ui`) carries the composition rules, and this page does not restate them.
 
 Contents
 
@@ -17,7 +17,7 @@ Contents
 
 ## Read the project first
 
-Run `npx shadcn@latest info --json` and save it in the run folder. Trust it over `components.json` and over anything inferred. The fields that matter here are `base` (`radix` or `base`), `style`, `tailwindCss`, `resolvedPaths.ui`, `iconLibrary`, `registries` and the installed `components`. `base` decides how triggers compose (`asChild` on Radix, `render` on Base UI), so every brief that writes a trigger pastes it. Moving from Radix to Base UI is its own job, run with shadcn's `migrate-radix-to-base` skill, not inside a build.
+Read `components.json` and the installed files in the ui folder, and save what they say in the run folder. When the `shadcn` package is already installed locally, also run `npx shadcn info --json` and trust it over anything inferred. Never download it for this, matching triage's no-download default. The fields that matter are `base` (`radix` or `base`), `style`, `tailwindCss`, `resolvedPaths.ui`, `iconLibrary`, `registries` and the installed `components`. `base` decides how triggers compose (`asChild` on Radix, `render` on Base UI), so every brief that writes a trigger pastes it. Moving from Radix to Base UI is its own job, run with shadcn's `migrate-radix-to-base` skill, not inside a build.
 
 ## Where tokens live
 
@@ -29,6 +29,8 @@ In the file at `tailwindCss`, as shadcn writes them. Each role is a pair of CSS 
 - `shadcn apply <preset>` and any registry item with `cssVars` write into this file. A generator that owns these lines fights both. The default is no generator. If the team wants DTCG as the source, generate only into a region fenced by `/* tokens:begin */` and `/* tokens:end */` comments, and never into the lines shadcn writes.
 - Do not put `--color-*: initial` in `@theme inline`. Stock components read `black`, `white` and `transparent`, such as the Dialog overlay's `bg-black/10`, and the reset drops them. Catch palette classes with the check's `rule/palette-use` (`checks.md`). A scoped reset of named palette families is allowed if the team asks, proven on the stock Dialog overlay and on a component that uses `bg-sidebar` and `fill-chart-1`.
 - `token-mapping` maps raw values onto these names as they are. It never proposes renaming one.
+
+On Tailwind v3 (`tailwind.config.*` present, no `@theme` in the CSS), the variables hold bare HSL channels under `:root` and `.dark`, such as `--muted: 210 40% 96.1%`, and `tailwind.config` maps them as `muted: "hsl(var(--muted))"`. There is no `@theme inline`. A new role is a config color plus the variable pair. `rule/token-parity` reads the channel values as colors.
 
 ## What counts as a component
 
@@ -96,7 +98,7 @@ Stock variants can fail contrast on their own, usually through alpha fills such 
 
 Pages and specs in `system-structure.md` cover what the team owns: customized primitives, team components and product rules, such as "`Button` has `tone`, not `variant`". For a stock primitive with no team rules, the page is short. The Description links shadcn's docs for the item, the spec's Foundation table has one "Stock" row, and States, Keyboard and ARIA still get filled for this app, since the check needs them.
 
-The Foundation row of any spec names the registry item and the `style` and `base` from `shadcn info`, then lists only the real differences `shadcn add <item> --diff` shows.
+The Foundation row of any spec names the registry item and the `style` and `base` from `components.json`, then lists only the real differences `shadcn add <item> --diff` shows.
 
 When a doc names where a component renders (`component-docs`, Description), read the top of the file on the App Router, for example: `"use client"`, `import "server-only"`, or neither on a server component. Follow its imports for hooks that force a client boundary. In a doc's Tokens table, a utility built from a declared role name (`bg-muted`, `text-muted-foreground`) is token use, and a palette utility (`bg-blue-600`, `text-gray-500`) is palette use.
 

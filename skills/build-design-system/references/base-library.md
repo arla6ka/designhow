@@ -1,6 +1,6 @@
 # Base: package library or team package
 
-> For the team setting this up: read this when triage reports `foundation` as `library:<package>`, such as MUI, Chakra, Mantine, Ant Design or React Aria, or `package:<name>` for the team's own package. The library owns behavior and most visuals. The system is the theme plus the wrappers and rules the team adds on top. Ask once, in the Frame, whether the team is keeping the library or leaving it. The default is keeping it.
+Read this when triage reports `foundation` as `library:<package>`, such as MUI, Chakra, Mantine, Ant Design or React Aria, or `package:<name>` for the team's own package. The library owns behavior and most visuals. The system is the theme plus the wrappers and rules the team adds on top. The Frame's one routing question (`run-record.md`, Questions) asks whether the team is keeping the library or leaving it. The default is keeping it.
 
 Contents
 

@@ -68,7 +68,9 @@ no traces.tsv, and exits 0 unless an after capture is missing.
 --diff runs scripts/pixdiff.mjs on each pair (needs Playwright), prints the
 changed-pixel percentage, bounding box and largest channel delta, and writes a
 .diff.png beside the after capture. It compares exactly (tolerance 0) unless
---tolerance <n> is given. Never pass --tolerance for a value-identical swap. Without it, a pair counts as changed when the files differ byte for byte.
+--tolerance <n> is given. Without it, a pair counts as changed when the files differ byte for byte.
+The montage reads the first theme only, so it never proves a value-identical swap:
+pixdiff.mjs on the before and after folders does (references/browser.md).
 
 Open gates: a finding above that a person still has to decide is a warning, not a
 failure, when open-gates.tsv (same folder) has a row for it:

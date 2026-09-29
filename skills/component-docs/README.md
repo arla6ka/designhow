@@ -24,40 +24,10 @@ Name the component, as in "document the button". With repo access the skill find
 - Guessed at keeps guesses from becoming documented fact.
 - Under a coordinator, a status line replaces questions. Nobody can answer mid-run, so open questions go in the output and only missing inputs stop it. The entry comes back as text and the coordinator saves it, since some hosts refuse files a subagent writes.
 
-## Optional tools
-
-- The repo gives Variants, Props, Tokens and the import line from code instead of memory, and finds real uses by searching call sites. The pasted path works without it.
-- A component workbench, opened in a browser, lets the skill render each story to check States and read its accessibility tree.
-- A browser tool (see `build-design-system/references/browser.md`) opens real uses on a dev server, preview or production URL to confirm the screen and the variant.
-- A docs platform, if you wire one up, needs a person between the draft and the publish step. The skill does not publish.
-
 ## Check after changing
 
-Run `TESTS.md`. At minimum, confirm it still stops with no real and no planned use, returns ready-with-gaps with a gate on one real use, finds the component from its name alone, marks tokens `NOT SUPPLIED` when the code references none, and lists a variant difference between the props type and the stories under Conflicts. Then check one entry's headings against a published one.
+Repo access, a component workbench and a browser are optional, and the pasted path must keep working. Run `TESTS.md`, then check one entry's headings against a published one.
 
 ## Adapt this skill
 
-Paste this into your agent with `SKILL.md`, both files in `references/`, and one published entry attached.
-
-```
-Attached are the component-docs skill, its format file, and (maybe) one entry we published.
-I want the skill to write entries the way our team writes them.
-
-Interview me, one question per message. Cover:
-- our headings, and what goes under each
-- our words for variants, states and parts
-- which missing inputs should end a run
-- where our code, stories and any specs live, and how you can read them
-- which source wins for tokens, for variants, and for behavior, with the reason
-
-Leave the stop rules, the three blocks after each entry, and the final checks alone
-unless one of my answers contradicts them.
-
-Swap the Toast example for my published entry, if I gave one, and match its length.
-
-Anything I can't answer gets marked UNDECIDED. Don't fill it in yourself.
-
-Show me the edits in two groups before making any: first, edits that change what
-the skill stops on, accepts, checks or asks; second, renames and reformatting.
-Make nothing until I approve.
-```
+Use the interview prompt in `../ADAPTING.md` with `SKILL.md`, both files in `references/` and one published entry. Topics for this skill: your headings and what goes under each, your words for variants, states and parts, which missing inputs end a run, where code, stories and specs live, and which source wins for tokens, variants and behavior. Swap the Toast example for your entry at its length.

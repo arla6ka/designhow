@@ -1,6 +1,6 @@
 # Run record
 
-> For the team setting this up: the run record is one Markdown file, `.design-system/run.md`. A reviewer reads the run from it without the transcript, and an agent resumes from it after a crash. Rename the path if you like. Keep one writer, the coordinating agent.
+The run record is one Markdown file, `.design-system/run.md`. A reviewer reads the run from it without the transcript, and an agent resumes from it after a crash. It has one writer, the coordinating agent.
 
 Contents
 
@@ -8,6 +8,7 @@ Contents
 - Rules
 - File shape
 - Frame
+- Questions
 - Standing orders
 - Phases
 - Decisions
@@ -20,12 +21,14 @@ Contents
 
 These words mean the same thing in every design.how skill. Other files point here instead of redefining them.
 
-- **Surface.** One route, or the shared layout every route renders (named `shared`), with its states from `surfaces.tsv`. It is the unit of capture, commit and verdict.
+- **`<skills>`.** The folder that holds this skill and its siblings: a project `.agents/skills/` or `.claude/skills/`, or a global install such as `~/.claude/skills/`.
+- **Surface.** One route, the shared layout every route renders (named `shared`), or a smaller unit migrate cuts, such as a modal. It is the unit of capture, commit and verdict. The capture list `.design-system/review/surfaces.tsv` names every surface, one row each with the columns `surface`, `route` and `states`. To capture one surface, copy its row under the header into `.design-system/tmp/<worker id>/<surface>.surfaces.tsv`. Migrate's work list, `.migration/<run>/queue.tsv`, is keyed by the same surface names.
 - **Run branch.** `ds/<yyyy-mm-dd>-<route>`, cut from HEAD at the start. Every write lands on it. Nothing commits to the starting branch, and merging is the person's call. When the person names a branch for this work, or created one for it in this session, that branch is the run branch and no other is cut. Record "run branch: <name>, the person's own" as a decision. Commits stay local until the person asks for a push or a PR.
-- **Identical-value swap.** A raw literal replaced by a token that holds exactly its value, proven by a pixel diff of 0 on every route it touches. It needs no clearance.
-- **Decision.** A choice a reversible change settles, made and recorded with its evidence. Fixes to broken behavior, adds-only accessibility changes and merges inside tolerance are decisions.
-- **Gate.** A product or brand choice a person could reasonably answer either way. It carries a default, the run applies that default on the run branch, and the person reverses it by naming it at merge.
-- **Clearance.** The person's go-ahead, within a budget, to move surfaces beyond identical-value swaps and decided gate defaults. What counts as clearance is in `coordinator-path.md` (Clearance).
+- **Identical-value swap.** A raw literal replaced by a token that holds exactly its value. It needs no clearance. `pixdiff.mjs <before dir> <after dir> --surface <name>` at tolerance 0 proves it at 0% over every width and theme capture of each surface it touches, never `montage.mjs --diff`, which reads the first theme only. A motion value replaced by a preset that resolves to the same value, such as a raw `200ms` by a 200ms preset, is also a swap, proven by matching before and after animation lists taken with reduced motion off (`browser.md`, Measuring motion). A changed motion value is a decision.
+- **Decision.** A choice a reversible change settles, made and recorded with its evidence. Fixes to broken behavior, adds-only accessibility changes (`traps.md`) and merges inside tolerance are decisions. Removing or restructuring semantics, brand, product vocabulary, visible change on shipped screens beyond tolerance and intentional behavior changes are gates.
+- **Gate.** A product or brand choice a person could reasonably answer either way. It carries a default, the run applies that default on the run branch, and the person reverses it by naming it at merge. Its states are `open` (waits on a person), `decided` (default chosen and recorded) and `applied` (landed on the run branch). At close, a `decided` gate is `applied`, or the handoff lists it as not landed with its reason.
+- **Clearance.** The person's go-ahead, within a budget, to move surfaces beyond identical-value swaps and decided gate defaults (`coordinator-path.md`, Clearance). These words in the ask count as clearance within the session budget: "looks like a different product", "make it look like one thing", "every page looks different", "consistent" or "consistency" with a verb that means change ("make every page consistent"), "fix it" or "fix this" aimed at a mess or an inconsistency, "migrate", "move every screen", "roll out", "adopt", "use it everywhere", and "nobody uses it", "nobody follows it" or any "ignore" aimed at the system. An ask that names none of them, including a fallback route picked because nothing matched, grants no clearance.
+- **Worker status.** A worker's report opens with `done`, `partial`, `blocked: <reason>` or `failed: <reason>`, in every skill. A sibling's `Status: stopped: <condition>` (token-mapping, component-docs, design-review) counts as `blocked`.
 - **Footprint.** How much the run adds to the repo. Full copies in the check scripts, specs and generated docs. Minimal, the default when the repo is not the person's own or the ask is for a PR, adds only tokens, the components touched and the screen changes, and uses the repo's own lint, typecheck and build as the check (`coordinator-path.md`, Start).
 
 ## Rules
@@ -53,7 +56,7 @@ These words mean the same thing in every design.how skill. Other files point her
 
 ## Frame
 
-Written in phase 1, with counts filled in after phase 2. The values below are one invented example.
+Written in phase 1, with counts filled in after phase 2. The first commit that changes a screen fixes the complaint quoted in the Frame. The values below are one invented example.
 
 ```markdown
 ## Frame
@@ -65,7 +68,7 @@ Themes: light, dark (data-theme attribute)
 Viewports: 390, 1280 (the app's narrowest and widest supported widths)
 Pilot: Invite teammate (Settings > Members > Invite). Uses Button, Input, Select, Dialog, Toast. Has an invalid-email error state.
 Workers: 5 docs, 2 code (machine budget: 9 GB free, swap 20%, backend stopped). 31 component files, 2 themes.
-Budget: 2 hours (the default: nobody named one and the host set no session length), split by the phase caps in coordinator-path.md.
+Budget: 2 hours (the default, since nobody named one and the host set no session length), split by the phase caps in coordinator-path.md.
 Clearance: yes, the ask "make every page look like one product" counts (coordinator-path.md).
 Check command in CI: npm run check (read from .github/workflows/ci.yml)
 
@@ -74,24 +77,38 @@ every token has a role, the checks fail on 6 seeded violations and pass on the s
 and the pilot matches its baseline except for D-07 and gate G-01.
 ```
 
+## Questions
+
+The Frame asks the two standing questions and at most one routing or target question, each with its default already applied, in one message. Budget and clearance come back as one reply, `Go, <budget>`. The run goes on under the defaults, and read-only steps start without waiting. Under design-system-boss, the boss asks them.
+
+- Bans. "Anything you never want to see in the UI, its copy or the docs?" Offer uppercase labels, middle-dot or bullet separators, em dashes, exclamation marks, emoji and gradients, none selected. Record each answer word for word as a standing order and a `rule/ban-<slug>` (`checks.md`, Bans), or "none named". A ban stated later becomes a standing order at once, and the next commit sweeps every file for it.
+- Design source, when the person named a design file, brand kit or mockups. "Should the system follow it as reference only, partially, or at pixel fidelity?" The default is reference only (`modes.md`, Following a design source).
+- The one routing or target question, such as a monorepo target nobody named (list candidates with route counts) or an ask that fits two routes a whole phase apart (default: the route that answers the named complaint).
+
+Send a batch of up to six multiple-choice questions only when the person asks to be asked or the run builds or hardens a system. Each lists the recommended option first, already applied. Ask only what changes files a worker writes: the branch and what besides product code is committed, the primary action color and how much brand color the product carries, the typeface and its license, the icon set, and where the person reviews the system.
+
 ## Standing orders
 
-One numbered list per run, one rule per line, pasted word for word into every brief and every retry. Under design-system-boss, the boss's list comes first and the build lines follow with the next numbers. Running directly, use this one. When you catch yourself repeating an instruction to a worker, add it here first.
+This is the one list for every design.how skill, one rule per line, pasted word for word into every brief and every retry. `design-system-boss` and `migrate-design-system` add only their own lines after it, as bullets. When you catch yourself repeating an instruction to a worker, add it here first. The list's first line is reserved for `STOP: <reason>`, unnumbered, which the coordinator writes to halt every new brief.
 
 ```markdown
 ## Standing orders
-1. Write only inside your brief's SCOPE.
-2. Tokens, generated files, the barrel, registry.json, the migration map and the check's config, allowlist and drift list belong to the coordinator. Report allowlist shrink candidates; never edit the allowlist.
-3. Use only the colors, fonts, shadows, gradients and motion the app already has, or that the design source the Frame follows draws.
+1. Write only inside your brief's SCOPE. Scripts a rerun needs go in .design-system/scripts/, committed; the check never reads .design-system/. Your scratch and one-off probes live only in .design-system/tmp/<your worker id>/, deleted at close. Never read, apply or delete another worker's scratch.
+2. The token source belongs to the one writer coordinator-path.md names. Generated files, the barrel, registries, indexes, the migration map and the check's config, allowlist and drift list belong to the coordinator. Report allowlist shrink candidates; never edit the allowlist.
+3. Use only the colors, fonts, shadows, gradients, motion, logos and product names the app already has, or that the design source the Frame follows draws.
 4. Baselines, fixtures and checks stay as written. Fix the code instead.
 5. Examples use inert data. No requests on mount.
-6. Report with the REPORT block, commands and exit codes pasted, not summarized.
+6. Report with the REPORT block, status `done`, `partial`, `blocked` or `failed` first, commands and exit codes pasted, not summarized. Every claim that something is fixed, passes or works names the command that proved it this session.
 7. Return your report as your final message, as text. Write no report file, and never write into a coordinator file.
 8. Browser commands use absolute paths and your own browser session name, spelled out on every line.
-9. Commit only to the run branch, locally, never to a branch the person did not name for the work. No push or PR unless the person asked for one.
-10. Swap a raw literal for a token of exactly the same value on any route once pixdiff at tolerance 0 shows 0% for that route. Decided gate defaults land wherever they reach. Other changes outside the pilot land only on cleared surfaces. Each is one surface per commit, with before and after captures in .design-system/review/ (images gitignored, traces.tsv and reports committed) and a traces.tsv row.
-11. What the team needs after the run (scripts, config, specs, generated docs) goes in the repo, never only in .design-system/ or a skill folder.
+9. Commit only to the branch your brief names, locally. Never merge, deploy, publish, force-push, stash, reset or clean. No push or PR unless the person asked for one. Leave uncommitted changes and branches you did not create as they are.
+10. Swap a raw literal for a token of exactly the same value on any route once pixdiff at tolerance 0 shows 0% on every width and theme capture of that route, or matching animation lists for a motion value. Decided gate defaults land wherever they reach. Other changes outside the pilot land only on cleared surfaces. Each is one surface per commit, with before and after captures in .design-system/review/ (images gitignored, traces.tsv and reports committed) and a traces.tsv row.
+11. What the team needs after the run (scripts, config, specs, generated docs) goes in the repo, never only in .design-system/ or a skill folder. On a minimal footprint nothing is vendored. An unexplained diff stays out of the commit and becomes a gate.
 12. The person's bans, quoted below, hold in code, copy, docs, examples and the showcase, except on a Don't: line.
+13. The dev server and browser follow coordinator-path.md (Dev server and retries). In a shared checkout, start none, and return `blocked: server down` when the brief's port does not answer.
+14. Put questions in your report, or your own run record, as gates with a default, never as a mid-run ask, then finish the work.
+15. In a checkout other workers share, make small exact edits that fail when the file changed since you read it. Never rewrite a file whole, and never revert or tidy a change you did not make. A script that applies drafts takes an explicit list of your own files.
+16. Start no agents unless your brief names you a coordinator, apart from the two fresh agents a two-agent test needs. A coordinator blocks on each worker and never returns while one runs.
 ```
 
 ## Phases
@@ -131,12 +148,14 @@ A change to a shipped screen beyond tolerance is a gate, not a decision row. Ref
 Append-only. Each gate is a question for a person, with the default the run applied so work could continue.
 
 ```markdown
-| ID | Question | Options | Default applied | Reverses by | Status |
+| ID | Question | Default | Status | Commit | From |
 |---|---|---|---|---|---|
-| G-01 | Merge 14 body-text grays into text.default (#171717)? Largest shift #111 to #171717, on 3 screens | merge, keep separate | merge | Keep the old values as listed exceptions | open |
-| G-02 | Sidebar secondary text: reuse text.inverse or add text.inverse.subtle? | reuse, add | reuse text.inverse | Add the token and point 4 call sites at it | open |
-| G-04 | Merge Combobox into Select with a `searchable` prop? Changes the settings timezone picker | merge, keep both | keep both | Merge and run the codemod on 7 call sites | open |
+| G-01 | Merge 14 body-text grays into text.default (#171717)? Largest shift #111 to #171717, on 3 screens. Reversing keeps the old values as listed exceptions | merge | applied | 3c4d5e6 | token-mapping |
+| G-02 | Sidebar secondary text: reuse text.inverse, or add text.inverse.subtle and point 4 call sites at it? | reuse text.inverse | applied | 3c4d5e6 | G-sidebar-01 |
+| G-04 | Merge Combobox into Select with a `searchable` prop? Changes the settings timezone picker, 7 call sites | keep both | decided | | D-combobox-02 |
 ```
+
+The columns are the same in every design.how skill. From names the worker, sibling or record that proposed the gate. Commit is the commit that applied the default, empty until then.
 
 The run applies every gate's default in the tokens and code on the run branch, not only in this table. A merge default means the merged values are gone from the token files. If no default is safe, the question belongs under Stop and ask in the skill, and the run stops.
 
@@ -194,10 +213,13 @@ Follow-up, no spec yet: Tabs, Tooltip, Avatar.
 Families with missing states at inventory: Button (built), Table (empty, loading, error: G-06).
 
 ### Gates
-G-01 open, default merge. G-02 open, default reuse text.inverse. G-04 open, default keep both.
+G-01 applied, merge. G-02 applied, reuse text.inverse. G-04 decided, keep both, so nothing lands.
 
 ### Next screen
 The next likely screen is the project list. It hits two coverage gaps: tables (Meanwhile: a divided list, as /settings) and bulk actions (Meanwhile: none selected hides the bar).
+
+### Trial
+One fresh agent, given only the repo on a throwaway branch and the AGENTS.md block, built the project list. Check: npm run check exit 0. design-review: 1 Blocking (row actions unreachable by keyboard). Twins opened: button.md, table-gap row. Gaps it named: tables, bulk actions.
 
 ### The check cannot see
 Copied from `node scripts/check-system.mjs --list-blind-spots`: rendered contrast, behavior, layout, runtime class names, files outside include, by-hand rules.
@@ -207,7 +229,7 @@ From .design-system/close.md. Raw values left: 412 across 23 routes (was 1,180).
 Largest: /settings/billing 61, /dashboard 48. Hand to migrate-design-system with the map and codemod above.
 ```
 
-The final message is the report's four parts, in this order. The first line is one plain sentence that answers the ask. Then it says which screens changed and which did not, and why. Every count in it comes from `.design-system/close.md` (`coordinator-path.md`, Close), and it names what is still raw instead of saying "every screen". No skill names the person did not use, no process narration and no skill friction. Those stay in this file.
+The final message is the report's four parts, in this order. The first line is one plain sentence that answers the ask. Then it says which screens changed and which did not, and why. Every count in it comes from `.design-system/close.md` (`coordinator-path.md`, Close), and it names what is still raw instead of saying "every screen". No skill names the person did not use, no process narration and no complaints about the tools or skills. Those stay in this file.
 
 ```
 The app now looks like one product on a branch you can merge: ds/2026-03-12-build changes 6 of 8 screens to one button, one text color and one field style. /empty and /404 look the same because they held no drifted values. Before and after pictures: .design-system/review/index.html.
@@ -215,6 +237,8 @@ Checks: npm run check exit 0 (clean clone). npm run build exit 0, and all 8 rout
 Gates, each already applied on the branch: 14 body grays become one text color (G-01). Sidebar secondary text reuses text.inverse (G-02). Combobox stays apart from Select (G-04).
 Next: "Merge ds/2026-03-12-build." To undo one, name it: "Merge ds/2026-03-12-build, but keep the 14 grays separate (reverse G-01)."
 ```
+
+The Trial runs once at handoff: a fresh agent gets only the repo and the AGENTS.md block and builds the named next screen on a throwaway branch. Record its check findings, its `design-review` Blocking count, which twins it opened and which coverage gaps it named. A trial that fails the check or opens no twin is a finding for the handoff.
 
 The message lists the gates that change what a screen shows or does, by default at most 3 so the person reads them all, each with the default the branch applied. The Next prompt clears every open gate at once and never asks for a step the run could have done, such as rerunning a script. Process disputes, such as which record or verifier to trust, stay in the run record. Each claim comes from a command run in this session. A red check is stated, never left out.
 
@@ -224,6 +248,6 @@ A new session or restarted agent reads this file first.
 
 1. Read Frame and Standing orders.
 2. Find the last phase marked `done`. Start the next one.
-3. After a crash, read the machine again and lower the window first (`design-system-boss/references/delegation.md`, Machine budget), and redo the step that was running in smaller calls.
+3. After a crash, read the machine again and lower the window first (`coordinator-path.md`, Machine budget), and redo the step that was running in smaller calls.
 4. For units in the Ledger that are not verified, check the branch. If the commit moved, rerun its verify commands before trusting the row.
-5. Do not redo finished work to feel sure. Recheck, on the real files, the one claim you are about to build on.
+5. Don't rerun a step marked done. Recheck only the claim the next step uses.

@@ -1,19 +1,19 @@
 # Coordinator path
 
-> For the team setting this up: the one page a coordinator reads to run the build, whether that is this skill's own coordinator or design-system-boss. Open another reference only when the phase that names it starts. Change the caps here, not in `SKILL.md`. Terms such as run branch, surface, gate and clearance are defined in `run-record.md` (Terms).
+The one page a coordinator reads to run the build, whether this skill's own or design-system-boss. Open another reference only when the phase that names it starts. Terms such as run branch, surface, gate, clearance and `<skills>` are defined in `run-record.md` (Terms).
 
 ## Start
 
-1. Pick the run branch. When the person named a branch for this work, in this session or in the agent's memory, use it and create no other. Otherwise create one from the current HEAD: `git switch -c ds/<yyyy-mm-dd>-<route>`, where the route is the mode (`build`, `harden`, `seed`) or the one the boss names, and never commit to the starting branch. Write the branch and the rule used into the Frame. Nothing is pushed unless the person asks.
+1. Pick the run branch. When the person named a branch for this work in this session, use it and create no other. Otherwise create one from the current HEAD: `git switch -c ds/<yyyy-mm-dd>-<route>`, where the route is the mode (`build`, `harden`, `seed`) or the one the boss names, and never commit to the starting branch. Write the branch and the rule used into the Frame. Nothing is pushed unless the person asks.
 2. Create `.design-system/run.md` from `run-record.md`, with the Frame, the standing orders and the known gates. Workers read gates, so the gates exist before any worker starts.
-3. Decide the footprint. When the repo looks like one the person does not own (a remote that is not theirs, a CONTRIBUTING.md, a README for outside contributors), or the ask mentions a PR or upstream, open a footprint gate with the default "minimal". Minimal adds tokens, the components touched and the screen changes, with no docs site, twins or copied scripts unless asked. Phases 5 and 7 write only what the repo's own lint and docs already hold. When the ask names families, minimal covers only those, and no migrate audit plan is written. Before editing an instance, confirm something imports it. Minimal closes with a PR body in `.design-system/pr.md`, a check that the branch base matches the upstream tip, and dead hunks dropped, per `design-system-boss/references/routes.md` (Minimal footprint close).
-4. Set up for the footprint. Full: copy the check scripts per `SKILL.md` phase 1, and add `.design-system/review/**/*.png` and `.design-system/tmp/` to `.gitignore`. Everything else in `.design-system/review/` is a committed record: `surfaces.tsv`, `traces.tsv`, the probe files, the review reports and `index.html`. Minimal: copy nothing and leave `.gitignore` alone. List `.design-system/` in `.git/info/exclude`, so the run record, captures and scratch stay untracked. Either way, fixtures, capture, pixdiff and montage run from `<skills>/build-design-system/scripts/`, where `<skills>` is `.agents/skills/` or `.claude/skills/`.
+3. Decide the footprint. When the repo looks like one the person does not own (a remote that is not theirs, a CONTRIBUTING.md, a README for outside contributors), or the ask mentions a PR or upstream, open a footprint gate with the default "minimal" (`run-record.md`, Terms). Phases 5 and 7 then write only what the repo's own lint and docs already hold. When the ask names families, minimal covers only those, and no migrate audit plan is written. Before editing an instance, confirm something imports it.
+4. Set up for the footprint. Full: copy into `scripts/` only what the repo's check runs (`check-system.mjs`, `check-spec.mjs`, `gen-docs.mjs`, `props-table.mjs`, `copy-check.mjs`), copy `spec-template.md` to `docs/system/`, run `node scripts/check-system.mjs --init`, and add `.design-system/review/**/*.png` and `.design-system/tmp/` to `.gitignore`. Everything else in `.design-system/review/` is a committed record: `surfaces.tsv`, `traces.tsv`, the probe files, the review reports and `index.html`. Nothing in `package.json` reads from `.design-system/` or a skill folder. Minimal: copy nothing, leave `.gitignore` alone, and list `.design-system/` in `.git/info/exclude`. Either way, fixtures, capture, pixdiff and montage run from `<skills>/build-design-system/scripts/`.
 
 ## Phase caps
 
-The budget is what the person named, else the session the host gives, else 2 hours, which fits one pilot and a first pass of surfaces. At a cap, record what is left as follow-up and move on. Size the window by the machine budget in `design-system-boss/references/delegation.md`: docs workers wide, workers that compile or drive a browser narrow, and never more than the coordinator's reviews keep up with. Stop spawning at 70% of the session by default, so the rest covers review, the check and the close. Under design-system-boss the build is a nested coordinator. It runs every worker in the foreground or blocks on it, and never returns while one of its workers is still running.
+The budget is what the person named, else the session the host gives, else 2 hours, which fits one pilot and a first pass of surfaces. Under design-system-boss, the build uses the caps in the boss's brief and skips the shares below. At a cap, record what is left as follow-up and move on. Refill a worker slot only when no report waits for review. Stop spawning at 70% of the session by default, so the rest covers review, the check and the close. A nested coordinator blocks on every worker and never returns while one runs (standing order 16).
 
-The shares are defaults. Move time between phases when the app calls for it, and record why in the Frame.
+The shares are defaults. Move time only with a Frame line naming both phases and why.
 
 | Phase | Cap | Read when it starts | Cut first at the cap |
 |---|---|---|---|
@@ -27,11 +27,38 @@ The shares are defaults. Move time between phases when the app calls for it, and
 | 7 Docs | 10% | `system-structure.md`, `spec-template.md`, `writing-method.md`, "Review, decide, fix" below, and "Document everything" when the ask names it | the HTML docs site, then families past the pilot's. Generated docs and the review never |
 | 8 Handoff | 5% | `run-record.md` (Handoff report) | nothing |
 
-With no clearance, the surfaces share goes to components and docs, except the time decided gate defaults need. Landing them is exempt from the spawn stop, because it is cheap and it is what makes screens change.
+With no clearance, the surfaces share goes to components and docs, except the time decided gate defaults need. Landing them is exempt from the spawn stop, because it is cheap and it is what makes screens change. The live showcase the person reviews in is never cut, and neither are the rules of a family that landed, the pilot, the check, the AGENTS.md block or the generated docs.
+
+## Machine budget
+
+This sets the most workers in flight for every design.how skill. Each worker kind's window starts at its own row, the browser row caps browser workers, and no window grows past this table. It is sized by what workers run, since a dev stack, a browser and four compiling workers on one machine can run out of memory and crash the host.
+
+| Worker kind | What it runs | Default in flight |
+|---|---|---|
+| Read-only | reads files, returns a report | 6 |
+| Docs writer | edits Markdown, runs the formatter and scans | 5 |
+| Code worker | edits code, runs typecheck and tests | 2 |
+| Browser worker | code plus a browser tab and measurements | 2, sharing one browser |
+
+Before the first fan-out, and after any crash:
+
+1. Read free memory and swap (`vm_stat` and `sysctl vm.swapusage` on macOS, `free -m` on Linux). Near the swap limit, halve the code and browser rows. Above 80% swap, start no worker until it drops.
+2. Stop every service the work does not need, such as a backend when only the showcase is reviewed, and name them in the Frame.
+3. Give each expensive command one lock, and put the locked form in every brief, such as `flock <lock file> <typecheck command>`. Workers typecheck once near the end and run tests only for their files.
+
+Record the reading and the window as a decision row, and recheck before each wave. After a crash, cut the code and browser rows first. When the person asks for more parallel work, widen the docs row first.
+
+## Dev server and retries
+
+- Only the coordinator starts the shared dev server and the shared browser session. It names the port in every brief and keeps the server up until every worker has returned. The scripts' own headless launches (capture, probe, pixdiff, montage) are exempt.
+- A worker in its own worktree may start its own server on port base+n when the shared one does not answer, and stops it when it finishes. A worker in a shared checkout starts nothing and returns `blocked: server down`. The coordinator restarts the server and resends the same brief.
+- The migrate verifier always runs its own server in its own worktree, because it checks out a surface commit the shared server does not serve.
+- A failed worker gets one retry, a fresh brief with the failing output pasted in. After a second failure the unit splits into smaller briefs or becomes a gate. On a direct build run the coordinator may take the family over itself instead. Under design-system-boss it writes no product code, so it gates.
+- When the same cause fails two units, stop refilling slots for that cause. Fix it in the brief, the contract or the reference implementation, then resend.
 
 ## Lock before fan-out
 
-A worker writes against the brief it gets today. Each item below changes every file a family touches, so it is settled, written into the repo and shown to the person before the first family worker starts. Changing one after fan-out is a migration of every file already written, with its own check, never a note in the next brief.
+A worker writes against the brief it gets today. One writer owns the token source and the first family: the coordinator on a direct run. Under design-system-boss, which writes no product code, it depends on the host. On a flat host the boss names the one writer. On a nested host the build step agent is the coordinator and writes it. Each item below changes every file a family touches, so it is settled, written into the repo and shown to the person before the first family worker starts. Changing one after fan-out is a migration of every file already written, with its own check, never a note in the next brief.
 
 | Settle | Where it lives | Shown to the person as |
 |---|---|---|
@@ -39,25 +66,17 @@ A worker writes against the brief it gets today. Each item below changes every f
 | The person's bans | the standing orders, the writing page and `bans` in the check config | the plan's bans line |
 | How closely to follow a design source | the Frame, then the sample (`modes.md`) | the sample beside the source |
 | The spec format and the rule shape | `docs/system/spec-template.md` and the first family's spec | that family's page |
+| The API vocabulary (`component-contract.md`, API) | `docs/system/decisions.md` | one decision line |
 | The icon set, its sizes and its alignment rule | the brand page and the icon component | the icon row on the first family's page |
 | Motion presets | the token source and the motion page | a replayable demo per preset |
 | The showcase shape, when the person reviews in a browser | the showcase shell and its registry | the first family's page |
 | How a new page, export or doc is picked up | a registry that finds files, or a generated index | nothing. Workers never edit it |
 
-In phase order, a whole-system run goes:
-
-1. Frame: the branch, the standing questions and the plan.
-2. Inventory: one read-only worker per product area for the surface map, and one per source the person named (`inventory.md`, Surface map and research).
-3. Foundations: tokens with measured contrast, type, icons, motion presets, the bans in the check, and the showcase shell.
-4. Components: the first family end to end in the final format and shown to the person, the design-source sample when there is one, then fan-out by file ownership with the foundation rule pages beside it, then the optical pass and the stress test.
-5. Checks. The workers' output already passes the spec check and the ban scan, which run from phase 1.
-6. Pilot, then surfaces.
-7. Docs, then Review, decide, fix.
-8. Project skills, then the handoff.
+On a whole-system run, phase 2 fans out one read-only worker per product area and one per source the person named (`inventory.md`, Surface map and research). The spec check and the ban scan run from phase 1, so workers' output passes them before phase 5.
 
 ## Clearance
 
-The person gives clearance by naming surfaces or a budget. Adoption asks, listed in `design-system-boss/references/triage.md` (The ask's intent), count as clearance within the session budget. So does an ask about how screens look, such as "every page looks like a different product".
+The person gives clearance by naming surfaces or a budget, or with an ask that holds one of the clearance words in `run-record.md` (Terms).
 
 Decided gate defaults need no clearance. Without clearance, nothing else lands outside the pilot except identical-value swaps. When the ask is visual consistency, a small outlier, such as a single off-brand 404 page, moves to the system as a decided default, not a gate. In harden mode and on the boss's Full route, horizontal overflow at the narrow width in shared layout (the shell, the nav, a layout every route renders) is a decided default too, with `document.documentElement.scrollWidth` at that width before and after in its trace row.
 
@@ -68,7 +87,7 @@ A visible change lands on the run branch when it traces to a gate or decision an
 1. Order the surfaces: the one the complaint names, then by how many drifted values each holds. Every route is a row in `.design-system/review/surfaces.tsv` (`surface`, `route`, `states`), and the phase 2 before captures came from it.
 2. One surface per commit. Apply the gate defaults and the migration map, with the codemod when one exists. Read every hunk before committing.
 3. After a shared UI or token edit, `node <skills>/build-design-system/scripts/capture.mjs --base <url> --status --surfaces .design-system/review/surfaces.tsv` must show 200 on every route, or the status its row expects. When the dev server may serve stale styles after a global style edit, restart it first (`browser.md`).
-4. Capture after with one command: `node <skills>/build-design-system/scripts/capture.mjs --base <url> --kind after --out .design-system/review --routes <surface>=<route>`, plus `--states <file.mjs>` for listed states. Add the surface's row to `.design-system/review/traces.tsv`: surface, commit hashes, gate and decision ids, and what changed in plain words, including every line of its behavior delta. A state the run adds has no before: list it in `surfaces.tsv` and capture it after. A shared shell change that touches every route is one row with the surface `shared`.
+4. Capture after with one command. Copy the surface's row into `.design-system/tmp/<worker id>/<surface>.surfaces.tsv` (`run-record.md`, Terms) and run `node <skills>/build-design-system/scripts/capture.mjs --base <url> --kind after --out .design-system/review --surfaces .design-system/tmp/<worker id>/<surface>.surfaces.tsv --states <file.mjs>`, so every listed state is recaptured along with the load state. Add the surface's row to `.design-system/review/traces.tsv`: surface, commit hashes, gate and decision ids, and what changed in plain words, including every line of its behavior delta. A state the run adds has no before: list it in `surfaces.tsv` and capture it after. A shared shell change that touches every route is one row with the surface `shared`.
 5. Run `node <skills>/build-design-system/scripts/montage.mjs --diff` and `node scripts/check-system.mjs --files <the surface's files>`. The montage exits 1 on any change no trace row or gate explains, and on the rendered problems `montage.mjs --help` lists, such as recolored text under its contrast floor or a nav link newly hidden at the narrow width with no gate id (`traps.md`, `trap/narrow-hidden-nav`). Fix it, or take the change off the branch and open a gate. A finding that waits on a person may stay on the branch under an open gate: add a row to `.design-system/review/open-gates.tsv` (gate, surface, text the finding contains) and name the gate in the trace row. The montage then lists it as a warning. Once the surface lands, run `node scripts/check-system.mjs --shrink-allowlist` and commit the allowlist on its own. Workers only report shrink candidates.
 6. A fix to broken behavior is a decision. An intentional behavior change is a gate, applied by default like any other. Accessibility-tree changes sort by `traps.md` (Adds-only accessibility changes). Link restyles are one gate listing every surface they touch (`SKILL.md`, Boundaries).
 7. When `migrate-design-system` is installed, it runs this loop and the build hands it the map. Merging into the person's branch is always the person's call.
@@ -86,7 +105,7 @@ By default, specs cover the pilot's families, and build adds the families the st
 1. List every canonical row in `components.tsv` by family. Families the pilot touched go first, then the rest by call-site count, highest first.
 2. Write `docs/system/writing.md` first, per `writing-method.md`, so every spec's Content cites it instead of deriving voice on its own.
 3. Fan out one spec worker per family, with the spec-worker variant in `worker-brief.md` and `rule-method.md`, in the rolling window. A family whose code still needs work gets the family template instead.
-4. Review each report as usual. Also open its `rule-tests` file and rerun one two-agent test yourself.
+4. Review each report as usual. Also open its `rule-tests` file and rerun one two-agent test on an Anti-slop or Limits rule yourself.
 5. At the docs cap, stop starting families. Each family not reached is one handoff line naming its members and call-site counts.
 
 ## Review, decide, fix
@@ -99,7 +118,7 @@ Scopes stop two writers from touching one file, not from answering one question 
    - Format and bans: headings, the rule shape, counts, sources, and every ban in prose, tables and examples outside `Don't:` lines.
    - Showcase against rules: the showcase obeys the rules it shows, since agents copy it.
 2. **Decide.** The coordinator writes one numbered decision per conflict in `docs/system/decisions.md`, committed, never only in the run record, since agents in later sessions read the repo. A rename of a prop, tone or token is a decision too, so every fix worker writes against the new name at once. Mark findings on files that changed since a lens's commit as stale.
-3. **Fix.** One worker per ownership set, side by side, each reading the decisions first and its lens findings second: code (the component folder, tokens, utility config), foundation and writing pages, specs split by an explicit file list, and the showcase. Docs workers never compile. The code worker lists every call site its renames break, with file and line, for the showcase worker. Then regenerate the indexes, run every check, look at a few pages in both themes, and commit per worker.
+3. **Fix.** One worker per ownership set, side by side, each reading the decisions first and its lens findings second: code (the component folder, tokens, utility config), foundation and writing pages, specs split by an explicit file list, and the showcase. Docs workers never compile. The code worker lists every call site its renames break, with file and line, for the showcase worker. Then regenerate the indexes, run every check, capture every page the fix touched in both themes, and commit per worker.
 
 The decisions page opens with its precedence: the person's direct words, then this page, then the foundation pages, then the specs, then the code. To change a decision, edit it here and fix every page and component it names in the same change. One line per decision:
 
@@ -116,3 +135,20 @@ Under this coordinator, `component-docs` and `design-review` return text and wri
 1. Run the full check on a clean clone and the repo's production build. Then start the production server and run `capture.mjs --status` against it. A route that answers 200 in dev and fails in production is a failed run.
 2. Run `node scripts/check-system.mjs --prune-allowlist`, which drops every allowlist entry the run fixed, and commit the allowlist. Then write the close numbers to one file, `.design-system/close.md`: the output of `node scripts/check-system.mjs --no-self-test --left`, then the montage's output with every warning on an open gate listed by gate id, then the inventory rerun by route. Every count in the final message comes from this file and nowhere else. Under design-system-boss the boss rewrites this file at its own close and keeps the build's rows.
 3. The final message is the handoff report, in the format `run-record.md` gives (Handoff report).
+
+Done also needs these, beyond `SKILL.md`:
+
+- A generator run twice leaves no diff. `node scripts/gen-docs.mjs --check` exits 0, and the AGENTS.md block names the generated docs and the check command.
+- Build and harden: every inventory row is canonical, merged, deleted or kept as a product composition. The handoff names the migration map, the codemod or why there is none, and counts by route. Harden adds `strays.tsv`.
+- Build specs the families the strays touch. Harden and seed list the rest as follow-up, unless the ask wants complete docs (Document everything).
+- Existing violations sit in a committed allowlist. Every trap in the pilot's files is fixed or gated with its measurement, and the checks find nothing there.
+- Outside the pilot and the system's own files, the run branch holds only identical-value swaps, the root token import, decided gate defaults and cleared surfaces, each surface one commit with a `traces.tsv` row and a montage that exits 0. Every gate names its default, and the branch applies it.
+- Seed has no before captures, says so, and names the next screen.
+
+### Minimal footprint
+
+On a minimal footprint the check is the repo's own lint, typecheck and build on a clean clone of the run branch, after any typecheck prerequisites, plus the repo's formatter in check mode on the changed files. Each exit code goes in the run record. The spec, docs and allowlist lines of Done do not apply. After that check and before `close.md`:
+
+1. Drop dead hunks. A hunk in a file or export nothing imports renders nowhere, unless the framework loads the file by name, as file-based routers do. Grep for importers with the repo's path aliases, revert those hunks in one commit and list them as follow-ups. Done when every changed file in `git diff <base>...HEAD` has an importer or a framework name.
+2. Check the base. `git log --oneline <tip>..<base>` must be empty, where the base is the commit the run branch started from and the tip is the upstream's default branch. With no upstream remote, the tip is the newest commit on the starting branch whose author is not the local setup, named in a decision row. If the log lists commits, Next opens "First rebase onto <tip>, since <base> carries <N> commits upstream doesn't have." and gives `git rebase --onto <tip> <base> <run-branch>`.
+3. Write the PR body to `.design-system/pr.md`, which stays untracked through `.git/info/exclude`: a title, one line per family on what changed and why, the before and after numbers from `close.md` with units, every deliberate visual change a reviewer could argue with and its capture paths, what the PR left out on purpose, and the follow-ups. It never names the skills or the run record. Next is `Open the PR from <run-branch> with .design-system/pr.md as the body.`

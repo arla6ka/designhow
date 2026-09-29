@@ -1,12 +1,13 @@
 # Writing method
 
-> For the team setting this up: this derives the app's voice from its own strings and turns it into rules a script checks. It carries no voice of its own. Every slot, template, verb and banned word comes from this app's copy or a named principle. The output is `docs/system/writing.md` (`system-structure.md`, Writing page), the copy inventory, and what `scripts/copy-check.mjs` checks.
+This derives the app's voice from its own strings and turns it into rules a script checks. It carries no voice of its own. Every slot, template, verb and banned word comes from this app's copy or a named principle. The output is `docs/system/writing.md` (`system-structure.md`, Writing page), the copy inventory, and what `scripts/copy-check.mjs` checks.
 
 Contents
 
 - The copy inventory
 - Deriving rules per slot
 - Pending and status text
+- Localized apps
 - The verb chain
 - House bans
 - Banned words
@@ -54,6 +55,10 @@ Copy rules never override a trap in `traps.md`. When a slot's majority is a trap
 
 An action's label stays the same while the action runs. Pending feedback, such as "Sending…" or "Uploading 3 of 5", goes in the `status` slot, shown in a status or live region or as text next to the control. It never replaces the label (`trap/loading-label-swap`), so a `button` rule never has a pending template. Pending wording is a `status` rule, derived like any other slot.
 
+## Localized apps
+
+When the app renders copy through message keys, read each slot's text from the source-locale catalog, and record the key beside the `file:line`. Measure Limits with the longest locale the app ships, or with a pseudo-locale that pads each string when only one ships, because a limit set on the source language breaks in a longer one. When the app ships a right-to-left locale, ask as gates how dates, numbers and plurals are formatted (the platform's `Intl` API or the app's own helpers), and whether layout uses logical properties such as `margin-inline-start`.
+
 ## The verb chain
 
 An action that asks for confirmation or reports a result uses one verb in all three places: the button that starts it, the confirmation (its title and its confirm action), and the result message. A different verb at any step makes the user wonder whether the same thing happened.
@@ -68,7 +73,7 @@ Generic filler that makes copy read as machine-written goes on the Banned words 
 
 ## Banned words
 
-The team sets the list from its own copy and the person's bans, never from another product. Read the inventory for filler (apology, hedging, words that could go without changing the message) and for synonyms that compete with the app's chosen term. A word goes on the list when most of the app's rows already avoid it, or when a principle grounds it and a gate records the decision. Each row names what to write instead.
+The team sets the list from its own copy and the person's bans, never from another product. Read the inventory for filler (apology, hedging, words that could go without changing the message) and for synonyms that compete with the app's chosen term. A word goes on the list when most of the app's rows already avoid it, or when a principle grounds it and a gate records the decision. Each row names what to write instead. The system's own terms (token, variant, slot, preset) go on the list unless the product is about them.
 
 ## What the check enforces
 

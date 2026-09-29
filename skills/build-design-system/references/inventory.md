@@ -1,6 +1,6 @@
 # Inventory
 
-> For the team setting this up: the commands below are one example, for a JavaScript or TypeScript web app with `rg` (ripgrep) and `ast-grep`. Swap in your own paths, file types and patterns. Keep the rule that scripts produce the counts, and keep the table formats, because later phases and `migrate-design-system` read them.
+The commands below are one example, for a JavaScript or TypeScript web app with `rg` (ripgrep) and `ast-grep`. Swap in your own paths, file types and patterns, and keep the table formats, because later phases and `migrate-design-system` read them.
 
 Contents
 
@@ -16,10 +16,11 @@ Contents
 - Baseline screenshots
 - Delete plan
 - Rerunning at handoff
+- Excluded paths
 
 ## Why scripts, not reading
 
-A model that reads files to count call sites misses re-exports, aliases and files it never opened, and cannot tell you which. A script finds every match, reruns at handoff for the after count, and gives `migrate-design-system` the same numbers. The model reads the tables and judges roles.
+A model that reads files to count call sites misses re-exports, aliases and files it never opened. Scripts produce every count so the handoff can rerun them and `migrate-design-system` reads the same numbers. The model reads the tables and judges roles.
 
 Save every script under `.design-system/scripts/`. Each writes a TSV or JSON file under `.design-system/inventory/` and prints its row count. A failing script prints the path it choked on and exits nonzero.
 
@@ -28,7 +29,8 @@ Save every script under `.design-system/scripts/`. Each writes a TSV or JSON fil
 ```
 .design-system/
   run.md
-  scripts/        inventory scripts, rerun at handoff
+  scripts/        scripts a rerun needs: inventory scripts, the states module, rendered-type. Committed. The check never reads them
+  tmp/<worker>/   one-off probes, deleted at close
   inventory/      routes.tsv, components.tsv, values.tsv, palette.tsv, tokens.tsv
   delete-plan.md
 ```
@@ -123,7 +125,15 @@ rg -n --no-heading -o "\b(bg|text|border|ring|fill|stroke|from|to|via|outline|di
 
 # Inline style objects
 ast-grep --lang tsx -p '<$E style={{ $$$ }} $$$>' app components src
+
+# Motion: durations, delays, easings, animated property lists and keyframes
+rg -U -n --no-heading -o "(^|[^\w-])(transition|animation)[a-z-]*\s*:[^;{}]+|@keyframes\s+[\w-]+|cubic-bezier\([^)]*\)|(^|[\s:,(])\.?\d+(\.\d+)?m?s\b" \
+  --glob '*.{css,scss,sass,less}' app components src
+rg -n --no-heading -o "\b(transition|animation)[A-Za-z]*\s*:\s*[^;,}]+|\b(duration|delay|ease|animate)-(\[[^\]]+\]|[\w./-]+)|\btransition(-[\w./-]+)?\b|\b(duration|delay|stiffness|damping|mass|bounce|ease)\s*:\s*(\[[^\]]*\]|[^,}]+)|type:\s*[\"']spring[\"']|cubic-bezier\([^)]*\)" \
+  --glob '*.{tsx,jsx,ts,js,mjs,html,vue,svelte}' app components src
 ```
+
+A hit from the first motion command can carry one leading character; trim it. `delay` and `duration` keys also match options that are not motion, so look at each hit. Motion rows go in `values.tsv` with category `duration`, `easing` or `animated-properties`. Mark each `transition: all` row with `trap/motion-layout-property`. `animated-properties` rows are inventory only, and `token-mapping` skips them.
 
 Normalize before counting, with the rules in `token-mapping`'s rules file: lengths to px on the project's root size, colors to sRGB hex with alpha. `#FFF`, `#ffffff` and `rgb(255 255 255)` are one value.
 
@@ -144,7 +154,7 @@ Palette classes go in `palette.tsv`, not `values.tsv`. They come from the framew
 
 ## Copy
 
-Every user-facing string, by slot, comes from `scripts/copy-check.mjs --extract` into `docs/system/copy-inventory.tsv`, once the writing page names each slot's sources. `writing-method.md` has the columns and how to find the sources.
+Every user-facing string, by slot, comes from `scripts/copy-check.mjs --extract` into `docs/system/copy-inventory.tsv`, once the writing page names each slot's sources. `writing-method.md` has the columns and how to find the sources. `copy-check.mjs` joins the check command in phase 7.
 
 ## Baseline screenshots
 
@@ -162,6 +172,18 @@ Anything another package or a published API exports stays, whatever the local co
 
 ## Rerunning at handoff
 
-Every count leaves out the run's own scaffolding: `public/system/`, generated twins and indexes, `scripts/` (fixtures included), `.design-system/`, `.migration/` and skill folders (`.agents/`, `.claude/`). With `rg`, add `--glob '!public/system/**' --glob '!scripts/**'` to each command that reaches them. Otherwise the handoff tells the wrong story, such as raw colors rising because of the generated `index.html`.
+Every count leaves out the Excluded paths below, plus `scripts/`, where the build copies its check scripts. Otherwise the handoff tells the wrong story, such as raw colors rising because of the generated `index.html`.
 
 In phase 8, rerun every script unchanged into `inventory/after/`. The handoff counts come from the difference: raw values, palette use and deprecated imports by route, and families with one canonical member. If a script had to change, say what changed and rerun it on the original commit too, so the counts compare.
+
+## Excluded paths
+
+Every count in every design.how skill leaves out the run's own scaffolding, so a build's fixtures and generated pages never read as drift:
+
+- the skills folder (`.agents/`, `.claude/`) and any folder holding a `SKILL.md`
+- `docs/system/` and `public/system/`
+- fixtures: `*.fixture` files and `__fixtures__/` folders
+- the run records `.design-system/` and `.migration/`
+- `node_modules/` and build output, such as `.next/`, `dist/` and `build/`. A route folder named `build` is listed by hand.
+
+`rg` already skips gitignored paths. Add `--glob '!{.agents,.claude,docs/system,public/system,.design-system,.migration,.next,dist,build}/**' --glob '!**/__fixtures__/**' --glob '!**/*.fixture'`, and one `--glob '!<folder>/**'` per folder holding a `SKILL.md`. Every other list of skipped paths points here and adds only its own extras, each with a reason.

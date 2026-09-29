@@ -2,21 +2,22 @@
 // pixdiff.mjs: compare two saved screenshots, or two folders of same-named PNGs.
 //
 //   node pixdiff.mjs /abs/before.png /abs/after.png
-//   node pixdiff.mjs /abs/baseline/ /abs/after/ [--max <percent>] [--tolerance <n>] [--out <dir>] [--no-image] [--root <dir>]
+//   node pixdiff.mjs /abs/baseline/ /abs/after/ [--surface <name>,...] [--max <percent>] [--tolerance <n>] [--out <dir>] [--no-image] [--root <dir>]
 //
+// In folder mode, when the first folder holds capture.mjs names (<surface>-before-<width>.png),
+// each before file pairs with its -after- name in the second folder, which may be the same
+// folder. Otherwise files pair by the same relative path. Every width and theme is compared.
+// --surface keeps only the named surfaces' files (every width, theme and state) and prints
+// how many other before files it skipped, so one surface's swap is proven in a shared folder.
 // Prints one line per file: path, size match, changed-pixel percentage, the bounding
-// box of the changed pixels (x,y wxh in image pixels), the largest per-channel delta
-// anywhere in the pair, the tolerance used, and the diff image it wrote.
-// A pixel counts as changed when any channel (R, G, B or A) differs by more than
-// --tolerance, 0 to 255, default 0: any difference counts. The max delta prints even
-// when it is under the tolerance, so a small shift is never silent. A value-identical
-// token swap is proven at the default tolerance 0, never with --tolerance: #6b7280 to
-// #737373 moves the channels by 8, 1 and 13 and must show as a change.
-// The diff image is the after capture faded, with changed pixels in red and the box
-// outlined. It goes beside the after file as <name>.diff.png, or into --out.
+// box of the changed pixels, the largest per-channel delta (printed even under the
+// tolerance), the tolerance, and the diff image: the after capture faded, changed
+// pixels red, written beside the after file as <name>.diff.png or into --out.
+// A pixel counts as changed when any channel differs by more than --tolerance
+// (0 to 255, default 0). A value-identical swap is proven at tolerance 0 only
+// (references/browser.md, Compare after a change).
 // Exits 1 when any pair differs in size, is missing, or changes more pixels than
-// --max (percent, default 0). agent-browser's `diff screenshot` compares against
-// the live page, so use this to compare two files.
+// --max (percent, default 0).
 //
 // Needs Playwright (`playwright` or `playwright-core`) and a Chromium. find-chromium.mjs
 // finds both: PW_CHROMIUM, Playwright's own download, any other Playwright download in
@@ -26,10 +27,10 @@ import { readFileSync, readdirSync, statSync, existsSync, mkdirSync, writeFileSy
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { launchChromium, repoRoot } from "./find-chromium.mjs";
 
-const USAGE = "usage: node pixdiff.mjs <before.png|dir> <after.png|dir> [--max <percent>] [--tolerance <n>] [--out <dir>] [--no-image] [--root <dir>]\n--tolerance is the per-channel delta, 0 to 255, a pixel may move and still count as unchanged. Default 0. Keep 0 to prove a value-identical swap\n--root is where Playwright is looked for first. Default: the git root of the first path, else of the current folder";
+const USAGE = "usage: node pixdiff.mjs <before.png|dir> <after.png|dir> [--surface <name>,...] [--max <percent>] [--tolerance <n>] [--out <dir>] [--no-image] [--root <dir>]\nTwo folders pair capture.mjs -before- files with their -after- names (the folders may be the same), else files of the same name\n--surface keeps only those surfaces' capture.mjs files and counts the rest as skipped\n--tolerance is the per-channel delta, 0 to 255, a pixel may move and still count as unchanged. Default 0. Keep 0 to prove a value-identical swap\n--root is where Playwright is looked for first. Default: the git root of the first path, else of the current folder";
 const args = process.argv.slice(2);
 if (args.includes("--help") || args.includes("-h")) { console.log(USAGE); process.exit(0); }
-if (args.some((a) => a.startsWith("-") && !["--max", "--out", "--no-image", "--root", "--tolerance"].includes(a))) {
+if (args.some((a) => a.startsWith("-") && !["--max", "--out", "--no-image", "--root", "--tolerance", "--surface"].includes(a))) {
   console.error(USAGE);
   process.exit(2);
 }
@@ -39,6 +40,8 @@ const max = maxArg === undefined ? 0 : Number(maxArg);
 const outDir = take("--out");
 const rootArg = take("--root");
 const tolArg = take("--tolerance");
+const surfArg = take("--surface");
+const only = surfArg ? new Set(surfArg.split(",").map((x) => x.trim()).filter(Boolean)) : null;
 const tolerance = tolArg === undefined ? 0 : Number(tolArg);
 if (!Number.isInteger(tolerance) || tolerance < 0 || tolerance > 255) { console.error(`pixdiff: --tolerance takes a whole number from 0 to 255, not ${tolArg}\n${USAGE}`); process.exit(2); }
 const noImage = args.includes("--no-image");
@@ -62,8 +65,21 @@ const walk = (d) => readdirSync(d).flatMap((e) => {
   return statSync(p).isDirectory() ? walk(p) : p.endsWith(".png") && !p.includes(".diff.") ? [p] : [];
 });
 const dirMode = statSync(A).isDirectory();
+// capture.mjs names files <surface>-before-<width>[-<theme>].png, so when the before
+// folder holds such names, each pairs with the same name with -after- in the after folder.
+const kinded = dirMode && walk(A).some((f) => basename(f).includes("-before-"));
+if (only && !kinded) { console.error("pixdiff: --surface needs two folders of capture.mjs names (<surface>-before-<width>.png)"); process.exit(2); }
+// A state capture is <surface>.<state>-before-..., so the surface is the name up to the first dot.
+const surfaceOf = (f) => basename(f).split("-before-")[0].split(".")[0];
+const befores = dirMode ? walk(A).filter((f) => !kinded || basename(f).includes("-before-")) : [];
+const kept = only ? befores.filter((f) => only.has(surfaceOf(f))) : befores;
+const skipped = befores.length - kept.length;
+if (only && !kept.length) { console.error(`pixdiff: no before capture for ${[...only].join(", ")} in ${A}`); process.exit(2); }
 const pairs = dirMode
-  ? walk(A).sort().map((fa) => [relative(A, fa), fa, join(B, relative(A, fa))])
+  ? kept.sort().map((fa) => {
+    const rel = relative(A, fa);
+    return [rel, fa, join(B, kinded ? join(dirname(rel), basename(rel).replace("-before-", "-after-")) : rel)];
+  })
   : [[relative(process.cwd(), B), A, B]];
 
 const page = await browser.newPage();
@@ -118,5 +134,5 @@ for (const [name, fa, fb] of pairs) {
   console.log(`${name}\t${r.size}\t${r.pct === null ? "-" : r.pct + "%"}\t${box}\t${delta}\ttolerance ${tolerance}${img ? `\t${relative(process.cwd(), img) || basename(img)}` : ""}`);
 }
 await browser.close();
-console.log(`${pairs.length} compared, ${failed} over ${max}%, tolerance ${tolerance}`);
+console.log(`${pairs.length} compared, ${failed} over ${max}%, tolerance ${tolerance}${only ? `, ${skipped} of other surfaces skipped` : ""}`);
 process.exit(failed ? 1 : 0);

@@ -1,6 +1,6 @@
 # Run folder
 
-The run folder is the run's only memory. The coordinator's context will be compacted, restarted or replaced, and the next one resumes from these files alone. A fact that is not in a file did not happen.
+A new coordinator resumes from these files alone, so write each fact here before acting on it.
 
 ## Layout and writers
 
@@ -8,9 +8,9 @@ The run folder is the run's only memory. The coordinator's context will be compa
 .migration/<run>/
   frame.md                    coordinator
   standing-orders.md          coordinator
-  surfaces.tsv                coordinator
-  allowlist.tsv               coordinator, only after a closed gate or a logged decision
-  forbidden-paths.txt         coordinator, matches standing order 2
+  queue.tsv                   coordinator
+  allowlist.tsv               coordinator, only after a gate that is no longer `open`, or a logged decision
+  forbidden-paths.txt         coordinator, matches the do-not-edit standing order
   agents.tsv                  coordinator
   gates.md                    coordinator
   decisions.tsv               coordinator, append only
@@ -23,7 +23,7 @@ The run folder is the run's only memory. The coordinator's context will be compa
   mapping/<surface>.md        the token-mapping run for that surface
   baselines/                  the baseline agent during Baselines, read only afterward
   baselines/traps.tsv         the same agent, every trap's before number, measured before any edit
-  lever/                      the lever builder during Build the lever, read only afterward
+  codemod/                    the codemod builder during Build the codemod, read only afterward
   briefs/<surface>.<n>.md     coordinator
   inbox/<surface>.<n>.md      coordinator, attempt n's status line and file list
   inbox/<surface>.<n>.captures/  the same worker: captures and probe output, no report
@@ -33,7 +33,7 @@ The run folder is the run's only memory. The coordinator's context will be compa
 
 `<n>` is the attempt number, starting at 1. `<sha>` is the first 12 characters of the commit the verdict covers.
 
-Scratch files from any agent, such as probe scripts, one-off captures and logs, go in `.design-system/tmp/`, never in the repo root, `scripts/` or this folder. The coordinator adds it and `.design-system/review/**/*.png` to `.gitignore` in Frame and deletes it at Close. The rest of `review/` is tracked. After Close, `git status --porcelain` lists no untracked path without a `decisions.tsv` row saying why it stays.
+One-off files from any agent, such as probe scripts, one-off captures and logs, go in `.design-system/tmp/<agent id>/`, never in the repo root, `scripts/` or this folder. Scripts a rerun or the check needs, such as the states module, go in `.design-system/scripts/` and are committed. The coordinator adds `.design-system/tmp/` and `.design-system/review/**/*.png` to `.gitignore` in Frame and deletes `tmp/` at Close. The rest of `review/` is tracked. After Close, `git status --porcelain` lists no untracked path without a `decisions.tsv` row saying why it stays.
 
 ## Why one writer per file
 
@@ -51,7 +51,7 @@ Written once in Frame. It changes only through a logged decision.
 Done when:
 - `node scripts/migration-inventory.mjs --check` exits 0 on the final commit
   (legacy imports 0, raw values outside allowlist 0, palette uses 0 when frame.md includes them, legacy files 0)
-- all 38 rows in surfaces.tsv are `landed` with a `verified` ledger row at the final commit
+- all 38 rows in queue.tsv are `landed` with a `verified` ledger row at the final commit
 - `lint:legacy` runs in CI at error level
 
 Scope: every route under app/. Out: app/admin/ (separate team).
@@ -59,7 +59,7 @@ Target system: @acme/ui 4.2.0, commit 7f3c2e19ab04
 Parity mode: mapped
 Widths: 390, 1280. Themes: light, dark
 Budget: 16 hours wall clock. Stop spawning at 11 hours.
-Window cap: 8
+Window cap: 2 (the machine budget's browser row, recorded as D-02)
 Run branch: ds/2026-03-12-migrate, from main at 3e1f0a2. Merging into main is the person's call.
 May look broken mid-run: /settings/* until settings-shell lands
 Platform: subagents with worktree isolation
@@ -67,21 +67,18 @@ Platform: subagents with worktree isolation
 
 ## standing-orders.md
 
-Numbered lines, one rule each. The coordinator pastes the whole file into every brief and respawn, because an instruction given once in chat fades after a few turns. An instruction the coordinator catches itself repeating becomes a line here. Line 0 is reserved for a stop order.
+The file holds, word for word, the numbered standing orders in `build-design-system/references/run-record.md`, then the lines below as bullets, then any the project instructions (AGENTS.md, CLAUDE.md) add. To halt all spawning, the coordinator writes `STOP: <reason>` as the file's first line. It pastes the whole file into every brief and respawn. Add these to the standing orders in run-record.md:
 
 ```markdown
-0. (empty; write STOP: <reason> here to halt all spawning)
-1. Target is @acme/ui 4.2.0. Import only from "@acme/ui". Never from "@acme/ui/src".
-2. Do not edit: packages/ui/**, app/globals.css, app/providers.tsx, package.json, lockfiles, .migration/**, tests/visual/**, **/__snapshots__/**, the visual test config, and the files the foundation's base reference marks single-writer. Never run the system's add or generate command.
-3. Never add a color, font size, radius, shadow or spacing value. Use the token the mapping file names.
-4. A gap goes in your report under Shared gaps. Do not work around it.
-5. Behavior stays the same. Same requests, same validation timing, same focus order, same URLs.
-6. Run the checks in your brief and paste their real output. A claim without output counts as not run.
-7. Do not rebase, force-push, or merge. Commit to your own branch only.
-8. Scratch files go in .design-system/tmp/. Nothing scratch goes in the repo root, scripts/ or .migration/.
+- Target is @acme/ui 4.2.0. Import only from "@acme/ui". Never from "@acme/ui/src".
+- Do not edit: packages/ui/**, app/globals.css, app/providers.tsx, package.json, lockfiles, .migration/**, tests/visual/**, **/__snapshots__/**, the visual test config, and the files the foundation's base reference marks single-writer. Never run the system's add or generate command.
+- Never add a color, font size, radius, shadow or spacing value. Use the token the mapping file names.
+- A gap goes in your report under Shared gaps. Do not work around it.
+- Behavior stays the same. Same requests, same validation timing, same focus order, same URLs.
+- Do not rebase.
 ```
 
-## surfaces.tsv
+## queue.tsv
 
 One row per surface, tab separated, updated in place.
 
@@ -92,13 +89,13 @@ billing-invoices	route	app/billing/invoices/**	empty,list,error,loading	shared	i
 settings-profile	route	app/settings/profile/**	default,invalid,saving,saved	shared	gated	0	-	-	-	-	G-04
 ```
 
-States, in order: `queued`, `gated`, `ready`, `in-flight`, `reported`, `verifying`, `verified`, `landed`. Side exits are `failed` (gets a fix attempt), `abandoned` (after two retries, with a reason), and `deferred` (out of scope by decision). Only the coordinator moves a row, and only at a drain.
+States, in order: `queued`, `gated`, `ready`, `in-flight`, `reported`, `verifying`, `verified`, `landed`. Side exits are `failed` (gets its one retry), `abandoned` (the retry failed and the surface could not split, with a reason), and `deferred` (out of scope by decision). Only the coordinator moves a row, and only at a drain.
 
-The montage reads `.design-system/review/surfaces.tsv`, which the coordinator writes from this file's surface, route and `states` at Frame and keeps in step at each drain.
+This is the migration's work queue, a different file from `.design-system/review/surfaces.tsv` (`build-design-system/references/run-record.md`, Terms), which capture and the montage read. The coordinator writes that file's `surface`, `route` and `states` columns from this one at Frame and keeps them in step at each drain. For one surface's capture, the worker copies that row under the header to `.design-system/tmp/<worker id>/<surface>.surfaces.tsv`.
 
 ## Worker reports in inbox/
 
-Each worker returns its report as its final message (schema in `references/worker-brief.md`) and writes no report file. The coordinator reads it once and saves only the `Status:` line, `Branch:`/`Head:` and the Files changed list to `inbox/<surface>.<n>.md`. The worker's folder, `inbox/<surface>.<n>.captures/`, holds captures and `.probe.json` files only. A report counts as drained once its path appears in the `last_report` column, and the coordinator never edits or deletes one. When a worker dies with no report, the coordinator writes `inbox/<surface>.<n>.lost.md` with the last side effect it could see.
+Each worker returns its report as its final message (schema in `references/worker-brief.md`) and writes no report file. The coordinator reads it once and saves only the `Status:` and `Commit:` lines, `Branch:` and the Files changed list to `inbox/<surface>.<n>.md`. The worker's folder, `inbox/<surface>.<n>.captures/`, holds captures and `.probe.json` files only. A report counts as drained once its path appears in the `last_report` column, and the coordinator never edits or deletes one. When a worker dies with no report, the coordinator writes `inbox/<surface>.<n>.lost.md` with the last side effect it could see.
 
 ## Verdict files and ledger.tsv
 
@@ -115,7 +112,13 @@ A new commit that touches a surface's `paths` voids its earlier rows and gets a 
 
 ## close.md
 
-First, `node scripts/check-spec.mjs <spec folder>` runs over the system's specs, and a spec that cites a file the run deleted or moved (`spec/stale-cite`) is refreshed in its own commit. Then close.md is written once, at the final integration commit, from `node scripts/migration-inventory.mjs --check` and a tally of `ledger.tsv` and `surfaces.tsv`. Every count in the final message comes from this file: inventory before and after, allowlisted rows, what is left, surfaces landed of total, verified by an independent agent, self-verified. It lists each montage warning on an open gate with its id, and names each surface and file still carrying raw values or legacy imports, so the message never says "every screen" while that list has a row. A landed surface that still reads `queued` or `in-flight` fails the close. So does a failed close commit, which the message reports first.
+First, `node scripts/check-spec.mjs <spec folder>` runs over the system's specs, and a spec that cites a file the run deleted or moved (`spec/stale-cite`) is refreshed in its own commit. Then close.md is written once, at the final integration commit, from `node scripts/migration-inventory.mjs --check` and a tally of `ledger.tsv` and `queue.tsv`. Every count in the final message comes from this file: inventory before and after, allowlisted rows, what is left, surfaces landed of total, verified by an independent agent, self-verified. It lists each montage warning on an open gate with its id, and names each surface and file still carrying raw values or legacy imports, so the message never says "every screen" while that list has a row. A landed surface that still reads `queued` or `in-flight` fails the close. So does a failed close commit, which the message reports first. Every `decided` gate is applied by now, or listed here as not landed with its reason.
+
+The final message is the four-part handoff in `build-design-system/references/run-record.md` (Handoff report), with these additions:
+
+- Part 1 carries `Verified: N of M by an independent agent`, the self-verified surfaces on their own line, every non-empty behavior delta, and the montage path.
+- Next adds the budget for surfaces left, such as `Merge ds/2026-03-12-migrate, but keep the blue Sign in button (reverse G-04). 2 hours finishes the 3 surfaces left.` If the close commit failed, Next starts with "First commit the run record (`git add .migration .design-system && git commit`), then merge."
+- In audit mode the result is `plan.md` (`references/inventory.md`), summarized in the same four parts.
 
 ```
 commit        8a41c2e07f93
@@ -130,17 +133,17 @@ close commit  ok
 
 ## gates.md
 
-One entry per question that needs a person, written before asking, with work routed around it. IDs are `G-NN`, the form the montage and the Next prompt read. A worker's proposed `G-<surface>-01` gets the next free `G-NN`, with the worker's ID kept in the entry.
+One entry per question that needs a person, written before asking, with work routed around it. Each entry's first line after the heading carries the gate record's columns (ID, question, default, status, commit, from), with status `open`, `decided` or `applied` as `build-design-system/references/run-record.md` (Terms) defines them. IDs are `G-NN`, the form the montage and the Next prompt read. A worker's proposed `G-<surface>-01` gets the next free `G-NN`, and `From` keeps the worker's ID.
 
 ```markdown
 ## G-04. settings-profile uses a date input the system lacks
+Default: B. Status: open. Commit: -. From: w-12 (G-settings-profile-01).
 Opened: 2026-03-12T11:20Z. Asked: system owner.
 Blocks: settings-profile, settings-billing-address. Everything else continues.
 Options:
   A. Owner adds DateField to @acme/ui. Surfaces wait for it.
   B. Keep the legacy DatePicker on these two surfaces, allowlisted with a removal date.
 Default if no answer by close: B, with both surfaces reported as not migrated.
-Answer:
 ```
 
 ## decisions.tsv
@@ -150,7 +153,7 @@ Append only. To correct an entry, add a row that replaces it.
 ```
 when	phase	what	because	evidence	outcome
 2026-03-12T10:05Z	pilot	split billing-invoices export modal into its own surface	worker hit the time limit twice on modal states	inbox/billing-invoices.1.md	new row billing-export
-2026-03-12T12:30Z	sweep	added Tooltip wrapper rename to codemod	5 of 7 failures were the same missing rename	lever/codemod.mjs@3e1a	reran 7, 6 verified
+2026-03-12T12:30Z	sweep	added Tooltip wrapper rename to codemod	5 of 7 failures were the same missing rename	codemod/codemod.mjs@3e1a	reran 7, 6 verified
 ```
 
 ## agents.tsv
@@ -159,23 +162,23 @@ Every spawn gets a row at spawn time and a terminal state at close, which proves
 
 ```
 id	role	surface	attempt	spawned	expect_by	last_side_effect	end
-w-17	worker	billing-invoices	2	13:05	14:05	commit 5be1c0a 13:48	reported
+w-17	worker	billing-invoices	2	13:05	14:05	commit 5be1c0a 13:48	done
 v-09	verifier	billing-invoices	1	13:50	14:20	verdicts/billing-invoices.5be1c0a93f21.md	done
 ```
 
-Terminal states are `reported`, `done`, `lost` (a `.lost.md` was written), `abandoned`, and `absorbed` (its scope moved to a named row).
+Terminal states are the status the agent returned (`done`, `partial`, `blocked`, `failed`), `lost` (a `.lost.md` was written), and `absorbed` (its scope moved to a named row).
 
 ## status.md
 
-Generated from `surfaces.tsv`, `ledger.tsv` and `gates.md` at every drain, never by hand:
+Generated from `queue.tsv`, `ledger.tsv` and `gates.md` at every drain, never by hand:
 
 ```sh
 {
   echo "# Status $(date -u +%FT%TZ)"
   echo; echo "## Surfaces by state"
-  awk -F'\t' 'NR>1{c[$6]++} END{for(s in c) print "- " s ": " c[s]}' surfaces.tsv
+  awk -F'\t' 'NR>1{c[$6]++} END{for(s in c) print "- " s ": " c[s]}' queue.tsv
   echo; echo "## Open gates"
-  awk '/^## G-/{h=substr($0,4)} /^Answer:[[:space:]]*$/{print "- " h}' gates.md
+  awk '/^## G-/{h=substr($0,4)} /Status: open\./{print "- " h}' gates.md
   echo; echo "## Inventory"
   cat inventory/counts.txt
 } > status.md
@@ -187,4 +190,4 @@ Written on pause and read first on resume. It states what the run was doing, whi
 
 ## Where the folder lives
 
-Keep `.migration/<run>/` in the main checkout, where the coordinator runs. Workers, local or cloud, write only code on their branch and captures at the path in their brief. The coordinator writes everything in `inbox/` and `verdicts/`. Whether to commit the folder is the team's call, and most teams add it at close as the run's record. Under design-system-boss the run commits it, except on a minimal footprint.
+Keep `.migration/<run>/` in the main checkout, where the coordinator runs. Workers, local or cloud, write only code on their branch and captures at the path in their brief. The coordinator writes everything in `inbox/` and `verdicts/`. Whether to commit the folder is the team's call, and most teams add it at close as the run's record. Under design-system-boss the run commits it, except on a minimal footprint (`build-design-system/references/coordinator-path.md`, Minimal footprint).

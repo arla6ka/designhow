@@ -1,6 +1,6 @@
 # Token architecture
 
-> For the team setting this up: the default below fits hand-rolled apps. If your repo already has a token source that other tools read, keep its format and apply the layer and naming rules inside it, and record the departure with its reason. When the foundation owns a token file, the base reference decides where tokens live and overrides this file (see "When the foundation owns the tokens").
+The default below fits hand-rolled apps. When the repo already has a token source other tools read, keep its format, apply the layer and naming rules inside it, and record the departure. When the foundation owns a token file, the base reference decides where tokens live.
 
 Contents
 
@@ -20,7 +20,7 @@ Contents
 
 Three layers, stored as W3C Design Tokens (DTCG) JSON, generating CSS custom properties and whatever theme mapping the styling framework reads.
 
-Each output has a different reader. People read the JSON with its descriptions. Browsers read the CSS variables. A utility framework turns its theme mapping into classes. Agents read the generated Markdown tables. One source with generated outputs means one place to change a value and no copies to drift. DTCG is an open format, so the source outlives any one build tool.
+Each output has a different reader. People read the JSON with its descriptions. Browsers read the CSS variables. A utility framework turns its theme mapping into classes. Agents read the generated Markdown tables.
 
 Choose a lighter setup when the system is small: one theme, no utility framework, and few distinct values across all categories (default cutoff about 40, the point where a hand-kept file stops being easy to scan). Then a single hand-written CSS file of semantic variables, with a role comment per variable, is enough. The role comment does the job of `$description`. The docs generator reads it, and a variable without one fails the Done list. Record the choice. The naming rules below still apply.
 
@@ -100,6 +100,7 @@ Check your generator's support before using newer DTCG features such as `$extend
 - Each extra theme is one file that overrides semantic aliases only, such as `tokens/theme.dark.tokens.json`. It never defines primitives.
 - Every semantic token resolves in every theme. The generator fails if one is missing, and the check's `rule/token-parity` fails when a color key is in one theme block and not the other.
 - Support the themes the app ships. Adding dark mode to an app that has none is a gate.
+- A theme the app ships on any route counts as shipped, even half built. Each value it lacks is a gate whose default is the nearest existing role in that theme, never a new color. For a class-based dark theme with no provider, capture with `capture.mjs --theme-via class`, and the Frame notes that those captures prove the tokens only.
 - Density or brand modes follow the same rule: one override file each, semantic layer only.
 
 ## Generation
@@ -120,16 +121,21 @@ Requirements:
 
 ## Motion presets
 
-A system with overlays, toasts, loaders or toggles always makes motion decisions, so motion is a foundation even when the app barely animates. Name a small set of presets in the token source before the first component, one per job: instant, micro (hover and press), enter, exit, overlay, sheet, collapse and loader. Each has a duration, an easing, the properties it animates, an exit faster than its enter, and its reduced-motion form. Decide which surfaces never animate, such as a menu opened from the keyboard. Components read presets through named utilities or variants, never their own durations, and the motion page lists each preset with the components that use it.
+A system with overlays, toasts, loaders or toggles always makes motion decisions, so motion is a foundation even when the app barely animates. Name the presets in the token source before the first component, by job: `instant`, `micro` (hover and press), `enter`, `exit`, `overlay`, `sheet`, `collapse` and `loader`. Each has a duration, an easing, the properties it animates and its reduced-motion form. Components read presets through named utilities or variants, never their own durations, and the motion page lists each preset with the components that use it.
 
-The app's own durations and easings are the source, clustered like any value. When the app has none, each new preset is a gate, with the default "instant for menus, a short fade for dialogs, none under reduced motion".
+The app's own durations and easings are the source, clustered like any value. When the app has no motion for a job, the gate default is `instant`, no animation, because that is reversible and adds no direction. Under reduced motion the default is an opacity fade in place of movement.
 
 Settle these with the presets, since every animated component depends on them:
 
-- **Speed.** Feedback on an interaction, such as a press, hover or toggle, has to feel immediate. Take the app's own fastest durations first, and when it has none, keep interaction presets short enough that the result appears as the finger lifts. Longer presets are for things the user waits on anyway, such as a sheet or a page change.
-- **Size.** Movement is proportional to the thing moving. A dialog enters from slightly smaller than its final size with a fade, never from zero. A pressed button shrinks a few percent, not by a fifth.
-- **Frequency.** An action people repeat all day and learn nothing new from, such as opening a context menu, adding or removing a list item or hovering a plain button, gets no animation, or animates out only.
+- **Reason.** A preset exists for feedback, to show where something came from, to show a change of state, or to cover a jump. A surface with none of these, or an action people repeat all day and learn nothing from, such as opening a context menu, gets `instant` or animates out only.
+- **Speed.** Feedback presets take the app's fastest durations, and presets for what the user waits on anyway, such as a sheet, take its longer ones. Exit speed against enter comes from the app, else a gate.
+- **Size.** A surface enters from the start scale the app uses, else a gate whose default is no scale, and never from 0. A pressed control scales to the app's value, else a gate with the same default. Anchored surfaces grow from their trigger, centered ones from the center, and exit reverses entry (`trap/motion-origin`).
 - **Visibility.** Loops pause when off screen or in a hidden tab (`trap/loop-offscreen`), and a theme switch changes colors without transitions (`trap/theme-transition`).
+- **Curve.** The job sets the shape and the app sets the values. When the app animates a job with no curve of its own, the gate default starts fast for a response to the user, is symmetric for movement between two points, and is linear for progress.
+- **Interruption.** Each preset continues from the current value on a retrigger (`trap/motion-restart`).
+- **Cost.** Presets animate transform and opacity only, driven by CSS or the Web Animations API, and name any exception (`trap/motion-layout-property`).
+
+Fix a motion finding with the first of these that clears it: delete the animation, shorten or shrink it, fix its curve or origin, make it interruptible, move it to transform and opacity.
 
 ## What never becomes a token
 
@@ -139,6 +145,8 @@ Tokens are for decisions someone might change across the whole app. These stay p
 - A value used once for one layout, such as the offset of a hero illustration. Put it in that component's CSS with a comment naming what it aligns to.
 - Values set by content, such as an image's aspect ratio or a chart's data colors computed from a scale.
 - Values inside third-party widgets the app does not style.
+- Brand art in `token-mapping`'s `graphic` category, such as a wordmark or an illustration.
+- A value within `token-mapping`'s tolerance of an existing token for the same role. It maps to that token, and no new one is made.
 - Math between tokens. `calc(var(--space-inset-md) * 2)` stays a calc.
 - Breakpoints, if the framework already owns them. Record them on the Space and layout page.
 
@@ -148,7 +156,6 @@ The check allows these by rule or by an allowlist entry with a reason, so an age
 
 - During phase 3, when `token-mapping` reports a gap whose role repeats in two or more places, or that someone would change globally.
 - After the build, only in the same change as the first code that needs it, with its `$description` and a docs line.
-- Never to fit a value that is within tolerance of an existing token for the same role. Map to the existing one.
 
 ## Worked example
 

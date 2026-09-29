@@ -8,7 +8,7 @@ Read the section for the path this run takes, and record the path in Source.
 - With nothing named, take the style values in the files the current branch changes against the main branch.
 - Pasted code or values, a URL to a running build, and screenshots all count.
 - Leave out folders the router never serves and nothing imports, such as private example folders, since their values are on no screen. Folders that only group routes do route and stay in. The foundation reference for the app's stack (`../build-design-system/references/base-*.md`) says how its router marks these.
-- Leave out the system's own scaffolding, even when the branch diff touches it: `public/system/`, generated `.md` twins and indexes, `scripts/`, check fixtures (`*.fixture`, `fixtures/`), `.design-system/`, `.migration/` and skill folders (`.agents/`, `.claude/`, `skills/`). Their values are examples and generated copies, and counting them makes a migration look worse than it is. Pass these as exclude globs to the search tool, never as search roots.
+- Leave out the paths in `../build-design-system/references/inventory.md` (Excluded paths), even when the branch diff touches them, plus the check's own `scripts/`, whose values are examples. Without that sibling, leave out skill folders, `docs/system/`, `public/system/`, fixtures, `.design-system/`, `.migration/`, dependencies and build output. Pass these as exclude globs to the search tool, never as search roots.
 
 List the excluded folders once under Source, and record the choice of values there as an assumption.
 
@@ -44,7 +44,7 @@ A color picked off a screenshot is approximate. Its row is never exact, its reas
 
 ## Converting colors
 
-Convert with code whenever a tool can run it, such as a short script that turns every color into OKLCH and compares pairs by ΔE OK. Name the command and its exit code in Source. Conversion by eye is how near misses get reported as exact.
+Convert with `node <skills>/build-design-system/scripts/oklch.mjs`, where `<skills>` is the folder that holds this skill and its siblings (`build-design-system/references/run-record.md`, Terms). It turns hex or `rgb()` into OKLCH and prints ΔE OK between two colors on the times-100 scale the tolerances use (`--help`). Without that sibling, write a short script: sRGB to linear, then the OKLab matrices, then ΔE OK as the Euclidean distance in OKLab times 100. Name the command and its exit code in Source. Never convert by eye.
 
 ## Tool failure
 

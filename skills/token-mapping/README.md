@@ -15,7 +15,7 @@ Ask something like "are we using our tokens on the settings page?" With repo acc
 
 ## Invariants
 
-Keep these unless your system really differs.
+Change one only when its stated reason doesn't apply to you.
 
 - Purpose before value. An 8px radius token is wrong for an 8px gap, and a report that says otherwise looks right until someone ships it.
 - Ambiguous rows keep every candidate, and a gap names the closest token when one fits the purpose. Those two sections hold the only decisions a person makes.
@@ -24,27 +24,10 @@ Keep these unless your system really differs.
 - No list, no mapping. Mapping from memory is how wrong names spread.
 - Called by another skill, it runs to the end, puts questions in the report and opens with a status line, since a coordinator has no one to answer mid-run.
 
-## Optional tools
-
-File access keeps the list current and lets the report state when it was read. A browser lets it read computed values from a running build. The pasted path must keep working, because tool access differs by setup.
-
 ## Check after changing
 
-Run `TESTS.md` on one real screen or file. Confirm that a number match with the wrong purpose lands in Do not use, a value between two tokens stays ambiguous, a vague ask still finds the list, and the run still stops when no list exists.
+File access and a browser are optional, and the pasted path must keep working. Run `TESTS.md` on one real screen or file.
 
 ## Adapt this skill
 
-Give an agent the prompt below, along with `SKILL.md` and the two files in `references/`.
-
-```
-I want to fit the attached token-mapping skill to our system.
-
-Interview me, one question per turn. Cover where our tokens live and in what format, our categories compared with yours, our base unit and tolerances, our modes, the gap threshold, which source wins when two token sources disagree (say, the JSON source and a hand-edited CSS file), and any exceptions we have agreed on.
-
-Rules for you while we do this:
-- Leave the procedure, stops, boundaries and final checks alone unless an answer of mine contradicts one.
-- If a default tolerance no longer fits our base unit, suggest a replacement and let me approve it.
-- Only use token names, categories and exceptions I give you. Anything I can't answer gets marked unresolved.
-
-When the interview ends, split your proposed edits into behavior changes (what the skill accepts, rejects, stops on or hands to a person) and wording changes (same logic, new labels or phrasing). Show both lists and edit nothing until I say go.
-```
+Use the interview prompt in `../ADAPTING.md` with `SKILL.md` and both files in `references/`. Topics for this skill: where your tokens live and in what format, your categories against these, your base unit and tolerances, your modes, the gap threshold, which source wins when two disagree, and any agreed exceptions.

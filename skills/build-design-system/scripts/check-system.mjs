@@ -55,7 +55,8 @@ Options
 Config keys (all optional, JSON)
   include        folders to scan               ["app","src","components","lib","pages"]
   exclude        path prefixes to skip          node_modules, .next, public, scripts,
-                                                .design-system, .migration, skill folders
+                                                .design-system, .migration, __fixtures__,
+                                                skill folders and any folder with a SKILL.md
   tokenSources   files where raw values may sit on custom property lines (--x: #fff)
   uiDir          the component folder           "components/ui"
   examplesDir    the docs' example files, always scanned  gen-docs.config.json's, else
@@ -131,7 +132,7 @@ const JSX_EXT = /\.(tsx|jsx)$/;
 const CSS_EXT = /\.(css|scss|sass|less|pcss)$/;
 const DEFAULTS = {
   include: ["app", "src", "components", "lib", "pages"],
-  exclude: ["node_modules", ".next", ".git", "dist", "build", "out", "coverage", ".design-system", ".migration", ".design-review", "public", "scripts", ".agents", ".claude", ".cursor", ".codex"],
+  exclude: ["node_modules", ".next", ".git", "dist", "build", "out", "coverage", ".design-system", ".migration", ".design-review", "public", "scripts", ".agents", ".claude", ".cursor", ".codex", "__fixtures__"],
   tokenSources: [],
   uiDir: null,
   registry: "registry.json",
@@ -166,7 +167,7 @@ const phys = (cfg, rel) => (cfg.fixtures && !existsSync(join(cfg.root, rel)) && 
 const readRel = (cfg, rel) => readFileSync(join(cfg.root, phys(cfg, rel)), "utf8");
 const existsRel = (cfg, rel) => existsSync(join(cfg.root, phys(cfg, rel)));
 const uiEntries = (cfg) => (cfg.uiDir && existsSync(join(cfg.root, cfg.uiDir)) ? readdirSync(join(cfg.root, cfg.uiDir)).map((e) => (cfg.fixtures ? unfix(e) : e)).sort() : []);
-const SEGMENT_EXCLUDES = new Set(["node_modules", ".next", ".git", ".design-system", ".migration", ".design-review", ".agents", ".claude", ".cursor", ".codex"]);
+const SEGMENT_EXCLUDES = new Set(["node_modules", ".next", ".git", ".design-system", ".migration", ".design-review", ".agents", ".claude", ".cursor", ".codex", "__fixtures__"]);
 
 // Blank out comments, keep offsets. mask[i] = 1 inside a string or template literal.
 function lex(src, js) {
@@ -467,6 +468,8 @@ function checkFile(cfg, rel, report, stockLines) {
   for (const m of code.matchAll(rawRe)) {
     if (js && !mask[m.index]) continue;
     if (tokenLine(m.index)) continue;
+    // hsl(var(--x)) and hsl(var(--x) / 50%) read a token that stores bare channels (Tailwind v3 with shadcn).
+    if (m[0].endsWith("(") && /^[a-z]+\(\s*var\(--[\w-]+\)\s*(?:\/\s*[\d.]+%?\s*)?\)/i.test(code.slice(m.index, m.index + 120))) continue;
     const call = m[0].endsWith("(") ? /^[a-z]+\([^()]*\)/i.exec(code.slice(m.index, m.index + 80)) : null;
     hit(m.index, "rule/raw-value", call ? call[0].replace(/\s+/g, " ") : m[0].endsWith("(") ? m[0] + ")" : m[0].toLowerCase());
   }
@@ -706,7 +709,7 @@ function listFiles(cfg) {
     const abs = join(cfg.root, rel);
     const st = statSync(abs, { throwIfNoEntry: false });
     if (!st || skip(rel)) return;
-    if (st.isDirectory()) { for (const e of readdirSync(abs).sort()) walk(rel ? `${rel}/${e}` : e); return; }
+    if (st.isDirectory()) { if (rel && existsSync(join(abs, "SKILL.md"))) return; for (const e of readdirSync(abs).sort()) walk(rel ? `${rel}/${e}` : e); return; } // a folder holding a SKILL.md is a skill, not product code
     const logical = cfg.fixtures ? unfix(rel) : rel;
     if (cfg.fixtures && logical === rel && /\.(tsx|jsx|ts|js)$/.test(rel)) return; // fixtures must be .fixture files
     if (CODE_EXT.test(logical) || CSS_EXT.test(logical)) out.push(logical);
@@ -739,7 +742,8 @@ function cssBlocks(code) {
 
 const DARK = /\.dark\b|\[data-(?:theme|mode|color-scheme)=["']?dark|prefers-color-scheme:\s*dark|\.theme-dark\b/;
 const LIGHT_ROOT = /^(?::root|html|:host|\.light|\[data-(?:theme|mode)=["']?light["']?\])(?:\s*,\s*(?::root|html|:host|\.light|\[data-(?:theme|mode)=["']?light["']?\]))*$/;
-const COLOR_VALUE = new RegExp(`^(?:#[0-9a-f]{3,8}|(?:rgba?|hsla?|oklch|oklab|lab|lch|hwb|color-mix|color)\\(.*|${NAMED.join("|")})$`, "i");
+// Bare HSL channels, as Tailwind v3 with shadcn stores them (222.2 47.4% 11.2%), are colors too.
+const COLOR_VALUE = new RegExp(`^(?:#[0-9a-f]{3,8}|(?:rgba?|hsla?|oklch|oklab|lab|lch|hwb|color-mix|color)\\(.*|-?[\\d.]+(?:deg)?\\s+[\\d.]+%\\s+[\\d.]+%(?:\\s*\\/\\s*[\\d.]+%?)?|${NAMED.join("|")})$`, "i");
 
 // CSS files a stylesheet imports from node_modules (such as tailwindcss or a component library's CSS), for definitions only.
 function importedCss(root, spec, from) {

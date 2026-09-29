@@ -1,6 +1,6 @@
 # Mapping rules
 
-> For the team setting this up: replace the categories, tolerances and gap threshold with your own. Keep the four classes, and keep checking purpose before value. The skill treats whatever this file says as agreed, so edit it before the first real run.
+Replace the categories, tolerances and gap threshold with your own before the first real run, since the skill treats this file as agreed. Keep the four classes and purpose before value.
 
 ## Classifications
 
@@ -16,7 +16,7 @@ Each row gets exactly one class per mode. Purpose is checked first, then value.
 
 **Not mapped.** Counted in the Summary with no row. A role token with an alpha applied, such as `color-mix()` over its `var()` or a utility's alpha modifier, is token + alpha. A palette value with an alpha stays palette use and gets a row. Values in the `graphic` category are excluded by default.
 
-A value that equals a token but serves a different purpose is never a match. It becomes ambiguous or a gap, and the token goes in Do not use. Numbers repeat all over a system, so this is the commonest confident mistake.
+A value that equals a token but serves a different purpose is never a match. It becomes ambiguous or a gap, and the token goes in Do not use.
 
 If the list states no purpose at all, the run is value matching only. Rows can still be exact or semantic, each reason beginning "Value only", and Do not use stays empty because it cannot be checked. A value that matches no token within tolerance is a gap. The report adds Consistency by role, because value matching alone cannot say whether colors are used consistently.
 
@@ -43,7 +43,7 @@ The team's list is what the project itself declares: token files, theme entries 
 
 A candidate must belong to the same category as the row's job.
 
-- Color, split by role: surface, text, border, icon, focus, status
+- Color, split by role: surface, text, border, icon, action, focus, status. `action` is the fill and text of a control that acts, such as a button
 - Spacing, split by job: inset (padding inside a component) and gap (space between items). One scale often serves both, so record which job the row does
 - Size: fixed widths, heights, icon sizes
 - Radius
@@ -53,15 +53,15 @@ A candidate must belong to the same category as the row's job.
 - Opacity
 - Motion: duration and easing
 - Z-index
-- Graphic: logo art, illustrations, decorative gradient stops and masks. Excluded from rows and counts by default, and listed once under Source with a count and locations. A caller can bring it back in.
+- Graphic: logo art, illustrations, decorative gradient stops and masks. Excluded from rows and counts by default, and listed once under Source with a count and locations. A caller can bring it back in. `build-design-system` keeps these raw too (`token-architecture.md`, What never becomes a token).
 
 A row whose job or category cannot be read is ambiguous when the jobs it might do give two or more candidates between them, and otherwise a gap marked "job unread". Do not guess one.
 
 ## When the repo has no token file
 
-The run stops, and the groundwork goes back grouped the way Geist lays out its foundations, a sound default for a new token set that `build-design-system` also uses.
+The run stops, and the groundwork goes back grouped the way Geist lays out its foundations, the grouping `build-design-system` also uses.
 
-- Color: surfaces, text, borders, icons, focus and status, each with its theme
+- Color: surfaces, text, borders, icons, action, focus and status, each with its theme
 - Typography: families, sizes, weights, line heights, letter spacing
 - Materials: how a surface is finished, meaning radius, border width and shadow
 - Space and layout: inset, gap, fixed sizes, breakpoints
@@ -77,7 +77,7 @@ Before comparing, convert both sides to one form.
 - Lengths go to px. Use a 16px root for `rem` unless the project sets another.
 - Line height goes to a unitless ratio. 24px on a 16px font is 1.5.
 - Colors go to OKLCH, plus alpha. Accept hex (3, 4, 6 or 8 digits), `rgb()`, `hsl()`, `hwb()`, `oklch()`, `oklab()` and named colors. OKLCH keeps colors outside sRGB, such as P3 `oklch()` values, unclipped.
-- Compare two colors by ΔE OK, the distance between them in OKLab times 100. Under 0.5 counts as identical, which absorbs 8-bit rounding.
+- Compare two colors by ΔE OK, the distance between them in OKLab times 100, the scale `oklch.mjs` prints. Under 0.5 counts as identical, which absorbs 8-bit rounding.
 - Alpha is part of the color. `#0F172A` at 80% is not `#0F172A`. Alphas must match within the opacity tolerance.
 
 ## Tolerances
@@ -109,10 +109,9 @@ When gaps are more than 30% of rows (the default), the likelier cause is the wro
 
 ## Consistency by role
 
-Write this section when the list states no purposes or the ask is about consistency. Group every color row (raw and palette) by role: text, surface, border, icon, focus, status. For each role, give the distinct values with counts, their spread in ΔE OK, and the near pairs that likely mean one thing. A near pair is under ΔE OK 5 by default, close enough that two values in one role were likely meant as one. Name no token for any cluster. Example:
+Write this section when the list states no purposes or the ask is about consistency. Group every color row (raw and palette) by role: text, surface, border, icon, action, focus, status. For each role, give the distinct values with counts, their spread in ΔE OK, and the near pairs that likely mean one thing. A near pair is under ΔE OK 5 by default, close enough that two values in one role were likely meant as one. Name no token for any cluster. Example:
 
 ```markdown
-## Consistency by role
 - Text: 6 values over 212 rows. gray-500 (88), gray-600 (61), #666 (9) sit within ΔE OK 4 and likely mean one muted text.
 - Surface: 3 values over 140 rows. white and gray-50 carry 131 of them.
 - Status, error: red-500 (14) and red-600 (11), ΔE OK 6, used for the same error text in two areas.
@@ -132,7 +131,7 @@ The Summary's first line answers the question the person asked, in one sentence,
 
 The counts line gives rows split into raw and palette, then exact, semantic, ambiguous, gap and Do not use, in occurrences, and says so. Token + alpha and graphic follow as not mapped. A list with no stated purpose adds "Value matching only" to it.
 
-The mapping table's columns are value, location, job, token, class and reason. Source gives the list's name, format, path, read method, date and time, the modes, the color conversion command and exit code, any precedence rule applied, and every assumption.
+The mapping table's columns are value, location, job, token, class and reason, sorted by file and line so it doubles as a migration list. Do not use gives each token with the purpose it does have. Ambiguous gives every candidate and the fact that would settle the row. Gaps give what the value does and why no token covers it, and Consistency by role follows them when written. For a person to decide asks about the ambiguous rows, the gaps and any open conflict. Source gives the list's name, format, path, read method, date and time, the modes, the color conversion command and exit code, any precedence rule applied, and every assumption.
 
 ```markdown
 ## Summary
@@ -162,5 +161,5 @@ Mode: light. Dark not mapped.
 - Whether table header height should be a token.
 
 ## Source
-tokens/tokens.json, DTCG format, read from the repo on 2026-03-12 at 14:10. Light mode. No second source. Colors converted to OKLCH and compared by ΔE OK with a scratch conversion script (`node /tmp/oklch.mjs values.tsv`, exit 0). Graphic excluded: 3 values in src/ui/Logo.tsx.
+tokens/tokens.json, DTCG format, read from the repo on 2026-03-12 at 14:10. Light mode. No second source. Colors converted to OKLCH and compared by ΔE OK with `node <skills>/build-design-system/scripts/oklch.mjs` (exit 0). Graphic excluded: 3 values in src/ui/Logo.tsx.
 ```

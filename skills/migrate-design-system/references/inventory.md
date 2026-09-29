@@ -4,6 +4,7 @@ The inventory is a script, not a search the model runs by hand. It finds every p
 
 ## Contents
 
+- Finding the target system
 - What counts as legacy
 - Reconcile with the build's registry
 - When old and new share a path
@@ -13,7 +14,12 @@ The inventory is a script, not a search the model runs by hand. It finds every p
 - The allowlist
 - Blocking new legacy usage
 - The check commands
+- The shared layer
 - Audit mode and plan.md
+
+## Finding the target system
+
+Look for `.design-system/run.md`, `registry.json`, a token source, a UI package or folder, a `/system` route, or the foundation's config file. Read the foundation's base reference in `build-design-system/references/`. Stop and point to `build-design-system` only when nothing is found, or two candidates disagree and no project rule picks one.
 
 ## What counts as legacy
 
@@ -50,20 +56,10 @@ The foundation's base reference in `build-design-system/references/` has the per
 3. **Palette use.** Classes or variables that name a step on a color scale, such as `text-gray-500` or `$blue-600`, from the styling tool's default palette or a scale the project declares. They name a value and no job, so they are neither token use nor raw values. `token-mapping` and the boss's `triage.sh` count them the same way, so the three tools agree. A name built from a declared role, such as `bg-muted`, is token use. `frame.md` says whether palette use is in the done predicate. The default is in when the system declares semantic color tokens, and reported only when it does not.
 4. **Legacy files.** Files matching a `path` line in `legacy.txt`.
 
-Scaffolding never counts, because counting the system's own output reports adoption that did not happen. Scaffolding is the system package, generated docs and their `.md` twins, `scripts/`, check fixtures, run folders and skill folders. Put its globs in `inventory/ignore.txt` once and pass it to every search:
+Scaffolding never counts, because counting the system's own output reports adoption that did not happen. Copy the excluded paths from `build-design-system/references/inventory.md` (Excluded paths) into `inventory/ignore.txt` once, add these two extras, and pass the file to every search:
 
-```
-packages/ui/
-public/system/
-scripts/
-*.fixture
-fixtures/
-.design-system/
-.migration/
-.agents/
-.claude/
-skills/
-```
+- The system package, such as `packages/ui/`, because its source defines the tokens.
+- `scripts/`, because the checks and their allowlists quote raw values.
 
 Never name an excluded folder as a search root, because ripgrep searches a path it is given even when the ignore file lists it.
 
@@ -91,12 +87,12 @@ Class names built from strings, styles set at runtime and values from a CMS esca
 
 ## Assigning findings to surfaces
 
-Every row in `surfaces.tsv` has a `paths` glob. The script assigns each finding to the one surface whose glob matches its file. Shared code (layouts, providers, the legacy folder itself) belongs to the `shared` row.
+Every row in `queue.tsv` has a `paths` glob. The script assigns each finding to the one surface whose glob matches its file. Shared code (layouts, providers, the legacy folder itself) belongs to the `shared` row.
 
 - A finding that matches no glob is `unassigned`. Fan-out does not start while `unassigned` is above zero.
 - A file that matches two globs is an overlap. The script exits with an error naming the file and both surfaces. Fix the globs, since two workers must never own one file.
 
-With a file-based router, one surface per route folder is a good first cut, with layout files in `shared`. In a feature-folder app, use one surface per feature folder. Split any surface whose findings exceed what the pilot's worker handled comfortably inside its time limit.
+With a file-based router, one surface per route folder is a good first cut, with layout files in `shared`. In a feature-folder app, use one surface per feature folder. Split any surface with more findings than the pilot had.
 
 ## Example commands
 
@@ -109,7 +105,7 @@ Legacy imports with ast-grep, as a rule file the script and CI both use:
 id: no-legacy-ui
 language: tsx
 severity: error
-message: Import from @acme/ui instead. See .migration/<run>/lever/RECIPE.md.
+message: Import from @acme/ui instead. See .migration/<run>/codemod/RECIPE.md.
 rule:
   any:
     - kind: import_statement
@@ -155,7 +151,7 @@ app/checkout/payment-frame.tsx	#32325d	the payment provider's appearance API nee
 app/settings/profile/date.tsx	~/ui/DatePicker	G-04 option B	design-systems	2026-12-01
 ```
 
-Every entry has a reason and an owner. The check fails on an entry that matches no finding, so the list shrinks as work lands. Adding an entry needs a closed gate or a logged decision. The script reads `allowlist.tsv` from day one, even when empty, because without it one documented exception makes a zero count impossible.
+Every entry has a reason and an owner. The check fails on an entry that matches no finding, so the list shrinks as work lands. Adding an entry needs a gate that is no longer `open`, or a logged decision. The script reads `allowlist.tsv` from day one, even when empty, because without it one documented exception makes a zero count impossible.
 
 ## Blocking new legacy usage
 
@@ -170,7 +166,7 @@ When Delete legacy removes a module with zero callers, change the rule to ban th
 
 ## The check commands
 
-Workers and verifiers use the same calls. `--help`, or any unknown flag, prints usage and the allowlist format, writes nothing and exits 2. It reads `legacy.txt`, `ignore.txt`, `surfaces.tsv` and `allowlist.tsv` from the run folder given by `--run <folder>`, default the newest `.migration/*/` under the root, and never from a path relative to its own file.
+The skill ships no inventory script. The agent writes `scripts/migration-inventory.mjs` to this interface: the flags `--run`, `--root`, `--paths`, `--check`, `--pin` and `--help`, the outputs `inventory/current.tsv`, `inventory/counts.txt` and `inventory/pin.txt` in the shapes above, and exit codes 0 (pass), 1 (`--check` found work left), 2 (usage) and 3 (wrong root). Workers and verifiers use the same calls. `--help`, or any unknown flag, prints usage and the allowlist format, writes nothing and exits 2. It reads `legacy.txt`, `ignore.txt`, `queue.tsv` and `allowlist.tsv` from the run folder given by `--run <folder>`, default the newest `.migration/*/` under the root, and never from a path relative to its own file.
 
 It takes `--root <dir>`, the tree it counts, defaulting to the git root of `--run`, else of the current folder, else the current folder, so a worker can run it from anywhere with absolute paths. It exits 3, naming the root and saying to pass `--root`, when the run folder's real path is not under the root or the scan reads no source files. Both guard one false pass, where a script run from outside the app counts an empty tree and prints `0 0 0 0`, which reads as a finished surface.
 
@@ -198,9 +194,13 @@ outside=$(git diff --name-only "$BASE..$HEAD" -- . $(printf ':(glob,exclude)%s '
 [ -z "$outside" ] || { printf 'Outside scope:\n%s\n' "$outside"; exit 1; }
 ```
 
+## The shared layer
+
+One agent, alone, lands what every surface needs: the system package and lockfile, theme provider, global styles, token wiring, shared wrappers and the lint config. A command that pulls components from the system's registry or generator runs only in this phase, and one that overwrites a customized file is a gate (the foundation's base reference). After each edit it runs the runtime checks in `references/verification.md`, because a type check misses breaks that show only when a route renders. A component the owner adds to close a gap gets its `component-docs` page before any brief names it.
+
 ## Audit mode and plan.md
 
-Audit mode runs Frame and Inventory, including the mapping runs, and ends by writing `plan.md`. Outside the run folder it writes one file, `scripts/migration-inventory.mjs`, with `--help` and the allowlist format, so the edit run reuses it instead of moving it and repointing its paths. It commits that file on the run branch when there is one, and otherwise leaves it untracked and names it in `plan.md`. No lint rule is added.
+Audit mode needs neither a settled system nor a running app. It runs Frame and Inventory, including the mapping runs, and ends by writing `plan.md`. Outside the run folder it writes one file, `scripts/migration-inventory.mjs`, with `--help` and the allowlist format, so the edit run reuses it instead of moving it and repointing its paths. It commits that file on the run branch when there is one, and otherwise leaves it untracked and names it in `plan.md`. No lint rule is added.
 
 Because it only reads, it can run beside `build-design-system` or harden work. Start it once their token commit lands and pin that commit in the plan's first line, so the person gets a plan even when the build runs out of budget.
 
@@ -214,7 +214,7 @@ Counts: imports 214, raw 1307, palette 388, files 46, unassigned 0 (inventory/co
 Blind spots: <places static search cannot see>
 
 ## Surfaces
-<table: surface, paths, findings, states, depends_on, notes. From surfaces.tsv.>
+<table: surface, paths, findings, states, depends_on, notes. From queue.tsv.>
 
 ## Shared layer work
 <each shared change, with the files it touches>
@@ -228,7 +228,7 @@ Blind spots: <places static search cannot see>
 ## Pilot
 <the proposed pilot surface and why it exercises the most>
 
-## Lever candidates
+## Codemod candidates
 <the rewrites a codemod could do, with the share of findings each covers>
 
 ## Gates

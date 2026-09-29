@@ -1,6 +1,6 @@
 # Stress test
 
-> For the team setting this up: this is the break-it pass at the end of phase 4, after a family's checks pass and before its specs close. `rule-method.md` grows one dimension at a time to set a limit. This page throws hostile data, input and widths at every primitive at once to find what the specs missed. Add rows for your product's own hostile data, such as currency formats or very long record names.
+The break-it pass at the end of phase 4, after a family's checks pass and before its specs close. `rule-method.md` grows one dimension at a time to set a limit. This page throws hostile data, input and widths at every primitive at once to find what the specs missed. Add rows for your product's own hostile data, such as currency formats or very long record names.
 
 Contents
 
@@ -12,7 +12,7 @@ Contents
 
 ## Who runs it
 
-One worker per family group, side by side under the machine budget (`design-system-boss/references/delegation.md`), on a dev-only stress page per family under the showcase root, such as `/system/stress/<family>`, which the coordinator creates first. Each worker owns its family's component files and tests, its showcase section and its specs, and fixes robustness and behavior, never the visual style. It adds one "Edge cases" specimen per component page, before the in-context example, from the shared fixtures file.
+One worker per family group, side by side under the machine budget (`coordinator-path.md`, Machine budget), on a dev-only stress page per family under the showcase root, such as `/system/stress/<family>`, which the coordinator creates first. Each worker owns its family's component files and tests, its showcase section and its specs, and fixes robustness and behavior, never the visual style. It adds one "Edge cases" specimen per component page, before the in-context example, from the shared fixtures file.
 
 ## Widths and themes
 
@@ -53,6 +53,7 @@ Interaction
 
 Visual
 - [ ] Both themes, with the focus ring visible on every surface level
+- [ ] One capture with `forced-colors: active` emulated, where every state stays visible
 - [ ] Icons measured against their text or their box (`browser.md`, Measuring optical alignment)
 - [ ] Color never the only signal
 

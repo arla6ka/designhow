@@ -9,16 +9,16 @@ Read this page, not every file. At each step, open only what the Open column nam
 | 3 | Read AGENTS.md or CLAUDE.md | the repo's own file |
 | 4 | Pick the state, the intent and the foundation | `references/triage.md`, "The app's state", "The ask's intent", "The foundation" |
 | 5 | Pick the route | `SKILL.md`, "Routing table" |
-| 6 | On a writing route, pick the run branch: the one the person named for this work, else a new one from HEAD | `SKILL.md`, "The branch model" |
+| 6 | On a writing route, pick the run branch: the one the person named for this work, else a new one from HEAD | `build-design-system/references/run-record.md`, "Terms" |
 | 7 | Copy the route's steps and set the phase caps | `references/routes.md`, the route's section and "Budget" |
 | 8 | Probe subagents, nesting, browser and shell. On a flat host, switch to the track below after step 10 | `references/delegation.md`, "What the host can do" |
-| 9 | Write the state file with the standing orders, the build's `.design-system/run.md` skeleton when the route runs the build, and the ignore entries for the footprint | `references/state.md`, "The state file" and "The run folder"; `references/delegation.md`, "Standing orders" |
-| 10 | Send the Frame with the standing questions, or put it in the report when nobody is reading | `references/triage.md`, "The one question" and "Standing questions" |
+| 9 | Write the state file with the standing orders, the build's `.design-system/run.md` skeleton when the route runs the build, and the ignore entries for the footprint | `references/state.md`, "The state file" and "The run folder"; `build-design-system/references/run-record.md`, "Standing orders"; `references/delegation.md`, "Standing orders" |
+| 10 | Send the Frame with the standing questions, or put it in the report when nobody is reading | `references/triage.md`, "The one question"; `build-design-system/references/run-record.md`, "Questions" |
 | 11 | Brief and run each step | `references/delegation.md`, "The step brief"; `SKILL.md`, Procedure, "Run the steps" |
 | 12 | Save each return's status line and file list to `returns/<step>.md` | `references/delegation.md`, "Saving a return" |
 | 13 | Check each return and write its verdict | `references/delegation.md`, "Checking a return" |
 | 14 | Apply decided defaults, then clearance, then migration on the run branch | `references/routes.md`, Build step 4; `SKILL.md`, Procedure, "Clear the migration" |
-| 15 | Close: wait for workers, triage into `triage/after/`, clean-clone check, captures and montage, delete `.design-system/tmp/`, `git status` with every untracked path explained. Reconcile the audit's gates and re-pin it if the build moved what it names | `references/routes.md`, the rules at the top; on a minimal footprint, "Minimal footprint close" |
+| 15 | Close: wait for workers, triage into `triage/after/`, clean-clone check, captures and montage, delete `.design-system/tmp/`, `git status` with every untracked path explained. Reconcile the audit's gates and re-pin it if the build moved what it names | `references/routes.md`, the rules at the top; on a minimal footprint, `build-design-system/references/coordinator-path.md`, "Minimal footprint" |
 | 16 | Write `close.md`, then the report from it, and send the report as the final message | `references/state.md`, "The close file" and "The handoff report" |
 
 ## Flat host: the build and migrate seats
@@ -32,9 +32,9 @@ Three records, one writer each. `state.md` gets a Steps row and a decision row p
 | F1 | Decision row "Boss holds the build seat: flat host". Load `build-design-system` | `build-design-system/references/coordinator-path.md`, "Start" and "Phase caps". The base reference triage named | |
 | F2 | Copy the check scripts per the build's phase 1. Fixtures stay in the skill folder. Phase caps come from `routes.md` "Budget", phase order from the build | `build-design-system/SKILL.md`, "1. Frame" | |
 | F3 | Inventory and baselines: read-only workers per screen group. Every pilot trap's before state goes in `run.md` | `build-design-system/references/worker-brief.md`, "The template" | `inventory.md`, `browser.md` "Capture every route in one command" |
-| F4 | Foundations: one worker writes the token source, commits it first, then the identical-value swaps | nothing new | `token-architecture.md` or the base reference |
+| F4 | Foundations: the one worker the boss names writes the token source, commits it first, then the identical-value swaps | nothing new | `token-architecture.md` or the base reference |
 | F5 | Right after the token commit, spawn the migrate audit as one step agent pinned to it | `references/delegation.md`, "The step brief" | `migrate-design-system`, audit mode |
-| F6 | Components: the first family's worker, then one worker per family on disjoint paths | nothing new | `component-contract.md`, `traps.md` |
+| F6 | Components: that same worker writes the first family, then one worker per family on disjoint paths | nothing new | `component-contract.md`, `traps.md` |
 | F7 | Checks: one worker. The check exits 0 before the pilot | `build-design-system/references/checks.md`, "The check has to run" | `checks.md` |
 | F8 | Pilot: one worker fixes every trap in the pilot's files, with before and after numbers | nothing new | `browser.md` "Compare after a change" |
 | F9 | Docs: spec workers on disjoint families, then four review lenses, the decisions log and one fix wave by file ownership | `build-design-system/references/coordinator-path.md`, "Review, decide, fix" | `system-structure.md`, `spec-template.md` |

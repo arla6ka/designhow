@@ -1,6 +1,6 @@
 # Triage
 
-Triage is cheap on purpose: one script, a few file reads, no browser and no subagent. It decides the route, so every call traces to a number a person can rerun.
+Triage runs one script and a few reads, with no browser or subagent. It decides the route, so every call traces to a number a person can rerun.
 
 ## Contents
 
@@ -19,18 +19,19 @@ Triage is cheap on purpose: one script, a few file reads, no browser and no suba
 bash <skills>/design-system-boss/scripts/triage.sh <repo> <repo>/.design-system/boss/triage
 ```
 
-It prints `signal<TAB>value` lines and writes them to `signals.tsv`, with match lists beside it (`raw-colors.txt`, `components.tsv`, `components-layer.tsv`, `families.tsv`, `raw-families.tsv`, `layer-dirs.tsv`, `harden-dirs.tsv`, `stray-dirs.tsv`, `tw-semantic.txt`, `routes.txt`, `token-files.txt`, and `shadcn-info.json` when it ran). It reads only files git tracks or would track, writes only into the output folder, and needs `rg`, plus `node` when a `components.json` exists.
+It prints `signal<TAB>value` lines and writes them to `signals.tsv`, with match lists beside it (`raw-colors.txt`, `components.tsv`, `components-layer.tsv`, `families.tsv`, `raw-families.tsv`, `layer-dirs.tsv`, `harden-dirs.tsv`, `stray-dirs.tsv`, `tw-semantic.txt`, `routes.txt`, `token-files.txt`, and `shadcn-info.json` when it ran). It also writes `tw-arbitrary.txt`, `tw-palette.txt` and `inline-styles.txt`, the match lists behind `tw_arbitrary`, `tw_palette` and `inline_styles`. It reads only files git tracks or would track, writes only into the output folder, and needs `rg`, plus `node` when a `components.json` exists.
 
 When `components.json` exists, the script asks the shadcn CLI from `node_modules/.bin` for the project's config and never downloads it on its own. `TRIAGE_SHADCN_INFO=npx` allows the download, and `0` skips the call. Without the CLI, the script reads `components.json` directly and says so in `shadcn_info`. Where they differ, trust the CLI over the file and over anything inferred.
 
-When `rg` is missing, the script exits with a message. Run these instead, save each output in the same folder, and record the fallback in the state file. They skip `.gitignore`, so the excludes do that job.
+When `rg` is missing, the script exits with a message. Run these instead, save each output in the same folder, and record the fallback in the state file. They skip `.gitignore`, so the excludes do that job. `--exclude-dir` matches folder names only, so `S` drops `docs/system`, `public/system` and `static/system` by path, and a folder holding a `SKILL.md` outside `.agents/` or `.claude/` needs its own `--exclude-dir`.
 
 ```sh
-X='--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.next --exclude-dir=dist --exclude-dir=build --exclude-dir=.design-system --exclude-dir=.migration --exclude-dir=.agents --exclude-dir=.claude --exclude-dir=scripts --exclude-dir=fixtures --exclude-dir=system'
+X='--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.next --exclude-dir=dist --exclude-dir=build --exclude-dir=out --exclude-dir=.design-system --exclude-dir=.migration --exclude-dir=.agents --exclude-dir=.claude --exclude-dir=scripts --exclude-dir=fixtures --exclude-dir=__fixtures__ --exclude=*.fixture*'
+S='^\./(.*/)?(docs|public|static)/system/'
 grep -rIn $X -E '#[0-9a-fA-F]{3,8}([^0-9A-Za-z-]|$)|(^|[^A-Za-z0-9-])(rgba?|hsla?|oklch)\(' --include='*.css' --include='*.scss' --include='*.tsx' --include='*.jsx' . \
-  | grep -vE '^[^:]*:[0-9]+:[[:space:]]*--' > raw-colors.txt
-grep -rIoh $X -E 'var\(--[a-zA-Z][a-zA-Z0-9-]*' --include='*.css' --include='*.scss' --include='*.tsx' --include='*.jsx' . | wc -l
-grep -rIn $X --exclude-dir=fixtures --exclude-dir=examples --exclude-dir=docs --exclude-dir=checks -E 'export (default )?(function|const|class) [A-Z]' --include='*.tsx' --include='*.jsx' . > components.txt
+  | grep -vE "$S" | grep -vE '^[^:]*:[0-9]+:[[:space:]]*--' > raw-colors.txt
+grep -rIo $X -E 'var\(--[a-zA-Z][a-zA-Z0-9-]*' --include='*.css' --include='*.scss' --include='*.tsx' --include='*.jsx' . | grep -vE "$S" | wc -l
+grep -rIn $X --exclude-dir=examples --exclude-dir=docs --exclude-dir=checks -E 'export (default )?(function|const|class) [A-Z]' --include='*.tsx' --include='*.jsx' . | grep -vE "$S" > components.txt
 find . -name '*.tokens.json' -o -name 'tailwind.config.*' -o -path '*/tokens/*.json' | grep -v node_modules
 cat components.json package.json   # foundation: shadcn config, or a UI library dependency
 ```
@@ -41,7 +42,7 @@ In a monorepo, run it per app folder, each into its own subfolder of `triage/`.
 
 Two units. A **line** signal counts source lines, so a line holding three hex values counts once. An **occurrence** signal counts every match. `token-mapping` counts occurrences, so compare its totals with `raw_color_occurrences`, never `raw_color_lines`. `adoption_pct` mixes the two, which is fine for picking a state and wrong for a before-and-after claim. The report names the unit beside every count.
 
-Every count leaves out the run's own scaffolding: generated twins and indexes (`public/system/`, `static/system/`), `scripts/`, fixtures (`fixtures/`, `__fixtures__/`, `*.fixture`), `.design-system/`, `.migration/`, and skill folders (`.agents/`, `.claude/`, any folder holding a `SKILL.md`). A build adds all of these, and without the rule its fixtures and generated HTML would count as drift. `scaffold_files_skipped` says how many files that left out. Presence signals such as `llms_txt` still see `public/llms.txt`.
+Every count leaves out the paths in `build-design-system/references/inventory.md` (Excluded paths), build output included, so a route folder named `build` is listed by hand. The script adds `scripts/`, `fixtures/` and `static/system/`, because the build copies its check scripts and fixtures into `scripts/`, check fixtures also sit in plain `fixtures/` folders, and some frameworks serve generated twins from `static/`. Without the rule the build's own fixtures and generated HTML would count as drift. `scaffold_files_skipped` says how many files that left out. Presence signals such as `llms_txt` still see `public/llms.txt`.
 
 Adoption also leaves out the component layer, the token source, examples, docs, tests and stories, or a system's own `var()` uses would make a weak system read as settled. Component and family counts leave out the same examples, docs and check folders, so planted fixtures never read as duplicate families. `component_specs` leaves out twins and `spec-template.md`.
 
@@ -61,7 +62,9 @@ Adoption also leaves out the component layer, the token source, examples, docs, 
 | `product_component_defs`, `stock_ui_defs` | definitions | definitions outside stock shadcn files, and inside them | empty, and duplicates |
 | `families_with_2plus` | families | families (Button, Input, Dialog and so on) with two or more members. A member is a definition matched on name suffix, or a raw copy. Stock shadcn files count as one member per family | drifting or settled |
 | `raw_family_copies` | elements | raw `<button>`, `<input>`, `<textarea>`, `<select>` and `<a>` elements sharing 3 or more static classes with the same element in another file. The family's component file holds the canonical copy and never counts. `raw-families.tsv` lists each copy and its match | duplicates the name suffix misses, and the Named families edit list |
-| `foundation` | name | `shadcn`, `shadcn+registry`, `library:<package>`, `package:<name>`, `raw`, or `none (default: shadcn)` on an empty app (2 or fewer routes, 5 or fewer product components) | which base reference the steps load |
+| `foundation` | name | `shadcn`, `shadcn+registry`, `library:<package>`, `package:<name>`, `raw`, or `none (default: shadcn)` on an empty app (the **empty** rule in The app's state) | which base reference the steps load |
+| `ui_library`, `own_package` | names | a UI library dependency, and the team's own UI package | `foundation` |
+| `framework`, `tailwind`, `inline_styles`, `storybook`, `git_branch` | names, occurrences | the stack, inline style objects, a Storybook folder and the starting branch | informational. They route nothing, and briefs get them as context |
 | `shadcn_base`, `shadcn_style`, `tailwind_css_file`, `shadcn_ui_dir`, `shadcn_registries` | names | from the shadcn CLI, or `components.json` | base-shadcn.md |
 | `ui_raw_lines` | lines | raw colors and palette classes inside the component layer, upstream's own on shadcn | reported apart. Raw work across the app is this plus `raw_color_lines` |
 | `component_specs` | files | Markdown files with a `### State precedence` section, the mark of a filled spec template | weak or hardened |
@@ -95,17 +98,17 @@ With no foundation and nothing shipped yet, the default is shadcn, per `base-sha
 Apply these in order and take the first that matches. Write the deciding signal next to the state.
 
 1. `boss_state` is set. Resume. No new triage decision.
-2. `routes` is 2 or fewer and `product_component_defs` is 5 or fewer. **empty**. Nothing ships yet, so the system starts from brand bits or shadcn defaults.
+2. `routes` is 1 or fewer and `product_component_defs` is 2 or fewer. **empty**. That is at most a starter page and its layout, so the app has no product route, and the system starts from brand material or shadcn defaults. The component count keeps out an app whose routes live in code, which the script cannot see. A small shipped app gets Build, never Seed.
 3. `token_files` is 0 and `custom_property_defs` is under 20. **none**.
 4. `adoption_pct` is under 80, `palette_pct` is 30 or more, or `families_with_2plus` is 2 or more. **drifting**.
 5. `system_docs_routes` is 0, or `llms_txt` is no, or `registry_json` is no. **settled**.
 6. Otherwise **documented**.
 
-`drifting` and `settled` each split by whether a component layer worth hardening exists, which is when `harden_dirs` is set. `build-design-system/references/modes.md` uses the same rule. A smaller or less used layer gets built, not hardened. A system with such a layer is **weak** when `component_specs` is 0 or its families still duplicate. Weak systems get hardened before anyone migrates onto them.
+`drifting` and `settled` each split by whether a component layer worth hardening exists, which is when `harden_dirs` is set: 5 or more components imported by 3 or more routes. `build-design-system/references/modes.md` keeps a standalone copy of this rule. A smaller or less used layer gets built, not hardened. A system with such a layer is **weak** when `component_specs` is 0 or its families still duplicate. Weak systems get hardened before anyone migrates onto them.
 
 Palette classes sit outside `adoption_pct`, as `token-mapping` counts them. A high `palette_pct` means much of the app's color names a value and no job. The Values and Review routes then answer "are colors consistent" by role, per `token-mapping`'s Consistency by role section, and the Frame says so.
 
-The thresholds are defaults, set where a typical app starts to read as two products. A team that has measured its own app should change them here and nowhere else.
+These are unmeasured defaults. Replace them with your app's numbers, here and nowhere else.
 
 A `build_record` with no handoff section means an earlier build stopped partway. Route to Build, and the build resumes from its own record. A migration run folder with open surfaces does the same for Adopt.
 
@@ -131,11 +134,11 @@ Read the ask for these words. The rows run from named complaints to generic verb
 | "fix it", "fix this", "clean it all up", "clean it up", "mess", "sort out our UI" | full. "Fix it" or "fix this" aimed at a mess or an inconsistency counts as clearance |
 | "migrate", "move every screen", "roll out", "adopt", "nobody uses it", "nobody follows it", "the screens ignore it" | adopt, and the ask counts as clearance |
 | "start a design system", "new app", "from scratch", "from our brand" | seed |
-| "build", "set up", "extract", "break down the screens", "consolidate" | build |
+| "build", "set up", "extract", "break down the screens", "consolidate", "we need a design system" | build |
 
-An ask that matches nothing is **seed** when the state is `empty`, **full** when it is `none` or `drifting`, and **adopt** when it is `settled`.
+An ask that matches nothing is **seed** when the state is `empty`, **full** when it is `none` or `drifting`, and **adopt** when it is `settled`. A fallback intent never counts as clearance.
 
-Adoption asks are the rows above marked "counts as clearance", plus any "ignore" aimed at the system and "use it everywhere". They clear migration within the session budget, on the run branch. When an ask names two complaints, such as missing states and nobody using the system, the first row still picks the route and the adoption words still give clearance.
+The clearance words are listed in `build-design-system/references/run-record.md` (Terms), and the rows above marked "counts as clearance" follow that list. They clear migration within the session budget, on the run branch. When an ask names two complaints, such as missing states and nobody using the system, the first row still picks the route and the adoption words still give clearance.
 
 "Launch subagents" is a delegation request, not an intent. Honor it in the step that fans out.
 
@@ -165,12 +168,7 @@ Budget and clearance are not this question. The Frame asks for both as the one r
 
 ## Standing questions
 
-Two questions go in every Frame on a writing route, beside the one question, each with its default applied. Their answers change every file a worker writes, so a late answer means rewriting those files.
-
-- **Bans.** "Anything you never want to see in the UI, its copy or the docs?" Offer the common ones with none selected: uppercase labels, middle-dot or bullet separators, em dashes, exclamation marks, emoji, gradients. Record each answer word for word as a standing order and as a `rule/ban-<slug>` the check scans (`build-design-system/references/checks.md`, Bans). With no answer, record "none named". A ban stated later becomes a standing order at once, and the next commit sweeps every file for it.
-- **Design source.** When the person named a design file, brand kit or mockups: "How closely should the system follow it: reference only, partial, or pixel fidelity?" The default is reference only, which keeps the current look. A closer answer runs through a sample first (`build-design-system/references/modes.md`, Following a design source).
-
-When the person asks to be asked, or the route builds or hardens a system, send a batch of up to six in the same message. Each is multiple choice, with the recommended option first and already applied, and the run continues under the defaults. Ask only what changes files a worker writes: the branch to work on and whether anything besides product code is committed, the primary action color and how much brand color the product carries, the typeface and its license, the icon set and its style, and where the person reviews the system (an in-app route, a docs site or a component workbench).
+The bans and design-source questions, and when a batch of up to six goes with them, are in `build-design-system/references/run-record.md` (Questions). The boss asks them in the Frame on every writing route, and a sibling called under the boss does not ask them again.
 
 ## Blind spots
 

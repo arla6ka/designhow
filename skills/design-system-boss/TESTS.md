@@ -1,19 +1,8 @@
 # Tests: design system boss
 
-Run these by hand. Give an agent the same repo and prompt twice, once with the boss off and the five siblings installed, once with the boss on, and compare. Most cases stop after triage, the Frame or the first step. The full-route cases take hours.
+Setup, how to phrase the ask and the baseline table are in `../TESTING.md`. Compare each case with the boss off and the five siblings installed. Most cases stop after triage, the Frame or the first step.
 
-## Setup under test
-
-A result only means something next to the setup that produced it. Record before every run:
-
-- This skill's files, unedited or with your changes named
-- Sibling skills installed, with versions or commits, and any missing
-- Whether AGENTS.md or CLAUDE.md loaded
-- Host: subagents, nesting, worktrees, browser and shell, each yes or no
-- Repo, commit, and whether `git status` was clean
-- Model for the boss, and for step agents if different
-
-Keep practice repos in git so every run starts from the same commit. Shape them to your own stack. The cases assume these:
+The cases assume these practice repos, kept in git and shaped to your stack:
 
 - **Bare** has about 15 routes, no token file, a few hundred raw colors and three button implementations.
 - **Drifting** has a DTCG token source, adoption under half, two input families and a `src/ui` layer with thin states.
@@ -83,9 +72,9 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 ## Pre-ship review
 
-**Input:** Settled, and "check the invite flow before I ship." Then Upstream on `main` with no branch diff, and "check the playground before I ship it, and tell me if we're using colors consistently."
+**Input:** Settled, and "check the invite flow before I ship." Then a repo with no branch diff, and "check it before I ship, and tell me if our colors are consistent."
 
-**Expect:** route Review, with `design-review` on the flow and `token-mapping` on its files side by side. With no flow named, `design-review` runs on the top routes, stated as the default, and `token-mapping` answers with Consistency by role. Triage reports `palette_pct` apart from `adoption_pct`. The boss waits for every step, `git status` matches before outside `.design-system/boss/`, and the check line reads "n/a (read-only route)".
+**Expect:** route Review, with `design-review` on the flow and `token-mapping` on its files side by side. With no flow named, `design-review` runs on the top routes, stated as the default, and `token-mapping` answers by role, with `palette_pct` apart from `adoption_pct`. `git status` matches before outside `.design-system/boss/`, and the check line reads "n/a (read-only route)".
 
 **Fails if:** anything in the repo changes, review findings are "fixed", the boss hands back with steps running, or palette classes count as raw in one skill and as token use in the other.
 
@@ -107,11 +96,11 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 ## Ask against state
 
-**Input:** Bare with "migrate the app onto our design system". Weak shadcn with "migrate every screen onto our components" and with "make it look like one thing". Drifting with "our screens are missing loading and error states". Weak shadcn with "set up a proper design system so the team stops drifting", then again with `harden_dirs` none. Bare with "every page looks like a different product".
+**Input:** Bare with "migrate the app onto our design system". Weak shadcn with "migrate every screen onto our components" and with "make it look like one thing". Drifting with "our screens are missing loading and error states". Weak shadcn with "set up a proper design system so the team stops drifting", then again with `harden_dirs` none. Bare with "every page looks like a different product". A shipped app with 2 routes and 6 components, with "we need a design system".
 
-**Expect:** Bare migrate goes to Build, and the one question offers to stop at the audit. A weak system hardens first, then Full from clearance, with the Frame saying why in one line. "Missing states" routes to Harden. The build ask on a drifting layer routes to Harden, and to Build with no `harden_dirs`. The visual ask is intent full and counts as clearance. Each routing picks one table row.
+**Expect:** Bare migrate goes to Build, and the one question offers to stop at the audit. A weak system hardens first, then Full from clearance, with the Frame saying why in one line. "Missing states" routes to Harden. The build ask on a drifting layer routes to Harden, and to Build with no `harden_dirs`. The visual ask is intent full and counts as clearance. The small shipped app routes to Build. Each routing picks one table row.
 
-**Fails if:** migrate runs before a system exists, a weak system is migrated before it is hardened, intent is matched by meaning with no row, the state file cites two rows, or a second component layer appears beside `components/ui`.
+**Fails if:** the small shipped app gets Seed, migrate runs before a system exists, a weak system is migrated before it is hardened, intent is matched by meaning with no row, the state file cites two rows, or a second component layer appears beside `components/ui`.
 
 ## Unrelated work
 
@@ -129,6 +118,14 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Fails if:** any value appears that triage did not find in the repo.
 
+## Mid-run ask
+
+**Input:** during a Full run's build step, "review the settings page", then "also add a dark theme".
+
+**Expect:** the review runs against the starting branch and writes nothing to docs/system. The dark theme queues after the run or becomes a gate.
+
+**Fails if:** either ask writes to the run branch while the build writes.
+
 ## Resume
 
 **Input:** stop the boss during the Full route's migrate audit. Start a fresh agent with the skill and the repo only.
@@ -143,7 +140,7 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Expect:**
 
-- Flat. One decision row per seat, and the boss follows "Flat host: the build and migrate seats", opening only its Open column. Workers write the first family and the token source, and `git log` shows no product-code commit by the boss.
+- Flat. One decision row per seat, and the boss follows "Flat host: the build and migrate seats", opening only its Open column. The one worker the boss names writes the token source and the first family, and `git log` shows no product-code commit by the boss.
 - No subagents. The same route in sequence, with `state.md` updated before and after each step.
 - No shell. Workers run triage, `git status`, the dev server, checks and pixdiffs, and return full output with exit codes.
 - No worktrees. A decision row picks sequence or disjoint file lists, and each return's `git status --porcelain` stays inside its list.
@@ -194,15 +191,15 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Input:** any writing route. Force a handback while two build workers run. Then a nested host where a migrate step agent hands back before its workers return.
 
-**Expect:** before handing back, `state.md` has a Live workers section with each worker's brief, scope and task. On a normal close the boss waits and the section is empty. The shared dev server stays up until the last worker returns, and a worker that finds it down returns `Status: blocked: server down`. A step with live workers is not `done` until each returns or its brief reruns.
+**Expect:** before handing back, `state.md` has a Running workers section with each worker's brief, scope and task. On a normal close the boss waits and the section is absent. The shared dev server stays up until the last worker returns. A worker in the shared checkout that finds it down returns `blocked: server down`, and one in its own worktree starts its own server on port base+n. A step with live workers is not `done` until each returns or its brief reruns.
 
-**Fails if:** the boss hands back with no Live workers rows, stops the dev server while a worker is live, a worker starts a second dev server in the same checkout, or a step is verified while a worker is live.
+**Fails if:** the boss hands back with no Running workers rows, stops the dev server while a worker is live, a worker starts a second dev server in the same checkout, or a step is verified while a worker is live.
 
 ## Run branch
 
-**Input:** Bare, "our UI is a mess, fix it", pre-cleared with "Go, 3h", with 3 or more migrate workers in flight. Then Weak shadcn with "set up a proper design system so the team stops drifting" and no clearance.
+**Input:** Bare, "our UI is a mess, fix it", pre-cleared with "Go, 3h", with migrate workers in flight up to the machine budget. Then Weak shadcn with "set up a proper design system so the team stops drifting" and no clearance.
 
-**Expect:** the run creates `ds/<yyyy-mm-dd>-full` from HEAD before its first write and records the starting branch. Identical-value swaps land on every route with a 0% pixdiff saved. After the build's check, decided defaults land on every screen they reach, one surface per commit with captures and a montage row, and each gate reads `applied on <branch>` with its commit. Before clearance one writing step runs at a time, and after it parallel writers share no path. Only the coordinator shrinks the allowlist, in its own commit. Without clearance, nothing else moves.
+**Expect:** the run creates `ds/<yyyy-mm-dd>-full` from HEAD before its first write and records the starting branch. Identical-value swaps land on every route with a 0% pixdiff saved. After the build's check, decided defaults land on every screen they reach, one surface per commit with captures and a montage row, and each gate reads `applied` with its commit. Before clearance one writing step runs at a time, and after it parallel writers share no path. Only the coordinator shrinks the allowlist, in its own commit. Without clearance, nothing else moves.
 
 **Fails if:** the starting branch gains a commit, a visible change has no gate or decision, a surface lacks captures, a worker commit touches an allowlist, Next asks for anything but a merge, or the run merges.
 
@@ -218,17 +215,17 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Input:** Drifting, a brand kit folder, and "we need a design system, follow our brand kit, and ask me questions first."
 
-**Expect:** the Frame carries the bans question with the common bans offered and none selected, the design source question with "reference only" applied, and a batch of up to six multiple-choice questions, each with its recommended option first and applied. Read-only steps start without waiting. A later "no uppercase, no em dashes" becomes standing orders word for word and `bans` entries in the check config.
+**Expect:** the Frame carries the bans question with the common bans offered and none selected, the design source question with "reference only" applied, and a batch of up to six multiple-choice questions, each with its recommended option first and applied. Read-only steps start without waiting. Two bans the person states later become standing orders word for word and `bans` entries in the check config.
 
 **Fails if:** the run waits on an answer, fidelity to the brand kit is assumed, or a ban lives only in chat.
 
 ## Machine budget
 
-**Input:** Bare, "our UI is a mess, fix it, launch subagents", on a laptop whose swap is at 85% with the full local stack running. Then crash the host once mid-fan-out and resume.
+**Input:** any fan-out route on a machine short of memory, then a host crash mid-fan-out and a resume.
 
-**Expect:** the state file records free memory and swap, the services stopped and why, and the window by worker kind as a decision row. No code or browser worker starts while swap is above about 80%. Docs workers may run wide, and code workers stay at 2 or fewer, each typecheck through the lock. After the crash, a fresh agent reads the machine again, lowers the window before anything starts, resumes workers whose transcripts survived, and redoes the failed browser step one action per call.
+**Expect:** the window follows `build-design-system/references/coordinator-path.md` (Machine budget) as a decision row, and the resume reads the machine again before anything starts.
 
-**Fails if:** the window is one fixed number, a worker starts its own dev server or browser, a leaf worker spawns helpers, or the resume reruns the batched call that crashed.
+**Fails if:** the window is one fixed number or exceeds that budget.
 
 ## Returns as status and files
 
@@ -248,11 +245,11 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 ## PR footprint
 
-**Input:** Upstream, and "make the buttons and headings across the demos consistent. I want to send this upstream as a PR, so keep it tight". The branch sits on a commit upstream does not have.
+**Input:** Upstream, and an ask that names two component families and an upstream PR. The branch sits on a commit upstream does not have.
 
-**Expect:** the route is `Named families, minimal footprint`, with no Harden step. The edit list starts from `triage/raw-families.tsv` and sits in the state file, one decision row per family, each file with an importer count. Nothing is vendored, `.gitignore` is untouched, `.design-system/` is in `.git/info/exclude`, and no audit plan is required. One commit per family. The check line names the repo's own lint, typecheck and build. `.design-system/pr.md` exists, untracked, with per-family changes, numbers and every deliberate visual change. A decision row names the upstream tip, and Next starts with the rebase onto it.
+**Expect:** the route is `Named families, minimal footprint`, with no Harden step. The edit list starts from `triage/raw-families.tsv`, one decision row per family, each file with an importer count. Nothing is vendored, `.gitignore` is untouched, and no audit plan is required. One commit per family. The check line names the repo's own lint, typecheck and build. `.design-system/pr.md` exists, untracked, and Next starts with the rebase onto the upstream tip.
 
-**Fails if:** the route names Harden, a spec or check script lands in the diff, a family the ask did not name changes, a hunk sits in an export nothing imports, `pr.md` is missing or committed, or Next opens the PR from the branch as it is.
+**Fails if:** a spec or check script lands in the diff, a family the ask did not name changes, a hunk sits in an export nothing imports, `pr.md` is missing or committed, or Next opens the PR from the branch as it is.
 
 ## Phase caps
 

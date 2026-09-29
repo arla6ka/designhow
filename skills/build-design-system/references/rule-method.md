@@ -1,6 +1,6 @@
 # Rule method
 
-> For the team setting this up: how a worker writes the rules for one primitive, in any app. It carries no rules of its own. Every rule comes from this app's code, a measurement on it, or a named principle. Keep the rule shape, the grounds and the four tests. Extend the question bank when your product has a concern it misses.
+How a worker writes the rules for one primitive, in any app. It carries no rules of its own. Every rule comes from this app's code, a measurement on it, or a named principle. Extend the question bank when your product has a concern it misses.
 
 Contents
 
@@ -50,7 +50,7 @@ Ask every question for every primitive. An answer becomes a rule, a table row, o
 3. **Where it breaks.** Grow each dimension until something fails: content length, item count, nesting, viewport width, input method, locale (longer strings, right to left), and data states (empty, one, many, slow, failed, stale). Goes in Limits and Rules.
 4. **Limits.** At each break, what number does the alternative take over at? Goes in Limits, measured.
 5. **Copy slots.** Which text does it render (label, title, body, action, placeholder, helper, error, empty, tooltip, status)? For each, what casing, grammar template, length and forbidden words hold? Goes in Content.
-6. **States over time.** Idle, pending, success, failure and recovery. What does the user see and do in each, and how long does feedback stay? Does anything persist, time out, undo, or survive a reload? What happens to a second press while pending, and where is focus? Goes in Rules, with the mechanics in the States table.
+6. **States over time.** Idle, pending, success, failure and recovery. What does the user see and do in each, and how long does feedback stay? Does anything persist, time out, undo, or survive a reload? What happens to a second press while pending, and where is focus? Does each state change animate, and for what job? Goes in Rules, with the mechanics in the States table.
 7. **Input methods.** Walk the full task with pointer, touch, keyboard and a screen reader. What can one method not reach (hover-only, right-click-only, drag-only), and what is its other path? Goes in Rules and Keyboard.
 8. **Accessibility contract.** Role, accessible name in every variant, announcements and their timing, focus after each transition, contrast as drawn, target size, motion. Goes in Accessibility.
 9. **Composition.** What may it contain, and what may it sit inside? Which pairings break focus, nesting or semantics? Goes in Rules, and one example file shows the main pairing.
@@ -117,14 +117,14 @@ Each test cell holds `pass` or `n/a: <reason>`. The verdict is `ship`, `rewritte
 
 - **Falsify.** Write one snippet that breaks the rule. Confirm the named check fails it, or that a reviewer given only the rule flags it. If no violation can be written, cut the rule. For a `lint` or `test` rule, the snippet becomes its failing fixture.
 - **Negation.** Write the opposite rule. If it sounds just as fine against the same grounds, the rule is taste. Sharpen it with a number or a reason, or make it a gate.
-- **Two agents.** Give the rule and one task from this app to two fresh agents with no other context. If what they build differs on what the rule governs, add the missing number, literal or condition and rerun.
+- **Two agents.** For Anti-slop and Limits rules, give the rule and one task from this app to two fresh agents with no other context. If what they build differs on what the rule governs, add the missing number, literal or condition and rerun. Other rules write `n/a: falsify and sweep cover it` in the cell, because the test costs two fresh agents per rule.
 - **Sweep.** Search every call site. Each one follows the rule or is listed as an exception on the stray list with its `file:line`. When exceptions outnumber followers, the rule contradicts the app and becomes a gate.
 
 ## Anti-patterns
 
 - **Restating the prop list.** "Use `size` to set the size" is the Props table. A rule says when a value is right and what breaks otherwise.
 - **Taste without a reason.** A "because" that repeats the rule ("because it looks cleaner") fails the negation test.
-- **Rules no one can check.** If nothing can tell a violation from a pass, the rule is decoration.
+- **Rules no one can check.** If nothing can tell a violation from a pass, the rule is decoration. "Feel less cramped" is a mood; "Tables use the full width of their container" is a rule.
 - **Overruling the majority without a gate.** A rule grounded only in a principle that contradicts what most call sites do changes shipped screens. It is a gate with the principle as its default, never a silent rule.
 - **Importing another product's rules unasked.** A number or literal from another system is not a ground. Derive this app's own. A public guide the person named sets a direction, like a principle, and never supplies wording or values.
 

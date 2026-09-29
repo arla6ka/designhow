@@ -10,19 +10,25 @@ Search the repo for an export with the requested name, then for files named afte
 
 A real use names a screen in the product, what put the component on it, and which variant appeared. A screen on a preview build or behind a flag counts if it is marked unshipped. A rule about where the component belongs is not a use, and neither is a use rebuilt from the variant list.
 
-With file access, search for imports of the component outside its own folder, stories and tests. Leave out the system's own scaffolding too: `public/system/` and the `/system` docs route, generated `.md` twins and indexes, `scripts/`, check fixtures (`*.fixture`, `fixtures/`), `.design-system/`, `.migration/` and skill folders (`.agents/`, `.claude/`, `skills/`). These show the component without using it. The same exclusions apply when deciding which export product code imports most or which call site is most common. A call site inside a route or screen is a real use:
+With file access, search for imports of the component outside its own folder, stories and tests. Leave out the paths in `../build-design-system/references/inventory.md` (Excluded paths), plus the `/system` docs route and the check's `scripts/`, since these show the component without using it. Without that sibling, leave out skill folders, `docs/system/`, `public/system/`, fixtures, `.design-system/`, `.migration/`, dependencies and build output. The same exclusions apply when deciding which export product code imports most or which call site is most common. A call site inside a route or screen is a real use:
 
 - The screen is the route or page that renders it.
 - What put it there is the job of the surrounding code, such as the handler or label beside it.
 - The variant is the props at the call site.
 
-Record each as "found by search" with its `file:line`. Take a few, from different screens where possible (three by default, enough to show a pattern without flooding Examples). Pasted uses come first, and found ones only fill the count to two.
+Record each as "found by search" with its `file:line`. Pick them from different screens where possible. Take three by default, because two must survive the definition above, and found uses fill the count to two for the stop rule after any pasted ones. A raw element that does the component's job, such as a native `<select>` for Select, counts as a use only when no such component exists, recorded as "raw element, no component".
 
-A planned use comes from a coordinator's pilot or brief, or from a seed plan: a screen that will use the component and has not been built. Record it as "planned, from <brief or pilot>" with no `file:line`. It fills the count and never counts as real (`SKILL.md`, Fewer than two uses).
+A planned use comes from a coordinator's pilot or brief, or from a seed plan: a screen that will use the component and has not been built. Record it as "planned, from <brief or pilot>" with no `file:line`. It fills the count and never counts as real.
+
+### Fewer than two uses
+
+- One real use. Write the whole entry. Mark Usage `NEEDS REVIEW (one real use)`, return `Status: ready-with-gaps (1 real use)`, and add a gate: "Second real use. Default: publish as is and recheck Usage when a second screen uses it."
+- Planned uses. Mark each `(planned)` under Examples with no call-site code, sourced to the brief. They fill the count to two, but fewer than two real uses keeps the status at ready-with-gaps.
+- A deprecated predecessor. Its call site counts as real when the migration map sends it to this component, and its Sources line says so.
 
 ## Code
 
-With file access, read the props type and its defaults, the source, the styles, and the stories or tests. Code is the source for Variants, States, Props, Tokens and the import line. When the framework splits code that runs on the server from code that runs on the client, find which side the component is on from its own markers and the imports that force a side, and record it for the import line. Only a named token reference in the styles counts as a token. A raw hex or pixel value does not. For utility classes, a class built from a declared role name is token use and a class built from a palette step is palette use, the same split `token-mapping` makes (`doc-format.md`, Tokens). Record file paths and the commit or read time.
+With file access, read the props type and its defaults, the source, the styles, and the stories or tests. Code is the source for Variants, States, Props, Tokens and the import line. When the framework splits code that runs on the server from code that runs on the client, find which side the component is on from its own markers and the imports that force a side, and record it for the import line. Only a named token reference in the styles counts as a token. A raw hex or pixel value does not. Utility classes split into token use and palette use as `doc-format.md` (Tokens) says. Record file paths and the commit or read time.
 
 ## Workbench
 

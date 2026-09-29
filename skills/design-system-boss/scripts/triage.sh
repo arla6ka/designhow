@@ -19,13 +19,17 @@ cd "$REPO" || exit 2
 mkdir -p "$OUT"
 : > "$OUT/signals.tsv"
 
-# Scaffolding is never the app, and is left out of every count: run folders, skill folders (any
-# folder holding a SKILL.md), check scripts and their fixtures (`scripts/`, `fixtures/`, `*.fixture`),
-# and generated twins and indexes (`public/system/`, `static/system/`). Presence checks such as
-# llms_txt still read public/llms.txt.
+# Scaffolding is never the app, and is left out of every count. The list is Excluded paths in
+# build-design-system/references/inventory.md: skill folders (any folder holding a SKILL.md),
+# docs/system and public/system, fixtures, .design-system/, .migration/, node_modules and build
+# output (.next/, dist/, build/). A route folder named build/ is dropped too; list it by hand.
+# Extras here: scripts/, where the build copies its check scripts, fixtures/, where check
+# fixtures also sit, and static/system/, where some frameworks serve generated twins.
+# Presence checks such as llms_txt still read public/llms.txt.
 EXCL=(-g '!**/.design-system/**' -g '!**/.migration/**' -g '!**/.agents/**' -g '!**/.claude/**'
+  -g '!**/node_modules/**' -g '!**/.next/**' -g '!**/dist/**' -g '!**/build/**'
   -g '!**/scripts/**' -g '!**/fixtures/**' -g '!**/__fixtures__/**' -g '!**/*.fixture' -g '!**/*.fixture.*'
-  -g '!**/public/system/**' -g '!**/static/system/**'
+  -g '!**/docs/system/**' -g '!**/public/system/**' -g '!**/static/system/**'
   -g '!**/*.min.*' -g '!**/*.svg' -g '!**/*.lock' -g '!package-lock.json')
 SKILLDIRS=$(rg --files --hidden -g '**/SKILL.md' -g '!**/node_modules/**' -g '!.git/**' . 2>/dev/null | sed 's#^\./##' | xargs -n1 dirname 2>/dev/null | sort -u)
 while read -r d; do [ -n "$d" ] && [ "$d" != . ] && EXCL+=(-g "!$d/**"); done <<< "$SKILLDIRS"
@@ -103,7 +107,7 @@ foundation=raw
 if [ "$shadcn" = yes ]; then foundation=shadcn; [ "${regs:-none}" != none ] && foundation=shadcn+registry
 elif [ "$lib" != none ]; then foundation="library:$lib"
 elif [ -n "$own" ]; then foundation="package:$own"; fi
-# An empty app (2 or fewer routes, 5 or fewer product components) has no foundation yet. Printed
+# An empty app (1 or fewer routes, 2 or fewer product components) has no foundation yet. Printed
 # once product_component_defs is known, as "none (default: shadcn)", the Seed route's default.
 
 # Routes a user can reach. Next.js private folders (app/**/_name) are not routes.
@@ -128,7 +132,7 @@ put component_defs "$(wc -l < "$OUT/components.tsv" | tr -d ' ')"
 # The component layer: folders by name, folders a barrel (index.ts) re-exports 3+ components from,
 # and folders outside the route tree holding components that 3 or more route files import. Reasons go to layer-dirs.tsv.
 : > "$OUT/layer-dirs.tsv"; : > "$OUT/harden-dirs.tsv"
-find . \( -name node_modules -o -name .git -o -name .agents -o -name .claude -o -name .design-system -o -name .migration -o -name scripts -o -name fixtures -o -name __fixtures__ -o -path '*/public/system' -o -path '*/static/system' \) -prune -o -type d \( -path '*/components/ui' -o -path '*/packages/ui' -o -path './ui' -o -path './src/ui' -o -path './src/components' -o -path './packages/*/src' -o -name 'design-system' -o -name 'ui-kit' \) -print 2>/dev/null \
+find . \( -name node_modules -o -name .next -o -name dist -o -name build -o -name .git -o -name .agents -o -name .claude -o -name .design-system -o -name .migration -o -name scripts -o -name fixtures -o -name __fixtures__ -o -path '*/docs/system' -o -path '*/public/system' -o -path '*/static/system' \) -prune -o -type d \( -path '*/components/ui' -o -path '*/packages/ui' -o -path './ui' -o -path './src/ui' -o -path './src/components' -o -path './packages/*/src' -o -name 'design-system' -o -name 'ui-kit' \) -print 2>/dev/null \
   | sed 's#^\./##' | awk '{print $0 "\tname"}' >> "$OUT/layer-dirs.tsv"
 rg --files -g '**/index.{ts,tsx,js,jsx}' "${EXCL[@]}" "${NONPROD[@]}" 2>/dev/null | while read -r f; do
   n=$(rg -c "^\s*export\s+(\{[^}]*\b[A-Z]|\*|default\s+[A-Z]).*from\s+['\"]\./" "$f" 2>/dev/null || echo 0)
@@ -267,7 +271,7 @@ fi
 put stock_ui_defs "$(rg -c '^stock' "$OUT/components-layer.tsv" 2>/dev/null || echo 0)"
 pdefs=$(rg -c '^own' "$OUT/components-layer.tsv" 2>/dev/null || echo 0)
 put product_component_defs "$pdefs"
-[ "$foundation" = raw ] && [ "$routes" -le 2 ] && [ "$pdefs" -le 5 ] && foundation="none (default: shadcn)"
+[ "$foundation" = raw ] && [ "$routes" -le 1 ] && [ "$pdefs" -le 2 ] && foundation="none (default: shadcn)"
 put foundation "$foundation"
 # Raw copies. A native element (<button className="...">) whose static classes share 3 or more
 # with the same element in another file is a family member the name suffix misses. The file

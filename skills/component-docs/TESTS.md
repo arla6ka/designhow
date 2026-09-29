@@ -1,19 +1,10 @@
 # Tests: component documentation
 
-Run these by hand against real material from your own system. Nothing here runs automatically. For each case, run the same task in the same repo with the same prompt twice, once with the skill off and once with it on, and compare the two entries.
+Setup, phrasing, the baseline and changing one thing per run are in `../TESTING.md`. The cases below run on real material from your own system.
 
-## Setup under test
+## Baseline
 
-Note this before every run. The same input has a different correct result depending on what was loaded.
-
-- Skill file: `SKILL.md`
-- References loaded: `references/doc-format.md` (default or replaced?) and `references/sources.md`
-- Project instructions: CLAUDE.md or AGENTS.md, loaded or not, and whether it has a precedence rule for tokens or variants
-- Code: repo available or pasted, and the commit
-- Browser and workbench: connected or not, and whether they can open the story or URL
-- Model:
-
-Phrase each prompt the way a colleague would. Leave words like "test", "eval" or "rubric" out, because a model that knows it is being checked behaves differently. Judge from the entry and the transcript (which files it opened, which searches it ran), not from what the model says it did.
+Run with the skill off first, with the same material and the prompt "Document this component." Cases: Normal, Vague request, Missing required input, Conflicting sources. Watch for a made-up section order, usage examples that were not supplied, states described by color, token names that appear nowhere in the input, and no mention of where anything came from.
 
 ## Which cases apply
 
@@ -35,7 +26,7 @@ Skip a case whose condition does not hold for your install.
 | Stop tells the coordinator what to do | If you run build-design-system |
 | Direct run reply | Yes |
 | Template from the repo | Repos with a vendored spec template |
-| Direct run on a routed Tabs | Apps with route-based tabs |
+| No variant prop, A part used alone, A Defect line | Yes |
 | Scaffolding is not a real use | Repos after a build run |
 | An adds-only defect lands as a decision | If you run build-design-system |
 | Usage rules by the method | Yes |
@@ -46,18 +37,7 @@ Skip a case whose condition does not hold for your install.
 
 The review checklist in `references/doc-format.md`, plus a passing spec check for a spec. Needs a person: `NEEDS REVIEW` markers, Guessed at, and unsettled conflicts.
 
-## Baseline
-
-Run with the skill off first. Give the model the same material as each case and a plain prompt, such as "Document this component."
-
-| Case | Without the skill | With the skill |
-|---|---|---|
-| Normal | | |
-| Vague request | | |
-| Missing required input | | |
-| Conflicting sources | | |
-
-Watch for a made-up section order, usage examples that sound right and were not supplied, states described by color, plausible token names that appear nowhere in the input, and no mention of where anything came from. Until the first column is filled in, you do not know whether the skill helps.
+With the skill off, watch for a made-up section order, usage examples nobody supplied, states described by color, token names that appear nowhere in the input, and no sources.
 
 ## Normal case
 
@@ -65,7 +45,7 @@ Watch for a made-up section order, usage examples that sound right and were not 
 
 **Expect:** all nine headings in order. Every example is copied from a story or call site with its path, and every token exactly. Both real uses sit under Examples. Props matches the code's names and defaults. Sources has one line per source, each time copied from a `date` call at the read or left out. Guessed at is present, even as "Nothing guessed".
 
-**Fails if:** the entry holds a token, prop, variant or example the input never mentioned, a state mentions a color, or a heading is added or renamed.
+**Fails if:** the entry holds a token, prop, variant or example the input never mentioned, a state line gives a color and nothing the user can do, or a heading is added or renamed.
 
 ## Vague request
 
@@ -124,7 +104,7 @@ Watch for a made-up section order, usage examples that sound right and were not 
 
 **Input:** a brief from `build-design-system` with the component's code, its variant list and two call sites from the inventory, and a stories file with one variant the props type lacks.
 
-**Expect:** no questions mid-run. The output opens with `Status: complete with NEEDS REVIEW (1)`, and the variant difference sits under Conflicts.
+**Expect:** no questions mid-run. The output opens with `Status: complete with NEEDS REVIEW (1)` and `Commit: none`, and the variant difference sits under Conflicts.
 
 **Fails if:** it stops before finishing, drops the odd variant, or the status line is missing.
 
@@ -188,25 +168,29 @@ Watch for a made-up section order, usage examples that sound right and were not 
 
 **Fallback version:** remove `docs/system/spec-template.md` and `scripts/check-spec.mjs`, with `build-design-system` installed. The run uses the skill's copies and names them in Sources.
 
-## Direct run on a routed Tabs
+## No variant prop
 
-**Input:** "document our Tabs component" in an app whose framework splits server and client code, with no stories. `ui/tabs` is marked client-only, exports `Tabs` and `Tab`, has no variant prop, styles with palette utility classes, and marks a tab active only on an exact path match. `Tab` is also used alone as a back link. Run directly.
+**Input:** "document the Tabs" for a component with no variant prop and no stories, run directly.
 
-**Expect:**
-- The entry lands in `docs/system/tabs.md` with a draft comment on line 1.
-- Every Sources time matches a `date` call in the transcript, or there is no time.
-- Variants reads `None.` with a reason, and the run does not stop.
-- The import line records the client-only side.
-- The default example says `simplified from <file:line>` and differs from the call site only by dropped props.
-- `Tab` gets a `### Parts` subsection with its standalone call sites.
-- Tokens lists the palette classes under `Palette:`, with their theme variables under Guessed at.
-- Active and pending together is settled from the built styles or the browser, with how to reach it, and is not `NEEDS REVIEW`.
-- The parent tab going idle on child routes has a `Defect:` line with an owner, and the reply repeats it.
-- The NEEDS REVIEW count in the reply equals `grep -o 'NEEDS REVIEW'` on the file below line 1.
+**Expect:** Variants reads `None.` with a reason and the run continues. The default example says `simplified from <file:line>` and differs from the call site only by dropped props. The entry lands at `docs/system/tabs.md` with a draft comment on line 1, and every Sources time matches a `date` call in the transcript or is absent.
 
-**Fails if:** a Sources time is later than the file's write time or has no `date` call behind it, the run stops on the variant row, a question about the exact-match behavior defaults to "document as is" with no Defect line, or the reply's count differs from the grep.
+**Fails if:** the run stops on the variant row, or a Sources time has no `date` call behind it.
 
-**Role-name version:** the same component styled with classes built from declared role names. Tokens lists them as token use under their own names, with no Palette group and no `NEEDS REVIEW`.
+## A part used alone
+
+**Input:** a compound component whose child part is also used on its own elsewhere.
+
+**Expect:** one entry, with a `### Parts` subsection giving the part's props, its standalone call sites and how it differs alone.
+
+**Fails if:** the part gets its own entry or its standalone use is missing.
+
+## A Defect line
+
+**Input:** a component whose current behavior is a bug a user would notice, such as an active state lost on a nested route, run directly.
+
+**Expect:** States describes the current behavior, then a `Defect:` line names the owner and the smallest fix, and the reply repeats it. Any question about it defaults to documenting the current behavior with the Defect line kept. The NEEDS REVIEW count in the reply equals `grep -o 'NEEDS REVIEW'` on the file below line 1.
+
+**Fails if:** the default is "document as is" with no Defect line, or the reply's count differs from the grep.
 
 ## Scaffolding is not a real use
 
@@ -228,7 +212,7 @@ Watch for a made-up section order, usage examples that sound right and were not 
 
 **Input:** "document the Select" in a repo with two call sites (6 and 9 options), a stories file, and a running dev server.
 
-**Expect:** Usage has the six H3s in order: When to use, When not to use, Rules, Content, Anti-slop, Limits. Every When not to use line names another component and says "instead". Every rule line has a `rule/select-<slug>` ID, a condition, a reason, an `Evidence:` ground (call sites, a measurement with its path, or a named principle) and a `Check:`, then a nested `Don't:` and `Do:` line of real code against the component's import. The Limits number comes from growing the option count on a real instance, sits below the break, and cites the saved file. Anti-slop comes from one fresh agent's attempt compared with the call sites, or says `Not applicable` with the reason. Guessed at lists any rule that rests on a principle alone.
+**Expect:** Usage has the six H3s in order: When to use, When not to use, Rules, Content, Anti-slop, Limits. Every When not to use line names another component and says "instead". Every rule line has a `rule/select-<slug>` ID, a condition, a reason, an `Evidence:` ground (call sites, a measurement with its path, a named principle, or the person's quoted words) and a `Check:`, then a nested `Don't:` and `Do:` line of real code against the component's import. The Limits number comes from growing the option count on a real instance, sits below the break, and cites the saved file. Anti-slop comes from one fresh agent's attempt compared with the call sites, or says `Not applicable` with the reason. Guessed at lists any rule that rests on a principle alone.
 
 **Fails if:** a rule says "appropriate", "consistent" or "as needed", a limit has no measurement and no `NEEDS REVIEW (not measured)`, a don't has no instead, a rule lacks its Don't or Do line, a snippet uses a prop the component does not have, or a rule states a number no source or measurement gave.
 
@@ -247,5 +231,3 @@ Watch for a made-up section order, usage examples that sound right and were not 
 **Expect:** directly, the run writes the default, one file per tone with a visual difference, and a composition inside the table cell, each at `<examples dir>/badge/<name>.<ext>` with a `Caption:` line, the product import path and inert data from the props type and the call site. `### Example files` lists each. Under the coordinator it writes no example file, and each row reads `NOT SUPPLIED: brief scope names no examples folder`.
 
 **Fails if:** an example uses a prop or data no source shows, a tone is dropped without a row, or a file lands outside the brief's SCOPE.
-
-Change one thing between runs. If you change two, the next run cannot tell you which one mattered.

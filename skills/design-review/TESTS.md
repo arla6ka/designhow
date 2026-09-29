@@ -1,19 +1,12 @@
 # Tests: design review
 
-Run these by hand against one or two screens from your own product. For each case, run the same task on the same screens with the same prompt, once with the skill off and once with it on, and compare the reports.
-
-## Setup under test
-
-Two runs compare only when their setups match, so fill this in every time.
-
-- Skill and references in use: `SKILL.md`, `references/sources.md`, and the default criteria file or your own
-- Project instructions: loaded or not, and which file (CLAUDE.md / AGENTS.md)
-- Tools connected: browser tool, component workbench, or none
-- Model name and version
+Setup, phrasing, the baseline and changing one thing per run are in `../TESTING.md`. The cases below run on one or two screens from your own product.
 
 Several cases use an invite dialog built with known defects. Its Cancel and Send invite buttons are both `type="submit"`, Cancel comes first, the role select remounts on error, and the form POSTs to `/api/invite`.
 
-Write each prompt the way a colleague would, such as "check this screen before I ship." Keep "test", "eval" and "rubric" out of it, since a model that knows it is being checked behaves differently. Judge from the report and the transcript (what it opened, what it captured), not the model's account of its work.
+## Baseline
+
+Run with the skill off first, with the same screens and the prompt "Review this design." Cases: Normal, Vague request, Ambiguous judgment, Dialog and form probes. Watch for criteria made up on the spot, opinions written as problems, one issue listed per screen, a confident accessibility ruling, and findings with no location.
 
 ## Which cases apply
 
@@ -32,18 +25,7 @@ Every case runs on every setup except these:
 
 The readiness list under Output in `SKILL.md`.
 
-## Baseline
-
-Run with the skill off first, with the same screens and the prompt "Review this design."
-
-| Case | Without the skill | With the skill |
-|---|---|---|
-| Normal | | |
-| Vague request | | |
-| Ambiguous judgment | | |
-| Dialog and form probes | | |
-
-Look for criteria made up on the spot, opinions written as problems, one issue listed per screen, a confident accessibility ruling, and findings with no location. The skill's value is unknown until the first column is filled.
+With the skill off, watch for criteria made up on the spot, opinions written as problems, one issue listed per screen, a confident accessibility ruling, and findings with no location.
 
 ## Normal case
 
@@ -91,15 +73,17 @@ Look for criteria made up on the spot, opinions written as problems, one issue l
 
 **Fails if:** it reviews from the URL text, page source, or a guess about the page, or it tries to sign in.
 
+**Seed user version:** the same screen on a local build whose repo has a seed user. It signs in with that user, or with a storage state the person provides, and reviews the screen. With neither, the screen is marked not shown with the reason.
+
 **Passing version:** a public URL with a browser tool. The record lists the URL, the viewports captured and the date, and each finding points to a screenshot.
 
 ## Ambiguous judgment
 
 **Input:** a screen with three things in it. A color choice someone would argue about. A layout pattern no criterion covers. Gray body text that may be too light to read.
 
-**Expect:** the color choice is dropped and lands in Left out. The layout pattern goes under "For a person to decide." The gray text is reported there as an observation with no severity and no pass or fail.
+**Expect:** the color choice is dropped and lands in Left out. The layout pattern goes under "For a person to decide." The gray text gets a contrast ratio from a tool and, below 4.5:1, a ranked finding citing that ratio. From screenshots only, the ratio is marked inferred.
 
-**Fails if:** the color choice gets a severity or is dropped silently, a criterion is invented for the layout, or the report rules on contrast.
+**Fails if:** the color choice gets a severity or is dropped silently, a criterion is invented for the layout, or the gray text goes to a person unranked or is ranked with no ratio.
 
 **Empty version:** a clean screen that meets every criterion. The report says "None" under Blocking and Should fix, and no Note is promoted to fill them.
 
@@ -109,7 +93,7 @@ Look for criteria made up on the spot, opinions written as problems, one issue l
 
 **Input:** after-captures of one route at 390 and 1280 px from a coordinator brief, with the system's criteria file and no purpose.
 
-**Expect:** no questions. It infers the purpose and marks it assumed, and the report opens with `Status: complete (Blocking n, Should fix n, Note n)` whose counts match the findings.
+**Expect:** no questions. It infers the purpose and marks it assumed, and the report opens with `Status: complete (Blocking n, Should fix n, Note n)` whose counts match the findings, then `Commit: none`. The scan and probes read `not run: captures only`, and the report still counts as ready.
 
 **Fails if:** it stops to ask for a purpose, or the counts in the status line disagree with the findings.
 
@@ -127,11 +111,11 @@ Look for criteria made up on the spot, opinions written as problems, one issue l
 
 **Input:** repo access on main with no branch diff, 57 routes, and "check the app before I ship."
 
-**Expect:** about 5 routes, the home route then the main nav's links in nav order. The record says "Default scope: 5 top routes, no branch diff" and lists them. Each default route answered 200 before capture.
+**Expect:** 5 routes, those with the most links and navigations to them in product code, ties broken by nav order. The record says "Default scope: 5 top routes, no branch diff" and lists them with their counts. Each default route answered 200 before capture.
 
 **Fails if:** it reviews every route, picks routes without saying so, or stops to ask which screens.
 
-**Router conventions version:** a repo whose router ignores a private folder and drops a grouping folder from the URL, with a nav linking a page inside the group. For example, with a router that ignores `_`-prefixed folders and drops parenthesized folders from the URL: `app/page.tsx`, `app/_patterns/page.tsx`, `app/(shop)/cart/page.tsx`, `app/(shop)/_components/Row.tsx`, and a nav linking `/cart`. The scope includes `/` and `/cart`. A finding that names the private folder, or a route list that includes the grouping folder, fails.
+**Router conventions version:** a repo whose router ignores a private folder and drops a grouping folder from the URL, with links to a page inside the group. The scope includes that page by its URL. A finding that names the private folder, or a route list that includes the grouping folder, fails.
 
 **Named scope version:** a coordinator names the layouts flow while the branch has a diff elsewhere. It reviews the layouts flow only.
 
@@ -235,12 +219,18 @@ Look for criteria made up on the spot, opinions written as problems, one issue l
 
 **Mixed version:** a nav of links styled as tabs, where the selected one loses its visible selected state, and making it a real `tablist` would change every item's role. Expect two entries. The lost visible state is a finding with its own severity, and the role change is one line under For a person to decide with no severity. Sending the whole thing to a person, or ranking the role change, fails.
 
-Change one thing between runs, or the next result cannot tell you which edit mattered.
-
 ## Optical alignment is reported
 
-**Input:** a settings screen at 1280 whose filled icons stand taller than the labels beside them, and whose chip remove icons sit 1.5px above their box's center after a global nudge meant for icons beside text.
+**Input:** a screen with one icon that reads larger than its neighbors, and one icon alone in its own box that sits off that box's center.
 
-**Expect:** both are findings under criterion 10, citing `trap/icon-optical-size` and `trap/icon-optical-align`. The chip finding names the context (an icon alone in its own box) and its measured offset from the box's center, and the evidence includes a zoomed crop.
+**Expect:** both are findings under criterion 10, citing `trap/icon-optical-size` and `trap/icon-optical-align`. Each names its context and a measured offset or size, and the evidence includes a zoomed crop.
 
-**Fails if:** either lands under What not to report, or the chip icon is measured against text it does not sit beside.
+**Fails if:** either lands under What not to report, or an icon is measured against something it does not sit beside.
+
+## Touch findings name their evidence
+
+**Input:** "review this on mobile" with only a desktop browser's device emulation available, where a button's hover style sticks after a tap and an input's text is 14px.
+
+**Expect:** one capture at the phone width with touch emulation on. The input finding cites `trap/touch-input-zoom` as measured, with the computed 14px. The hover finding cites `trap/touch-hover-flash`, says `emulated, needs a device`, and names any `:hover` rule the source has outside `@media (hover: hover)`. The Review record names the emulation as the tool.
+
+**Fails if:** the hover finding reads as confirmed on a device, sticky hover is marked clean because emulation didn't show it, or the 14px input is marked `emulated, needs a device`.

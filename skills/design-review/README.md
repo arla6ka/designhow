@@ -8,7 +8,7 @@ Say "check this screen before I ship." With repo access and a browser, the skill
 
 ## Replace first
 
-1. **Criteria** in `references/review-criteria.md`. Cut every criterion your team would not stand behind. Most of the value of adapting is here.
+1. **Criteria** in `references/review-criteria.md`. Cut every criterion your team would not stand behind.
 2. **Severity levels.** Match the names and meanings your tracker already uses.
 3. **Exclusions.** Edit "What not to report" to match what your team leaves to other reviews.
 4. **Reference system.** Criterion 10 names Geist as a comparison for products with few screens. Swap in your own system once it exists.
@@ -16,7 +16,7 @@ Say "check this screen before I ship." With repo access and a browser, the skill
 
 ## Invariants
 
-Each rule prevents a specific failure. Keep them unless your review process works differently.
+Each rule prevents a specific failure. Change one only when its stated reason doesn't apply to you.
 
 - Findings cite a criterion. An uncited finding is one reviewer's opinion, and the team ends up debating it.
 - Findings carry a location and a viewport. Designers skip what they cannot locate, and a narrow-screen problem may not exist on desktop.
@@ -27,34 +27,10 @@ Each rule prevents a specific failure. Keep them unless your review process work
 - Evidence is the rendered design. A description only reflects what its writer noticed.
 - Called by another skill, it runs to the end, opens with a status line and returns the report as text. A coordinator has no one to answer a question mid-run, and some hosts refuse a report file written by a subagent.
 
-## Optional tools
-
-The skill runs on pasted screenshots alone. With a browser tool (see `build-design-system/references/browser.md`) it can open a local build, a preview URL, a hosted prototype or a component workbench story, capture each viewport, read the accessibility tree, and run an automated WCAG scan. The report logs the URL or story, the widths, the tool and the date. Make sure pasted screenshots still work after you add a tool.
-
 ## Test your changes
 
-Run `TESTS.md` against one or two screens from your own product. Then confirm by hand that a vague ask still finds the screen, that a screen with no readable purpose still halts the review, and that a random finding cites a criterion you actually wrote.
+A browser tool is optional, and pasted screenshots must keep working after you add one. Run `TESTS.md` against one or two screens from your own product, then confirm a random finding cites a criterion you actually wrote.
 
 ## Adapt this skill
 
-Send this prompt with `SKILL.md` and both files in `references/` attached.
-
-```
-I want to fit the attached design-review skill to my team.
-
-Interview me with one short question at a time. Cover these topics only:
-- which of the default criteria we keep, drop, or replace with our own
-- the severity levels we use and what each one means to us
-- the review topics we leave to other people or other checks
-- the form work arrives in (screenshots, local builds, preview URLs, component stories)
-- the screen widths we support
-- where finished reviews go
-
-Leave the procedure, stop conditions, and final checks as written, unless something I
-tell you contradicts them. Never fill a gap with a guess. If I don't know an answer,
-mark it open and move on.
-
-When the interview is done, sort your proposed edits into two groups. The first holds
-edits that would change what the skill flags, ranks, or halts on. The second holds
-renames and formatting that leave its decisions the same. Apply nothing until I approve.
-```
+Use the interview prompt in `../ADAPTING.md` with `SKILL.md` and both files in `references/`. Topics for this skill: which default criteria you keep, drop or replace, your severity levels, the topics you leave to other reviews, the form work arrives in, the widths you support, and where finished reviews go.

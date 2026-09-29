@@ -1,6 +1,6 @@
 # Worker brief
 
-A worker starts with an empty context and cannot ask a question. Everything it needs is in the brief or at a path the brief names. A gap in the brief becomes a guess, and at twenty workers, twenty different guesses.
+A worker starts with an empty context and cannot ask a question. Everything it needs is in the brief or at a path the brief names. A gap in the brief becomes a guess.
 
 ## Contents
 
@@ -14,17 +14,18 @@ A worker starts with an empty context and cannot ask a question. Everything it n
 ## The template
 
 ```
-SURFACE        <id from surfaces.tsv>, attempt <n>
+SURFACE        <id from queue.tsv>, attempt <n>
 OUTCOME        <one sentence a stranger could act on>
-BASE           branch <name> from commit <sha>. Worktree <path>. Commit only here.
+BASE           branch <name> from commit <sha>. Worktree <path>. Commit only to this branch.
 MAY EDIT       <globs>
-MUST NOT EDIT  <globs>, plus everything in standing order 2
+MUST NOT EDIT  <globs>, plus the do-not-edit standing order
 INPUTS         <paths to read first>
 KEEP           <behavior that must not change, one per line>
 DONE WHEN      <checkable lines>
 RUN            <exact commands, in order>
-SERVER         <shared dev server URL>. If it does not answer for <wait, default 60s>, start your own on
-               port <base + worker n> and stop it before you return.
+SERVER         <shared dev server URL>. If it does not answer for <wait, default 60s>: in your own
+               worktree, start your own on port <base + worker n> and stop it before you return;
+               in a shared checkout, return `blocked: server down` and start nothing.
 TIME LIMIT     <minutes>. At the limit, commit what you have, report partial, stop.
 REPORT         return the schema below as your final message. Write it to no file.
 STANDING ORDERS
@@ -39,19 +40,19 @@ STANDING ORDERS
 
 **BASE.** The exact commit, not only a branch name, because a worker on a stale base passes checks the run branch would fail.
 
-**MAY EDIT.** The surface's own paths from `surfaces.tsv`. Nothing shared.
+**MAY EDIT.** The surface's own paths from `queue.tsv`. Nothing shared.
 
-**MUST NOT EDIT.** The shared layer, other surfaces' paths, baselines, tests, snapshots, harness config, the lever, the run folder, and the allowlists (`scripts/check-allowlist.json`, `allowlist.tsv`), which the coordinator owns because parallel edits make their counts drift. The verifier's forbidden-path check enforces this list, so the two must match.
+**MUST NOT EDIT.** The shared layer, other surfaces' paths, baselines, tests, snapshots, harness config, the codemod, the run folder, and the allowlists (`scripts/check-allowlist.json`, `allowlist.tsv`), which the coordinator owns because parallel edits make their counts drift. The verifier's forbidden-path check enforces this list, so the two must match.
 
-**INPUTS.** Paths, not pasted text, for anything the worker can read locally: `mapping/<surface>.md`, `lever/RECIPE.md`, the system docs for each component the mapping names, and the pilot's landed diff as a worked example. On a retry, paste the previous report and the failing output in full, since those are what the retry acts on. Cloud workers that cannot read the run folder get every input pasted.
+**INPUTS.** Paths, not pasted text, for anything the worker can read locally: `mapping/<surface>.md`, `codemod/RECIPE.md`, the system docs for each component the mapping names, and the pilot's landed diff as a worked example. On a retry, paste the previous report and the failing output in full, since those are what the retry acts on. Cloud workers that cannot read the run folder get every input pasted.
 
 **KEEP.** The behavior that must survive, as checkable lines: which requests fire and when, validation timing, focus movement, keyboard paths, URLs, what persists, and what the user sees on failure. Take them from the surface's tests, its code and the baseline accessibility snapshot. "Preserve behavior" does not count.
 
 **DONE WHEN.** Lines the worker can check itself: its paths' inventory count is zero, its checks pass, its captures exist.
 
-**RUN.** The exact commands: the codemod call, the inventory check scoped to the surface, type check, lint, the surface's tests, and the capture command. Write every path absolute and pass the inventory script `--run <absolute run folder>`, so each command works from any folder. `capture.mjs --routes` captures the load state only, so a surface with listed states needs `--surfaces` with a one-row file the coordinator writes into `briefs/`, plus `--states`. Add known traps, such as "wait for the table's role, not a fixed delay."
+**RUN.** The exact commands: the codemod call, the inventory check scoped to the surface, type check, lint, the surface's tests, and the capture command. Write every path absolute and pass the inventory script `--run <absolute run folder>`, so each command works from any folder. `capture.mjs --routes` captures the load state only, so a surface with listed states first copies its row to `.design-system/tmp/<worker id>/<surface>.surfaces.tsv` (`references/run-folder.md`, queue.tsv) and passes it as `--surfaces`, plus `--states` with the states module the Baselines phase wrote. Add known traps, such as "wait for the table's role, not a fixed delay."
 
-**SERVER.** The coordinator keeps the shared dev server up until every worker has returned. The wait before a fallback defaults to 60 seconds, long enough to ride out a restart. The fallback port is the base port plus the worker's number, so two fallbacks never collide. A worker that started its own server stops it before returning and says so under Deviations.
+**SERVER.** The rule is in `build-design-system/references/coordinator-path.md` (Dev server and retries): only the coordinator starts the shared server and browser. The wait before a fallback defaults to 60 seconds, long enough to ride out a restart. The fallback port is the base port plus the worker's number, so two fallbacks never collide. A worker that started its own server stops it before returning and says so under Deviations.
 
 **TIME LIMIT.** By default the pilot's runtime plus half, so a typical surface finishes with margin. A worker that hits it reports what it has.
 
@@ -82,12 +83,12 @@ SURFACE        billing-invoices, attempt 1
 OUTCOME        The invoices route renders only @acme/ui components and tokens,
                with no change in behavior. Accessibility-tree changes only add semantics.
 BASE           branch migrate/billing-invoices from commit a91c04e2d7b0.
-               Worktree ../app-wt/billing-invoices. Commit only here.
+               Worktree ../app-wt/billing-invoices. Commit only to this branch.
 MAY EDIT       app/billing/invoices/**
 MUST NOT EDIT  app/billing/layout.tsx, app/billing/export/**,
-               plus everything in standing order 2
+               plus the do-not-edit standing order
 INPUTS         /repo/.migration/q3/mapping/billing-invoices.md
-               /repo/.migration/q3/lever/RECIPE.md
+               /repo/.migration/q3/codemod/RECIPE.md
                node_modules/@acme/ui/docs/{table,badge,button,empty-state}.md
                git show 4c1d0e7 (pilot: settings-notifications, landed)
 KEEP           Page loads invoices with one GET /api/invoices?page=1.
@@ -99,33 +100,34 @@ KEEP           Page loads invoices with one GET /api/invoices?page=1.
 DONE WHEN      node /repo/scripts/migration-inventory.mjs --run /repo/.migration/q3 --paths "app/billing/invoices/**" prints 0 0 0 0
                npm run typecheck, npm run lint, npm test -- invoices all pass
                captures exist for empty, list, error, loading at both widths, light and dark
-RUN            node /repo/.migration/q3/lever/codemod.mjs "app/billing/invoices/**"
+RUN            node /repo/.migration/q3/codemod/codemod.mjs "app/billing/invoices/**"
                (finish by hand what the codemod left, per the mapping file)
                node /repo/scripts/migration-inventory.mjs --run /repo/.migration/q3 --paths "app/billing/invoices/**"
                npm run typecheck && npm run lint && npm test -- invoices
-               node /repo/.agents/skills/build-design-system/scripts/capture.mjs --base http://localhost:3100 --kind after --out /repo/.migration/q3/inbox/billing-invoices.1.captures --surfaces /repo/.migration/q3/briefs/billing-invoices.surfaces.tsv --states /repo/.design-system/scripts/states.mjs
+               mkdir -p /repo/.design-system/tmp/w-07 && awk -F'\t' 'NR==1||$1=="billing-invoices"' /repo/.design-system/review/surfaces.tsv > /repo/.design-system/tmp/w-07/billing-invoices.surfaces.tsv
+               node /repo/.agents/skills/build-design-system/scripts/capture.mjs --base http://localhost:3100 --kind after --out /repo/.migration/q3/inbox/billing-invoices.1.captures --surfaces /repo/.design-system/tmp/w-07/billing-invoices.surfaces.tsv --states /repo/.design-system/scripts/states.mjs
                Trap: the list state needs the fixture user "ada@example.test". Wait for role=table, not a timeout.
-SERVER         http://localhost:3100. If it does not answer for 60s, start your own on
-               port 3107 (3100 + worker 7) and stop it before you return.
+SERVER         http://localhost:3100. If it does not answer for 60s, start your own in this
+               worktree on port 3107 (3100 + worker 7) and stop it before you return.
 TIME LIMIT     45 minutes. At the limit, commit what you have, report partial, stop.
 REPORT         return the schema below as your final message. Write it to no file.
 STANDING ORDERS
-0. (empty)
-1. Target is @acme/ui 4.2.0. Import only from "@acme/ui". ...
+1. Write only inside your brief's SCOPE. ...
+(orders 2 to 16 from run-record.md, word for word)
+- Target is @acme/ui 4.2.0. Import only from "@acme/ui". ...
 ```
 
 The worker's captures and probe files go to the path in RUN. The verifier treats them as a hint and recaptures from the commit into `captures/`.
 
 ## Report schema
 
-The worker returns this as its final message, never as a file. The coordinator parses it, so keep the headings.
+The worker returns this as its final message, never as a file. It starts with the status line, then the `Commit:` line, as every report to a coordinator does. The coordinator parses it, so keep the headings.
 
 ```markdown
-# <surface> attempt <n>
-
-Status: done | partial | blocked | failed
-Branch: <name>   Head: <full sha>
-Base: <sha the work started from>
+Status: done | partial | blocked: <reason> | failed: <reason>
+Commit: <full sha of your branch head>
+Branch: <name>   Base: <sha the work started from>
+Surface: <surface> attempt <n>
 
 ## Inventory for my paths
 Before: <imports> <raw values> <palette uses> <legacy files>
@@ -166,4 +168,4 @@ A report missing Commands run, or whose Files changed include a path outside MAY
 
 ## Briefs for other roles
 
-The shared-layer owner, lever builder and mapper use the same template, with their own files in MAY EDIT and their phase's exit condition from `SKILL.md` in DONE WHEN. The verifier brief is in `references/verification.md`.
+The shared-layer owner, codemod builder and mapper use the same template, with their own files in MAY EDIT and their phase's exit condition from `SKILL.md` in DONE WHEN. The verifier brief is in `references/verification.md`.

@@ -17,19 +17,28 @@
 //   tallOverlays     trap/overlay-no-max-height: an open dialog that runs past the viewport with nothing that
 //                    scrolls it into reach, or that clips its own content. Measure it at 390x320
 //   motion           trap/reduced-motion-ignored: animations with a duration over 1ms under
-//                    prefers-reduced-motion: reduce. capture.mjs records them in window.__dsMotion right after a
-//                    state function runs, before it finishes animations, so an enter animation still counts
+//                    prefers-reduced-motion: reduce, except those whose keyframes change only opacity or color,
+//                    which may stay to explain a state. capture.mjs records them in window.__dsMotion right after
+//                    a state function runs, before it finishes animations, so an enter animation still counts
 
 // Animations still running or holding their end state under prefers-reduced-motion: reduce. Evaluated in the page.
+// An animation whose keyframes change only opacity or color properties is skipped: it explains a state without movement.
 export const MOTION_SRC = `(() => {
   if (!matchMedia("(prefers-reduced-motion: reduce)").matches) return null;
   const seen = new Map(), out = [];
+  const META = new Set(["offset", "computedOffset", "easing", "composite"]);
+  const still = (a) => {
+    let kf = []; try { kf = a.effect && a.effect.getKeyframes ? a.effect.getKeyframes() : []; } catch (e) {}
+    const props = new Set(); for (const f of kf) for (const k of Object.keys(f)) if (!META.has(k)) props.add(k);
+    if (!props.size && a.transitionProperty) props.add(a.transitionProperty);
+    return props.size > 0 && [...props].every((p) => !p.startsWith("--") && /^(opacity|fill|stroke|.*[cC]olor)$/.test(p));
+  };
   const desc = (el) => !el || !el.tagName ? "document" : el.tagName.toLowerCase() + (el.id ? "#" + el.id : el.classList && el.classList[0] ? "." + el.classList[0] : "");
   for (const a of document.getAnimations()) {
     if (out.length >= 30) break;
     const t = a.effect && a.effect.getComputedTiming ? a.effect.getComputedTiming() : {};
     const d = typeof t.duration === "number" ? t.duration : 0;
-    if (d <= 1 || a.playState === "idle") continue;
+    if (d <= 1 || a.playState === "idle" || still(a)) continue;
     const what = a.animationName ? "animation " + a.animationName : a.transitionProperty ? "transition " + a.transitionProperty : "script animation";
     const k = what + " on " + desc(a.effect && a.effect.target) + (a.effect && a.effect.pseudoElement ? a.effect.pseudoElement : "");
     const n = (seen.get(k) || 0) + 1; seen.set(k, n);
@@ -416,7 +425,8 @@ traps from references/traps.md:
                                 nav links hidden below 768px with no menu button
   trap/overlay-no-max-height    an open dialog that runs past the viewport with
                                 nothing to scroll it, or clips its own content
-  trap/reduced-motion-ignored   animations over 1ms under prefers-reduced-motion
+  trap/reduced-motion-ignored   animations over 1ms under prefers-reduced-motion,
+                                except those that change only opacity or color
 capture.mjs writes the same fields into every .probe.json. Live pages load with
 reduced motion on.
 

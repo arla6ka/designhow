@@ -1,6 +1,6 @@
 # System structure
 
-> For the team setting this up: the structure below is modeled on Geist. Drop pages your app has no use for and rename the URL root if `/system` is taken. Keep one page per component, the component page sections in the order given here, a generated Markdown twin for every page, and one index an agent reads first. `scripts/gen-docs.mjs` generates the twins, the rules page, the index and `llms.txt` from `docs/system/`, so the docs cost one command and are never cut. An HTML docs site with live examples is an optional follow-up, unless the person reviews in a browser (Live showcase).
+The structure below is modeled on Geist. Drop pages the app has no use for, and rename the URL root if `/system` is taken. `scripts/gen-docs.mjs` generates the twins, the rules page, the index and `llms.txt` from `docs/system/`, so the docs cost one command and are never cut. An HTML docs site with live examples is an optional follow-up, unless the person reviews in a browser (Live showcase).
 
 Contents
 
@@ -13,6 +13,7 @@ Contents
 - Component pages
 - Live showcase
 - Pattern pages
+- After the run
 - Rules and coverage gaps
 - Markdown twins
 - llms.txt
@@ -23,13 +24,13 @@ Contents
 
 ## The model to study
 
-Geist, Vercel's design system, is the reference shape. Study it when you have internet access. This file alone is enough when you do not.
+Geist, Vercel's design system, is the reference shape. Study it when you have internet access.
 
 - Introduction: https://vercel.com/geist/introduction
 - A foundation page: https://vercel.com/geist/colors, https://vercel.com/geist/typography, https://vercel.com/geist/materials, https://vercel.com/geist/grid
 - A component page: https://vercel.com/geist/button, and its twin at https://vercel.com/geist/button.md
 
-What to take from it, in our words:
+Take:
 
 - Three kinds of page sit under one root. Foundations hold the decisions every component reads. Assets hold files people copy as they are. Components get one page each, all at the same depth.
 - A foundation page is organized by role, not by value. The color page groups its steps by use (fills, borders, text) and names the variable for each.
@@ -160,36 +161,13 @@ Done when every file listed exists at its path and every rule names who confirme
 
 ## Component pages
 
-This is the skeleton every component page and its twin follow. `component-docs` writes the prose in the same sections and order, so the page never reshuffles an entry. Use these H2s, in this order. Do not add, drop or rename any. An empty section says `NOT SUPPLIED` or `Not applicable` with a one-line reason.
-
-1. `## Description`. One sentence on what the component is for. Under it, a plain line with the import statement, the source path and the registry status. If the component has named parts (`DialogTitle`, or `Dialog.Title` where the library uses dotted parts), list them here.
-2. `## Examples`. The default example first, then one example rebuilt from each real use in the product, each labeled with the screen it came from. Each is a live render of the real component with its exact source under it. The `### Example files` table lists every example file, per `spec-template.md`.
-3. `## Variants`. One subsection per variant axis (size, tone, shape). Each shows every value side by side in one live example. When two axes interact, add one matrix example, the way Geist compares every type at every size.
-4. `## States`. One live example per state a reader can trigger: loading, disabled, invalid, open, and so on. Each says what the user can do in that state. When states overlap, say which wins.
-5. `## Props`. A table generated from the component's types by `scripts/props-table.mjs`, which `gen-docs.mjs` runs for every component page whose registry entry names a source file: name, type, default, and a one-line purpose from the prop's doc comment. Props inherited from the DOM or a library are summarized in one "Also accepts" line. The spec's Props section holds notes only, and a hand-written table there is replaced in the twin. The script uses the repo's `typescript` when it resolves and a regex over the props type when it does not, so keep `typescript` installed wherever the check runs.
-6. `## Usage`. Rules for choosing and using the component, in six H3s in this order: `### When to use`, `### When not to use` (each line names the alternative), `### Rules`, `### Content`, `### Anti-slop`, `### Limits`. Every rule line has the shape, a ground and its Don't and Do pair from `references/rule-method.md`. The page renders each pair labeled, below its rule.
-7. `## Accessibility`. The native element or behavior primitive it rests on, the keyboard path (keys, effect, where focus goes after), the accessible name in every variant, and contrast ratios measured in each theme. Mark anything not verified `NEEDS REVIEW`.
-8. `## Tokens`. The semantic tokens the component reads, taken from its styles, each linked to its foundation page.
-9. `## Related`. Each alternative, with the situation where it is the better pick.
-
-Where the older `component-docs` headings land, for teams moving existing entries:
-
-| Older heading | Section now |
-|---|---|
-| Summary | Description |
-| Parts | Description |
-| In the product | Examples |
-| Behavior | States |
-| Use it when, Use something else when | Usage: When to use, When not to use |
-| Writing | Usage: Content |
-| Do and don't | Usage: Rules, each pair rewritten as a rule with its Don't and Do lines |
-| Behavior and Best practices, as Usage H3s in earlier specs | Usage: Rules (`spec-template.md`, Moving an older spec) |
+Every component page and its twin use the nine H2s and the Usage H3s of `component-docs` `references/doc-format.md` (Headings, in order), filled to `spec-template.md`, which holds the same skeleton when that skill is not installed. The page renders each section live: every variant value side by side, a matrix when two axes interact, one example per triggerable state, and each rule's Don't and Do pair labeled below it. The Props table is generated from the types by `scripts/props-table.mjs`, which `gen-docs.mjs` runs for every page whose registry entry names a source file, so keep `typescript` installed wherever the check runs. Older headings map per `spec-template.md` (Moving an older spec).
 
 Examples import from the same path product code uses. A copy of the component inside the docs folder is a defect, because it drifts on the first change. Render both the component and its source text from the one example file, so every code block on the page compiles.
 
 The docs site's own styles never reach inside an example. A selector such as `.docs h2` also styles the `h2` an example renders, so the page shows the component wrong. Scope chrome styles to the chrome, such as `.docs-prose h2` or `@scope (.docs) to (.example)`, and wrap every live example in a container the chrome selectors never enter. The docs check below proves it.
 
-Done, for one component page in an HTML docs site: the spec passes `check-spec.mjs`, and every variant value and triggerable state has a live example in every theme. Every rule has a `rule-tests` row with verdict `ship` or `rewritten`. Accessibility has a measured keyboard walk and measured contrast, or `NEEDS REVIEW`. The twin matches a fresh generation, and the registry entry points at the page, the twin and the source file.
+Done, for one component page in an HTML docs site: the spec passes `check-spec.mjs`, and every variant value and triggerable state has a live example in every theme. Every rule has a `rule-tests` row with verdict `ship`, `rewritten` or `gate` (`rule-method.md`). Accessibility has a measured keyboard walk and measured contrast, or `NEEDS REVIEW`. The twin matches a fresh generation, and the registry entry points at the page, the twin and the source file.
 
 ## Live showcase
 
@@ -204,16 +182,7 @@ When the person reviews in a browser, or asks for a page in the app rather than 
 
 Give the person the link, and open it in the host's browser or preview pane when it has one.
 
-### Human and agent views
-
-Each page has a two-option switch, "Human" and "Agent", built as a real radio group with a name, and the choice shows in the URL, such as `?view=agent`, so a link opens the same view. Agent shows the page's source Markdown exactly as an agent reads it, from the same file as the twin, never written by hand.
-
-The agent view is a file viewer, so design it and test it like one:
-
-- One monospace size. Hierarchy comes from brightness only, and the `#`, `-` and backtick markers stay visible.
-- A column of about 640 px, with long lines wrapping inside it and code blocks scrolling on their own, so the page never scrolls sideways at 360 px.
-- A copy button for the whole page, and nothing else added: no card around the switch, no badge and no keyboard hint unless the person asks.
-- Tested like any page: both themes, 360 and 1280 px, the longest spec and one with a wide table, keyboard focus on the switch and the copy button, and text contrast measured.
+When the person asks for an agent view, each page gets a named radio group, "Human" and "Agent", whose choice shows in the URL. The agent view renders the twin's source Markdown as a file viewer and is tested like any page in both themes at 360 and 1280 px.
 
 ## Pattern pages
 
@@ -227,6 +196,17 @@ Optional. Add one only when two or more screens repeat the same composition and 
 6. `## Related`.
 
 Done when every example uses registry components only and each screen named under Description exists.
+
+## After the run
+
+The system keeps working only when someone owns it. On a full footprint, the handoff sets up:
+
+- An owner per system folder (tokens, components, docs), as a CODEOWNERS line when the repo uses them, named in the Frame.
+- Registry fields `owner`, `since` and `deprecated: {by, removeBy}`. A deprecated import warns until `removeBy`, then fails `rule/deprecated-import`.
+- A CI step that fails when the allowlist total grows against the merge base.
+- The contribution path. The AGENTS.md block's "open a gate" line names the repo's real path, an issue or PR label named in the Frame.
+
+`check-system.mjs` fails a deprecated import at once today. The warn-until-date form and the allowlist total are team additions to the check, each with a fixture pair.
 
 ## Rules and coverage gaps
 
@@ -258,7 +238,7 @@ Every page has a twin at the same path with `.md` appended. Agents read the twin
 - Leave out navigation, theme toggles and anything that only works in a browser.
 - Serve it with `Content-Type: text/markdown`. Where the framework allows it, also return the twin when a request sends `Accept: text/markdown` to the page URL, and add `<link rel="alternate" type="text/markdown">` to the page head.
 
-A stale twin is worse than none, because agents trust it. `gen-docs.mjs --check` fails when a committed twin differs from a fresh one.
+`gen-docs.mjs --check` fails a stale twin.
 
 ## llms.txt
 
@@ -328,7 +308,7 @@ Before you finish: run `npm run check`, and capture the changed screens at 390 a
 
 Name real paths, the real check command and the Frame's viewports. Before the docs exist, the block names the token file and the check, and phase 7 adds the docs lines. Delete a line when the repo has no such thing.
 
-On a full footprint, phase 8 also writes four project skills in the repo's skills folder, named after the product, and the block names each: use (build screens with the system: the component picker, the bans, page anatomy, states and a pre-ship check), maintain (add or change a component or token end to end, with the verification commands and the dev-environment traps met in the run), review (the four lenses in `coordinator-path.md`, Review, decide, fix) and migrate (one legacy screen per commit, with before and after captures). Each points to the docs and never restates their rules. One worker writes them from the finished system, not from the run's briefs, runs every command it names once, and reports each inconsistency it finds as a fix before close. Everything they cite, trap and rule IDs included, is defined in the repo, never only in an installed skill.
+On a full footprint, phase 8 also writes four project skills in the repo's skills folder, named after the product, and the block names each: use (build screens with the system: the component picker, the bans, page anatomy, states and a pre-ship check), maintain (add or change a component or token end to end, with the verification commands and the dev-environment traps met in the run, and a correction log, where a correction lands as a token, variant or check once it repeats, and its count is rechecked after the fix), review (the four lenses in `coordinator-path.md`, Review, decide, fix) and migrate (one legacy screen per commit, with before and after captures). Each points to the docs and never restates their rules. One worker writes them from the finished system, not from the run's briefs, runs every command it names once, and reports each inconsistency it finds as a fix before close. Everything they cite, trap and rule IDs included, is defined in the repo, never only in an installed skill.
 
 ## Checks for the docs
 
@@ -357,5 +337,5 @@ Add these to the phase 5 check. The first three run on every system. The rest ap
 | Twins and `llms.txt` | `gen-docs.mjs --check` exits 0, every `llms.txt` link loads |
 | AGENTS.md | The load-conditions block names real paths and the real check command |
 | HTML docs site, optional | The Done line under Component pages holds, and `check-docs-leak.mjs` exits 0 |
-| Live showcase, when the person reviews in a browser | One page per component and foundation, a navigator-only sidebar, the rules rendered on every page, and the agent view passing its tests in both themes at 360 and 1280 |
+| Live showcase, when the person reviews in a browser | One page per component and foundation, a navigator-only sidebar, the rules rendered on every page, and any agent view passing its tests |
 | Project skills, on a full footprint | Use, maintain, review and migrate exist in the repo, every command they name ran once, and the agent-instructions block names them |

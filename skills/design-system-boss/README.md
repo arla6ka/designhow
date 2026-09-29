@@ -16,7 +16,7 @@ screens onto shared components; replace hardcoded colors or spacing across more 
 or answer "how consistent is our UI".
 ```
 
-It needs file access, a shell and `rg` (ripgrep). A browser and subagents are optional, and routes that need screenshots stop and say so without one.
+It needs file access, a shell and `rg` (ripgrep). A browser and subagents are optional. Without subagents every step runs in sequence, and without a browser the build stops before its pilot and review steps are skipped. The model may invoke it unasked, because the asks it serves never name a skill, and that is safe because triage only reads and every write lands on a run branch only you merge.
 
 ## Replace first
 
@@ -28,10 +28,10 @@ It needs file access, a shell and `rg` (ripgrep). A browser and subagents are op
 
 ## Invariants
 
-Keep these unless your setup really differs.
+Change one only when its stated reason doesn't apply to you.
 
 - Triage by script. A route chosen from the prompt's wording alone sends a "fix it" ask to whichever skill's description sounded closest.
-- One routing question, with a default, and the standing questions answered by defaults until you reply. A run that waits on three answers produces nothing.
+- One routing question, with a default, and the standing questions answered by defaults until you reply. Work starts under the defaults, so no answer blocks it.
 - The boss never writes product code when it can spawn subagents. Once it starts editing, it stops reading returns, and every step behind it waits. On a host without subagents it takes a sibling's seat and follows that sibling's rules.
 - No worker outlives the boss. A worker left running keeps writing into a repo nobody checks.
 - One writing step at a time. Build and migrate touching the same files at once produce two versions of each.
@@ -39,42 +39,10 @@ Keep these unless your setup really differs.
 - Verdicts from files. A sibling's summary is a claim until its check command runs again.
 - One state file, one writer. The boss's context will be lost, and the next agent has only the file.
 
-## Why it is invocable by the model
-
-The frontmatter does not set `disable-model-invocation`, because the asks it serves are vague and never name a skill. That is safe because triage only reads, the first writing step starts after the Frame, every write lands on a run branch only the person merges, and the most expensive step waits for clearance.
-
-## Optional tools
-
-- Subagents with their own worktrees. Without them, every step runs in sequence and the artifacts are the same.
-- A browser for screenshots. Without one, the build stops before its pilot and review steps are skipped.
-- A second model family for checking judgment-heavy returns, such as accessibility calls in a review.
-
 ## Check after changing
 
 Run `TESTS.md`. At minimum, run Vague build ask to confirm triage comes first, Migration clearance to confirm no editing starts without a reply, and Unrelated work to confirm a dirty tree is left alone. Then run `scripts/triage.sh` on your own repo twice and confirm the output does not change. If you use shadcn, also run it on a fresh project with every stock component added, and confirm `families_with_2plus` is 0.
 
 ## Adapt this skill
 
-Give an agent the prompt below with this folder and the five sibling folders attached.
-
-```
-I want to fit the attached design-system-boss skill to our repo and team.
-
-Interview me, one question per message. Cover:
-- how we'd describe design system work in our own words, so the intent table matches us
-- what adoption level we'd call "settled", and how many duplicate component families we'd tolerate
-- where our tokens, shared components and docs live, so triage.sh searches the right folders
-- how much time and how many agents a normal run may use
-- who clears a migration, and how fast they usually reply
-- what our agent host can do: subagents, nested subagents, worktrees, a browser
-
-Rules for you while we do this:
-- Leave the routing table's order, the one-question rule, the clearance step and the
-  never list alone unless an answer of mine contradicts one.
-- Use only names, paths and commands I give you or that you read in our repo.
-  Mark anything I can't answer UNDECIDED.
-
-When the interview ends, split your proposed edits into two lists. First, changes to
-what the skill routes, stops on or hands to a person. Second, changes to paths, words
-and thresholds only. Show both and edit nothing until I say go.
-```
+Use the interview prompt in `../ADAPTING.md` with this folder and the five sibling folders attached. Topics for this skill: how your team words design system asks, so the intent table matches; what adoption level counts as settled and how many duplicate families you tolerate; where tokens, shared components and docs live, for `triage.sh`; how much time and how many agents a run may use; who clears a migration; and what your agent host can do (subagents, nesting, worktrees, a browser). Leave the routing table's order, the one-question rule, the clearance step and the never list alone unless an answer contradicts one.

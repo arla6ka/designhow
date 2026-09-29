@@ -1,20 +1,10 @@
 # Tests: build a design system
 
-Run these by hand. Give an agent the same repo and prompt twice, once with the skill switched off and once with it on, and compare what each leaves behind. A full run takes hours, so most cases stop after the phase they test.
+Run these per `../TESTING.md`. The script self-tests are the proof of every script behavior, so no case here restates them.
 
 ## Setup under test
 
-Record before every run, since a result only means something next to its setup:
-
-- The skill version: `SKILL.md`, `references/` and `scripts/` with fixtures
-- Mode (build, harden, seed) and foundation (copy-in registry, library, team package, raw)
-- Sibling skills installed: `token-mapping`, `component-docs`, `design-review`, or which were missing
-- Project instructions loaded or not, and any token precedence rule
-- Repo and commit, framework, styling method
-- Run command or preview URL, and whether it worked
-- Browser tool for screenshots (`references/browser.md`), or none
-- Subagents available or not, and how many ran at once
-- Model for the coordinator, and for workers if different
+Add to the shared list: mode and foundation, framework and styling method, the run command and whether it worked, and how many workers ran at once.
 
 Keep practice repos in git so every run starts from the same commit: a hand-rolled app with hundreds of raw colors, no token file and several buttons; a copy-in registry app with edited ui files and palette classes in product code; an app whose thin ui layer many screens skip; an empty repo; and an open-source app the person does not own.
 
@@ -29,7 +19,7 @@ Every case applies to every setup, except these.
 | Harden mode | Apps with a weak component layer |
 | Seed mode | Empty repos and new apps |
 | Foundation owns its tokens | Copy-in registry and package-library apps |
-| Measured traps, Captures and montage | Runs with a browser |
+| Measured traps, Motion | Runs with a browser |
 | Limits by measurement | Runs with a browser |
 | Document everything | Apps with more families than the pilot touches |
 | Design source fidelity | Runs where the person gives a design file, brand kit or mockups |
@@ -40,18 +30,7 @@ A passing run meets the Done list in `SKILL.md`. On top of it, each phase has a 
 
 ## Baseline
 
-Run the task with the skill switched off, on the same repo, with this prompt:
-
-```
-Build a design system for this app.
-```
-
-| Case | What happened with no skill | What happened with the skill |
-|---|---|---|
-| Normal | | |
-| Vague request | | |
-
-Watch for a token file written before any inventory, a palette borrowed from a popular system, colors that appear nowhere in the app, counts made by reading files, no screenshots before the first edit, every screen migrated at once, docs written by hand, and "the system is ready" with no check ever seen failing.
+Prompt: "Build a design system for this app." Fill the table for Normal and Vague request. Watch for a token file written before any inventory, a palette borrowed from a popular system, colors that appear nowhere in the app, counts made by reading files, no screenshots before the first edit, every screen migrated at once, docs written by hand, and "the system is ready" with no check ever seen failing.
 
 ## Normal
 
@@ -73,7 +52,7 @@ Watch for a token file written before any inventory, a palette borrowed from a p
 
 **Input:** a router skill starts this one with a target app and a two-hour budget, once on a host where agents can start agents and once on a flat host.
 
-**Expect:** it uses the target and budget as given, defaults the pilot, writes every open question to the Gates table, and ends with the handoff report. On the flat host the boss's rule governs, and the build seat writes the first family alone before any fan-out. The codemod runs only on the pilot, and the root layout's token import is the only import change outside it.
+**Expect:** it uses the target and budget as given, defaults the pilot, writes every open question to the Gates table, and ends with the handoff report. On the flat host the boss's rule governs, and the one worker the boss names writes the token source and the first family alone before any fan-out. The codemod runs only on the pilot, and the root layout's token import is the only import change outside it.
 
 **Fails if:** it asks the router a question mid-run, ignores the budget, ends on anything but the handoff report, applies both skills' seat rules at once, or fans out the first family.
 
@@ -141,7 +120,7 @@ Watch for a token file written before any inventory, a palette borrowed from a p
 
 **Input:** a copy-in registry app where 16 lines use raw hex, 8 identical in value to an existing token, and "people hardcode colors everywhere, clean it up". A design review names an overflow at the narrow width that existing tokens can fix, and the shared layout overflows at the narrow width.
 
-**Expect:** harden mode, with the complaint in the person's words in the Frame. `token-mapping` runs before specs, and the 8 identical-value swaps land on every screen with no gate, each route at 0% by `pixdiff.mjs`. Every other raw color defaults to its nearby role or a new token pair, and only brand art stays raw. Both overflow fixes land as decisions with captures and `scrollWidth` before and after. The final message leads with how many hardcoded colors are gone and names what is left.
+**Expect:** harden mode, with the complaint in the person's words in the Frame. `token-mapping` runs before specs, and the 8 identical-value swaps land on every screen with no gate, each route at 0% by `pixdiff.mjs` over every width and theme capture. Every other raw color within tolerance maps to its role, one beyond tolerance becomes a new pair under a gate, and only `graphic` values stay raw. Both overflow fixes land as decisions with captures and `scrollWidth` before and after. The final message leads with how many hardcoded colors are gone and names what is left.
 
 **Fails if:** specs or docs come before any raw color moves, identical-value swaps wait on a gate, a status color defaults to "keep raw", or a cheap review fix lands only under follow-ups.
 
@@ -149,7 +128,7 @@ Watch for a token file written before any inventory, a palette borrowed from a p
 
 **Input:** a shadcn app with every stock component installed, two team wrappers around Button, three edited ui files, no specs, and "our components are missing loading and error states, sort them out". The phase cap cuts Table and Card.
 
-**Expect:** `base-shadcn.md` loaded and `shadcn info --json` saved. `scripts/ui-drift.tsv` marks every ui file stock, customized or forked, each with a hash. `harden/gaps.tsv` lists missing states, precedence and keyboard paths. Every component gains its missing states, not only the pilot's. Loading keeps the label, sets `aria-busy`, keeps focus on the control, and blocks a second press (`trap/loading-label-swap`). The wrappers merge by the contract with map entries. Table and Card leave with their states built or a gate naming each one, and a removed prop is a gate listing its call sites. `strays.tsv` exists. No stock file is deprecated or rewritten.
+**Expect:** `base-shadcn.md` loaded and `components.json` read. `scripts/ui-drift.tsv` marks every ui file stock, customized or forked, each with a hash. `harden/gaps.tsv` lists missing states, precedence and keyboard paths. Every component gains its missing states, not only the pilot's. Loading keeps the label, sets `aria-busy`, keeps focus on the control, and blocks a second press (`trap/loading-label-swap`). The wrappers merge by the contract with map entries. Table and Card leave with their states built or a gate naming each one, and a removed prop is a gate listing its call sites. `strays.tsv` exists. No stock file is deprecated or rewritten.
 
 **Fails if:** only the pilot's components gain states, loading swaps the label or drops focus, a family leaves with neither states nor a gate, a prop vanishes with no gate, or an overwrite of a customized file runs without a gate.
 
@@ -179,9 +158,9 @@ Watch for a token file written before any inventory, a palette borrowed from a p
 
 ## The person's bans
 
-**Input:** the normal repo after phase 3. The person says "no uppercase labels, no middle dots, no em dashes". The first family's showcase page has a small uppercase eyebrow that joins "Components" and "Forms" with a middle dot.
+**Input:** the normal repo after phase 3. The person states two bans. Plant one violation of each, one in the showcase chrome and one in a spec.
 
-**Expect:** the bans go into the standing orders word for word, into every later brief, into `bans` in the check config, and onto the writing page as `rule/ban-*` lines grounded `person "<their words>", <date>`. The check fails on the eyebrow and on a planted em dash in a spec, and passes the same text on a `Don't:` line. The next commit has no hit outside `Don't:` lines, the coordinator's own chrome included.
+**Expect:** the bans go into the standing orders word for word, into every later brief, into `bans` in the check config, and onto the writing page as `rule/ban-*` lines grounded `person "<their words>", <date>`. The check fails on both plants, and passes the same text on a `Don't:` line. The next commit has no hit outside `Don't:` lines, the coordinator's own chrome included.
 
 **Fails if:** a ban lives only in chat or memory, a later brief lacks it, the check misses a plant, or a ban becomes a gate.
 
@@ -245,11 +224,11 @@ Watch for a token file written before any inventory, a palette borrowed from a p
 
 ## Icon set swap
 
-**Input:** the person asks to replace the app's outline icon set with a filled one, after two families have landed.
+**Input:** the person asks for a different icon set after two families have landed.
 
-**Expect:** one commit swaps every icon. Before review, icon sizes per control size are rederived so each glyph's ink is no taller than the label's cap height, and the alignment sweep in `references/browser.md` runs on every showcase page with icons sorted into beside-text and alone-in-a-box. Only glyphs drawn off center get their own offset. The person gets zoomed crops of each context in both themes, and a "too high" answer halves the correction for that one context.
+**Expect:** one commit swaps every icon. Before review, the icon sizes per control size are rederived and the alignment sweep in `references/browser.md` runs per context, beside text and alone in a box. The person decides from zoomed crops of each context in both themes.
 
-**Fails if:** icons keep the old set's sizes, one global offset moves icons that sit alone in a box, or alignment is called done from numbers alone.
+**Fails if:** icons keep the old set's sizes, or one global offset moves icons in every context.
 
 ## Stress test
 
@@ -261,11 +240,11 @@ Watch for a token file written before any inventory, a palette borrowed from a p
 
 ## Live showcase
 
-**Input:** a person who says "I review in the browser, not a workbench" and asks for a Human and Agent view on every page.
+**Input:** a person who says "I review in the browser, not a workbench".
 
-**Expect:** a dev-only route with one page per component and foundation, a sidebar that is navigation only, one `h1` per page, and the Usage rules rendered at the end of each page with their Don't and Do pairs. The switch is a named radio group whose choice shows in the URL. The agent view renders the page's source Markdown in one monospace size in a column of about 640 px, never scrolls sideways at 360, has one copy button and no other chrome, and passes keyboard and contrast checks in both themes. The link is given and opened in the host's preview pane.
+**Expect:** a dev-only route with one page per component and foundation, a sidebar that is navigation only, one `h1` per page, and the Usage rules rendered at the end of each page with their Don't and Do pairs. The link is given and opened in the host's preview pane.
 
-**Fails if:** every component sits on one page, the sidebar holds previews or counts, the agent view is hand-written or overflows at 360, or the switch gains a card or a keyboard hint nobody asked for.
+**Fails if:** every component sits on one page, the sidebar holds previews or counts, or the rules are missing from a page.
 
 ## Project skills
 
@@ -275,30 +254,6 @@ Watch for a token file written before any inventory, a palette borrowed from a p
 
 **Fails if:** a skill cites a rule or trap ID only an installed skill defines, a command in one fails, or the skills point at the run record.
 
-## Scripts prove themselves
-
-**Input:** copy `scripts/` into each practice repo, run `check-system.mjs --init`, `--hash-stock` and `--init-allowlist`, then seed one violation for every rule in `references/checks.md`, the raw-value, element, loading-label, label, import and stock-file rules alike. Run the typecheck before and after the copy, and run every script with absolute paths from an empty folder outside the repo.
-
-**Expect:** `--self-test` passes every fixture. Every seed fires under its rule, and removing the seeds gives exit 0. Every passing fixture copied into the app gives exit 0. One more hex in an allowlisted file fails with "allowlist holds N, found N+1". The typecheck reports no new errors, since fixture sources end in `.fixture`. From outside, each script resolves the app's root from its first path and prints the same counts, and `check-system.mjs` with no path exits 2 instead of passing.
-
-**Fails if:** a rule misses its seed, a passing fixture fails in a real app, the allowlist grows without failing, a fixture compiles, or a script prints zeros or a clean pass from the wrong folder.
-
-## Check sees the drift sources
-
-**Input:** a shadcn app with customized `button.tsx` and `dialog.tsx`. Save stock copies with `--save-stock`, then one at a time: rename `--muted-foreground` in `:root` and `@theme` but not `.dark`, change `bg-popover` to `bg-white` in the customized Dialog, change `h-9` to `h-10` in the customized Button, mount a Dialog conditionally, and swap an allowlisted hex for a new one in the same file.
-
-**Expect:** `--init` writes no empty config value and names each key left at its default. Upstream's own literals in customized files are exempt and counted, and only the team's lines fail. Each re-plant fails under its rule: `rule/token-parity`, `rule/stock-edit`, `trap/overlay-conditional-render`, and `rule/raw-value` with "not in the allowlist for this file". `--rehash` without `--note` exits 2. Every report ends with "The check cannot see".
-
-**Fails if:** any re-plant passes, a customized row has no hash, an upstream line fails, a team line passes, or the report claims more than the check covers.
-
-## Spec check proves itself
-
-**Input:** after phase 4, blank the Trigger cell of one state row, change a precedence line to "Loading and invalid: which one?", edit a line a committed spec cites, add a call site the spec's count misses, and add a prop with a doc comment to a component's props type. Then drop `Check:` from one rule, add "as needed" to another, delete one rule's `Do:` line, delete one example file, and delete one `rule-tests` row.
-
-**Expect:** `check-spec.mjs` exits 1 and names each line under `spec/states-empty`, `spec/precedence`, `spec/stale-cite`, `spec/call-sites`, `spec/rule-shape`, `spec/vague-word`, `spec/dont-do`, `spec/examples` and `spec/rule-tests`. `gen-docs.mjs --check` fails until gen-docs reruns, and the regenerated Props table carries the doc comment. Restoring the files gives exit 0. The check runs from the CI command.
-
-**Fails if:** any edit passes, a Props table is hand-written, or `--check` needs the write run's flags.
-
 ## Text entry and touch
 
 **Input:** a spec for the app's text input, where the input has no `autocomplete`, a search icon sits in a sibling element outside the input's box, the field is not inside a `form`, input text is 14px at every width, hover styles are not scoped to hover devices, and the submit button stays clickable while its request is pending.
@@ -306,6 +261,14 @@ Watch for a token file written before any inventory, a palette borrowed from a p
 **Expect:** the spec's `Traps checked:` line names `trap/field-input-type`, `trap/field-affix-focus`, `trap/field-form-enter`, `trap/touch-input-zoom`, `trap/touch-hover-flash` and `trap/submit-repeat`, and each has an answer in its section: the autocomplete token and input mode per field kind, the icon inside the hit area and focusing the input on click, one form with one submit, input text at 16px or more at touch widths, hover styles under `@media (hover: hover)`, and a repeat blocked while pending.
 
 **Fails if:** a trap is listed without an answer, the fix only changes the showcase and not the component, or the spec picks a duration the app does not use without a gate.
+
+## Motion
+
+**Input:** the app's menu grows from its own center, a toast restarts its entrance when a second toast arrives, a panel transitions every property, and three dialogs use three different durations. The migration replaces a raw `200ms` with a preset that resolves to `200ms`.
+
+**Expect:** the motion presets name a job for each preset, and the menu gets `instant` or grows from its trigger (`trap/motion-origin`). Toasts continue from their current position (`trap/motion-restart`), and the panel animates transform and opacity only (`trap/motion-layout-property`). The dialog durations become one preset or a gate with the counts. The swap is proven by matching before and after animation lists taken with reduced motion off, never by a 0% pixdiff.
+
+**Fails if:** a still capture is offered as proof of a motion change, a preset has no named job, or the fix keeps or adds an animation on a surface with no named job.
 
 ## Review, decide, fix
 
@@ -323,17 +286,9 @@ Watch for a token file written before any inventory, a palette borrowed from a p
 
 **Fails if:** a broken page passes, the leak check compares source instead of computed styles, or the generated docs are cut.
 
-## Captures and montage
-
-**Input:** a dev server and `surfaces.tsv` with a `saving` state. Capture before, then edit: a link loses its color, a muted line drops to 2.02:1, a button beside a 36px input grows to 42px, Cancel gains `disabled`, a route gains a new `empty` state, a nav edit changes every route, one listed state has no after pair, and a shared Button change makes `/` answer 500. Compare a `#6b7280` to `#737373` pair with `pixdiff.mjs`. Before any comparison, take a no-change control capture.
-
-**Expect:** the control diffs clean once noise is masked (`references/browser.md`). `capture.mjs --status` prints `FAIL /  500` and exits 1 before any capture. One command writes every route, width and state with a `.probe.json` each. `pixdiff.mjs` at its default shows a nonzero change with `max delta 13`. The montage lists each behavior change and exits 1 on the missing pair, the contrast drop, the link with no resting cue, and the height mismatch. The new state shows after only, the nav routes read "changed (shared)" under one row, and a finding under a gate named in `open-gates.tsv` and the trace row is a warning with exit 0.
-
-**Fails if:** a diff is called real before the control comes back clean, a route at 500 passes because the typecheck is green, a capture needs a shell variable, the gray shift reads as 0%, a behavior change reads as unchanged, or a missing capture, trace row or commit hash can be gated.
-
 ## Small footprint
 
-**Input:** any practice repo, then the open-source repo with "open a PR upstream that makes the demos consistent". Clone the full-footprint run branch afterward without installed dependencies, build output, `.design-system/` and any skill folder, and run the check command from the repo's manifest.
+**Input:** any practice repo, then a repo the person does not own with an ask for an upstream PR that names two component families. Clone the full-footprint run branch afterward without installed dependencies, build output, `.design-system/` and any skill folder, and run the check command from the repo's manifest.
 
 **Expect:** a full footprint vendors five scripts, their config, the allowlist, the drift list and stock copies, and no fixtures unless the run added a rule, with only `.design-system/review/**/*.png` and `.design-system/tmp/` in `.gitignore`. In the clone the check exits 0, running any type-generation step the framework needs first. The clone holds `surfaces.tsv`, `traces.tsv`, the probe files, the review reports and `index.html` with relative paths, and no PNG. On the upstream ask, a footprint gate defaults to minimal: tokens, touched components and screen changes, nothing vendored, `.gitignore` untouched, and `.design-system/` in `.git/info/exclude`.
 
@@ -353,12 +308,12 @@ Watch for a token file written before any inventory, a palette borrowed from a p
 
 **Expect:** the Frame's Budget line cites the caps in `references/coordinator-path.md`. A phase at its cap records what is left and the run moves on. Worker spawning stops at the cutoff `coordinator-path.md` sets, except for landing decided defaults. The coordinator opens each reference only as its phase starts.
 
-**Fails if:** the run record carries a minutes estimate per phase, one phase eats the next one's share, or the coordinator reads every reference before phase 1.
+**Fails if:** on a direct run, the run record carries a minutes estimate per phase, one phase eats the next one's share, or the coordinator reads every reference before phase 1.
 
 ## Final message
 
 **Input:** any finished run that ends with an allowlist.
 
-**Expect:** four parts in order: one plain sentence answering the ask, then which screens changed and which did not, with the review page's path; each check command with its exit code; the gates that change a screen, each with its applied default, within the cap in `run-record.md`; and one Next prompt that clears every gate at once, such as "Merge the run branch, but keep the blue Sign in button (reverse G-04)." Every count appears in `.design-system/close.md`, and the message names the files still listed.
+**Expect:** the Trial block names the fresh agent's check result, Blocking count, twins opened and gaps named. The final message has four parts in order: one plain sentence answering the ask, then which screens changed and which did not, with the review page's path; each check command with its exit code; the gates that change a screen, each with its applied default, within the cap in `run-record.md`; and one Next prompt that clears every gate at once, such as "Merge the run branch, but keep the blue Sign in button (reverse G-04)." Every count appears in `.design-system/close.md`, and the message names the files still listed.
 
 **Fails if:** the first line reads as a visible fix when nothing changed, unchanged screens go unmentioned, Next points at a file or asks for a step the run could do, more gates appear than the cap, a red check is left out, a count is missing from `close.md`, or the message says "every screen" while `--left` lists anything.

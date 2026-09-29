@@ -1,19 +1,10 @@
 # Tests: token mapping
 
-Run these by hand on one real screen or file from your own product. For each case, run the same task in the same repo with the same prompt, once with the skill off and once with it on, and compare the reports.
+Setup, phrasing, the baseline and changing one thing per run are in `../TESTING.md`. The cases below run on one real screen or file.
 
-## Setup under test
+## Baseline
 
-A result means something only next to its setup.
-
-- `SKILL.md`, with `references/mapping-rules.md` and `references/sources.md` beside it
-- CLAUDE.md or AGENTS.md: say which one was loaded, or none
-- Tools connected: none, file access to the repo, or a browser
-- Model: the one you actually run
-
-A pasted list and a tool-read list are separate runs. Note which one you used.
-
-Word each prompt as a colleague would. Leave out "test", "eval" and "rubric", because a model that knows it is being checked behaves differently. Judge from the report and the transcript (which files it searched and read, whether it ran a conversion), not from the model's summary of itself.
+Run with the skill off first, with the same values and token list and the prompt "Map these values to our tokens." Cases: Normal, Vague request, Ambiguous judgment, Missing required input. Watch for a token picked by number, an ambiguous row settled silently, a primitive chosen over a semantic token, and a made-up name on a gap.
 
 ## Which cases apply
 
@@ -35,18 +26,7 @@ Every case runs on every setup except these:
 
 The readiness list under Output in `SKILL.md`.
 
-## Baseline
-
-Run with the skill off first, with the same values and token list and the prompt "Map these values to our tokens."
-
-| Case | Without the skill | With the skill |
-|---|---|---|
-| Normal | | |
-| Vague request | | |
-| Ambiguous judgement | | |
-| Missing required input | | |
-
-Watch for a token picked by number, an ambiguous row settled silently, a primitive chosen over a semantic token, and a made-up name on a gap.
+With the skill off, watch for a token picked by number, an ambiguous row settled silently, a primitive chosen over a semantic token, and a made-up name on a gap.
 
 ## Normal case
 
@@ -106,7 +86,7 @@ Tool path only.
 
 **Input:** a brief from a coordinator skill with a values file and a proposed token list that leaves three values uncovered.
 
-**Expect:** no questions mid-run. The report starts with `Status: complete`, and the three values appear under Gaps and For a person to decide.
+**Expect:** no questions mid-run. The report starts with `Status: complete` and `Commit: none`, and the three values appear under Gaps and For a person to decide.
 
 **Fails if:** it stops to ask, or the status line is missing.
 
@@ -134,7 +114,7 @@ Tool path only.
 
 **Fails if:** the report answers "consistent" with value matches alone, or a cluster gets a proposed token name.
 
-**Large palette version:** an app whose declared theme holds only `--color-gray-50` to `--color-gray-950`, with 250 palette uses. Consistency by role comes right after the Summary, with distinct values and counts per role. The mapping table lists only non-Exact rows, and the summary still gives the Exact count. One Exact row per palette use fails.
+**Large palette version:** a declared theme of one hue's scale steps only, with a few hundred palette uses. Consistency by role comes right after the Summary, with distinct values and counts per role. The mapping table lists only non-Exact rows, and the Summary still gives the Exact count. One Exact row per palette use fails.
 
 ## Gap threshold
 
@@ -172,19 +152,19 @@ Tool path only.
 
 ## Units named
 
-**Input:** the large palette app above, where triage reports `tw_palette 216` lines.
+**Input:** the large palette app above, with a triage count of palette use given in lines.
 
-**Expect:** the counts line says occurrences. If triage is quoted, its number is labeled lines, and the report does not claim the two agree.
+**Expect:** the counts line says occurrences. A quoted triage number is labeled lines, and the report does not claim the two agree.
 
-**Fails if:** the report says the counts match triage, or gives a count with no unit.
+**Fails if:** the report says the counts match, or gives a count with no unit.
 
 ## Private folders
 
-**Input:** an app whose router ignores `_`-prefixed folders and drops parenthesized folders from the URL, with `app/_patterns/page.tsx` using `text-gray-400` and `app/(shop)/cart/page.tsx` using `text-gray-500`.
+**Input:** an app with a folder its router never serves and a folder that only groups routes, each holding a page with a palette color.
 
-**Expect:** `app/_patterns` is left out and listed once under Source. The `(shop)` route group stays in.
+**Expect:** the unserved folder is left out and listed once under Source. The grouping folder's page stays in.
 
-**Fails if:** a `_patterns` value appears as a row or in Consistency by role.
+**Fails if:** a value from the unserved folder appears as a row or in Consistency by role.
 
 ## Scaffolding stays out of the values
 
@@ -193,5 +173,3 @@ Tool path only.
 **Expect:** rows come from `app/settings/page.tsx` only. Source lists the excluded folders once. The counts match a run with the scaffolding deleted.
 
 **Fails if:** any row cites a file under `public/system/`, `scripts/`, `.design-system/`, `.migration/` or a skill folder, a fixture, or a generated twin.
-
-Change one thing between runs, or you will not know which change helped.

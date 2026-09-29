@@ -1,6 +1,6 @@
 # Checks
 
-> For the team setting this up: this is phase 5. It turns every rule a script can see into a check that fails a build. Keep the rule IDs the same as in `traps.md` and the specs, so a finding, a spec line and a failing check all name one thing. The skill ships `scripts/check-system.mjs`, a dependency-free Node starter, which setup copies into the repo's `scripts/`. Extend it, or move its rules into the repo's own linters when the team prefers. Add no dependency when a short script will do.
+Phase 5 turns every rule a script can see into a check that fails a build. Rule IDs match `traps.md` and the specs, so a finding, a spec line and a failing check all name one thing. The skill ships `scripts/check-system.mjs`, a dependency-free Node starter, which setup copies into the repo's `scripts/`. Extend it, or move its rules into the repo's own linters. Add no dependency when a short script will do.
 
 Contents
 
@@ -36,7 +36,7 @@ node /abs/skills/build-design-system/scripts/check-system.mjs --root /abs/app --
 
 Read the config `--init` writes and the lines it prints. `tokenSources` (files whose custom property lines may hold raw values), `uiDir`, `registry`, `driftList`, `allowlist` and `nativeControls` are guesses from the repo. `nativeControls` maps each native tag to the component the ui files export, such as `<button>` to `Button`. `--init` never writes an empty value such as `nativeControls: {}`, which would turn a rule off. It leaves an unfillable key out, so the default applies, and prints why. An old `{}` counts as unset. `rulesOff` is the only way to turn a rule off. `sharedTokens` lists `:root` colors meant to hold one value in every theme. `varIgnore` lists custom property prefixes a library sets at runtime.
 
-The scan skips the run's own scaffolding: `public/`, `scripts/`, `.design-system/`, `.migration/` and skill folders. It always scans the docs' example files (`examplesDir` in `scripts/gen-docs.config.json`, default `docs/system/examples`), since readers copy them into product code. The native-button rule appears on the first run after a canonical Button exists. Everything the check reads lives in the repo, never in `.design-system/` or a skill folder.
+The scan skips the Excluded paths in `inventory.md`, plus all of `public/`, which holds only generated output, and `scripts/`, which holds the check itself. It always scans the docs' example files (`examplesDir` in `scripts/gen-docs.config.json`, default `docs/system/examples`), since readers copy them into product code. The native-button rule appears on the first run after a canonical Button exists. Everything the check reads lives in the repo, never in `.design-system/` or a skill folder.
 
 ## What the check covers
 
@@ -44,14 +44,14 @@ One command, such as `npm run check`, runs every rule below and exits nonzero on
 
 | Rule | Fails on | Starter |
 |---|---|---|
-| `rule/raw-value` | Hex, `rgb()`, `hsl()`, `oklch()` outside a token source line, including inside arbitrary values such as `shadow-[0_1px_rgba(0,0,0,.1)]` | yes |
+| `rule/raw-value` | Hex, `rgb()`, `hsl()`, `oklch()` outside a token source line, including inside arbitrary values such as `shadow-[0_1px_rgba(0,0,0,.1)]`. `hsl(var(--x))` is token use | yes |
 | `rule/named-color` | CSS named colors in styles, style props and SVG paint attributes, in any quote style. `transparent`, `currentColor` and `inherit` pass | yes |
 | `rule/arbitrary-value` | Tailwind arbitrary values such as `p-[13px]` or `[mask-type:luminance]`. Variants such as `data-[state=open]:` and a bare `[var(--x)]` pass | yes |
 | `rule/palette-use` | Tailwind palette classes such as `text-gray-500`, and `var(--color-teal-700)`. Also solid `white` and `black` utilities (`bg-white`, `text-black`, `border-black`) once the theme defines a role for the job: a surface for `bg`, a foreground for `text`, a border, input or ring for `border`. Opacity forms such as `bg-black/50`, and `transparent`, pass | yes |
 | `rule/doubled-utility` | A utility that repeats its property word: `text-text-muted`, `bg-bg-subtle`, `border-border-strong`. It means a `--color-<role>` role starts with text, bg or border (`token-architecture.md`). A plain `border-border` passes | yes |
 | `rule/inline-px` | px, rem and em lengths for spacing, radius, size and font size in `style={{ }}`, including bare numbers such as `padding: 12`. The id keeps its old name so allowlists still match | yes |
 | `rule/css-px` | px, rem and em lengths for spacing, radius, type and size in CSS files, outside custom property lines. `0`, `1px` and media queries pass, and rem or em pass in line-height, letter-spacing and viewport math such as `calc(100dvh - 2rem)`. In a class, `p-[1.25rem]` is `rule/arbitrary-value` | yes |
-| `rule/token-parity` | A `var(--x)`, theme reference or `bg-(--x)` that no CSS file defines, with no fallback. A key the dark theme block defines that `:root` does not, and a `:root` color with no dark value | yes |
+| `rule/token-parity` | A `var(--x)`, theme reference or `bg-(--x)` that no CSS file defines, with no fallback. A key the dark theme block defines that `:root` does not, and a `:root` color with no dark value. Bare HSL channels such as `222 47% 11%` count as colors | yes |
 | `trap/native-control` | A native `<button>`, `<input>`, `<select>`, `<textarea>` or `<dialog>` where the system has the component, outside the ui folder | yes |
 | `trap/button-div` | `onClick`, `onPointerDown` or `onMouseDown` on a `div`, `span`, `li` or other non-interactive element, or on an `<a>` with no `href`. `tabIndex` of 0 or more with `onKeyDown` on one. An element with a `role` passes, and so does a native `<dialog>` with `onCancel` (below) | yes |
 | `trap/role-button` | `role="button"` on anything but a `<button>`, including `<a>` and `Link` | yes |
@@ -68,7 +68,7 @@ One command, such as `npm run check`, runs every rule below and exits nonzero on
 | `rule/ban-<slug>` | A pattern the person banned, from the config's `bans`, in UI code or a docs page (Bans, below) | yes, once `bans` lists one |
 | `spec/*` | `node scripts/check-spec.mjs docs/system` | separate script |
 | docs | `node scripts/gen-docs.mjs --check`: every twin, the rules page, the index and `llms.txt` match a fresh generation | separate script |
-| `copy/*` | `node scripts/copy-check.mjs`, once `docs/system/writing.md` exists: a stale copy inventory, and strings that break the writing page (`writing-method.md`) | separate script |
+| `copy/*` | `node scripts/copy-check.mjs`, added to the check in phase 7 once `docs/system/writing.md` exists: a stale copy inventory, and strings that break the writing page (`writing-method.md`) | separate script |
 
 Add each `trap/` or `rule/` from the specs that a regex or AST query can see, under its own ID, with fixtures. A rule a script cannot see shows its own `Check:` clause, or "review", on the generated rules page.
 
@@ -120,7 +120,7 @@ Every report ends with "The check cannot see", from `--list-blind-spots` (`blind
 - Run it yourself and read its exit code. Before handoff, run it again on a clean clone: a fresh `git clone` of the branch with its dependencies installed, and no `.design-system/` or skill folder.
 - If the check uses a linter, a linter crash fails the check. Never drop the linter from the command to get a green result. Fix its config, or remove the rules that depend on it, and say so in a decision row.
 - A rule the repo's own linter can already express may live there instead, with the same rule ID in its message. For example, ESLint's `no-restricted-imports` with the deprecated import paths, or Stylelint's `color-no-hex` for CSS.
-- Every index, twin or table derived from other files is generated, never written by hand, and the check runs its generator with `--check`, which also fails on a duplicate rule ID. A hand-written index drifts within the hour.
+- Every index, twin or table derived from other files is generated, never written by hand, and the check runs its generator with `--check`, which also fails on a duplicate rule ID.
 - List generated output in the formatter's ignore file, or format it in the generator with the repo's formatter and config, before writing or comparing. Otherwise the first formatter run makes `--check` fail for good. Run the formatter from the repo root with the repo's own binary, since one run inside a container or another folder may pick up another config. Formatters can move backticks in inline code that holds backticks, so write such examples as fenced blocks, and rerun the docs check after formatting.
 - If CI exists, read its config and confirm the command is in it. With no CI, say "runs locally, not in CI". Claiming the check blocks merges needs the CI config.
 

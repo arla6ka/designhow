@@ -23,7 +23,7 @@ A surface is migrated when a verifier has checked the running app at a named com
 
 A baseline records how each surface looked and behaved before any migration commit. Capture it once, during the Baselines phase, from the commit the shared layer will start on.
 
-For each surface, capture every state in its `states` column at every width and theme in `frame.md`: a screenshot plus a `.probe.json` with the page's roles, names, states and contrast.
+For each surface, capture every state in its `states` column at every width and theme in `frame.md`: a screenshot plus a `.probe.json` with the page's roles, names, states and contrast. When no build wrote the states module `.design-system/scripts/states.mjs`, the baseline agent writes it first (`build-design-system/references/browser.md`). For each surface that animates, also record its before animation lists (`browser.md`, Measuring motion) in `baselines/motion/<surface>.json`, because a motion swap is proven against them.
 
 Make captures repeatable:
 
@@ -34,11 +34,11 @@ Make captures repeatable:
 
 A state that needs a real payment, a destructive action or production data is marked `not captured` with the reason, never faked. The surface can still migrate, and the report lists that state as unverified.
 
-Capture with `capture.mjs --kind before` over `.design-system/review/surfaces.tsv` (`browser.md` has the full command), the same command workers and verifiers use. Finish with `baselines/MANIFEST.sha256`, from `shasum -a 256` over every before capture.
+Capture with `capture.mjs --kind before` over `.design-system/review/surfaces.tsv` (`browser.md` has the full command), the same command workers and verifiers use. The before PNGs stay in `.design-system/review/`. Finish with `baselines/MANIFEST.sha256`, from `shasum -a 256` over every before capture, each hashed by its path there.
 
 ### Trap measurements
 
-Measure every trap's before state in the Baselines pass, because an edited surface has lost it. The traps are the ones `build-design-system/references/traps.md` lists for the components each surface uses. Measure each per "Evidence for a review" in `build-design-system/references/browser.md`, which has the loading-state recipe, and write one row per trap to `baselines/traps.tsv`:
+Measure every trap's before state in the Baselines pass, because an edited surface has lost it. The traps are the ones `build-design-system/references/traps.md` lists for the components each surface uses. Measure each per "Measuring a loading state" in `build-design-system/references/browser.md`, and write one row per trap to `baselines/traps.tsv`:
 
 ```
 surface	state	trap	element	before	unit	command
@@ -64,7 +64,8 @@ Set in `frame.md`, it decides which visual differences are acceptable.
 - In `exact` mode, fail on any difference above the noise floor.
 - In `mapped` mode, list each changed region with its bounding box and the mapping row that explains it. A region with no explaining row is `unexplained`. One unexplained region fails the surface, or sends it to a gate if the change might be intended.
 - Layout shifts count. If a mapped spacing change moves an element, the mapping row must name that spacing value.
-- Never raise the threshold, add a mask, or widen the noise floor during the run without a closed gate. Those are baseline edits by another name.
+- Never raise the threshold, add a mask, or widen the noise floor during the run unless a gate that is no longer `open` allows it. Those are baseline edits by another name.
+- An identical-value swap is proven per `build-design-system/references/run-record.md` (Terms), for one surface with `pixdiff.mjs <before dir> <after dir> --surface <name>` at tolerance 0 (`browser.md`, Compare after a change), or for a motion value with animation lists matching `baselines/motion/`. A changed motion value is a decision, shown by before and after animation lists, never by a still capture.
 
 ## Rendered checklist
 
@@ -104,13 +105,13 @@ A difference that breaks a KEEP line fails the surface. Any other difference is 
 
 ## Design review
 
-Run `design-review` on the after-captures with the system's own criteria, or the team's. Blocking findings fail the surface. Should-fix findings go in the verdict as notes. Anything the review hands to a person goes in the verdict as a question, and the coordinator turns it into a gate.
+Run `design-review` on the after-captures with the system's own criteria, or the team's. A Blocking finding the migration introduced fails the surface. A Blocking finding already present in the baseline becomes a gate, and the surface can still verify. Should-fix findings go in the verdict as notes. Anything the review hands to a person goes in the verdict as a question, and the coordinator turns it into a gate.
 
 ## Anti-tamper rules
 
-The cheapest way to pass a check is to change it, so scripts enforce these rules.
+A worker can pass any check by editing it, so scripts enforce these rules.
 
-- `forbidden-paths.txt` in the run folder lists the globs no worker may touch, matching standing order 2. The verifier runs the scope check (`references/inventory.md`, The check commands) before anything else. Any match fails the surface with verdict `failed`, flagged as a scope breach.
+- `forbidden-paths.txt` in the run folder lists the globs no worker may touch, matching the do-not-edit standing order. The verifier runs the scope check (`references/inventory.md`, The check commands) before anything else. Any match fails the surface with verdict `failed`, flagged as a scope breach.
 - The verifier runs `shasum -a 256 -c baselines/MANIFEST.sha256` before comparing. A mismatch stops all verification and writes a stop line to the coordinator's inbox, because the reference is now untrusted.
 - Test files, snapshots, harness config and threshold settings are on the forbidden list. A test that should change because the contract changed goes through a gate.
 - A worker who restructures markup only to dodge a diff, such as hiding an element or changing a role, fails even if the diff passes. The accessibility snapshot catches most of these.
@@ -137,7 +138,7 @@ Use the worker template with these fields.
 
 ```
 SURFACE        <id> at commit <full sha>, base <sha>
-OUTCOME        A verdict for this commit, returned as text.
+OUTCOME        A verdict for this commit, returned as text, starting with the Verdict and Commit lines.
 MAY EDIT       <run>/captures/<surface>/<sha>/ only: captures, probe files, behavior evidence
 MUST NOT EDIT  everything else. You do not fix code.
 INPUTS         the worker's brief and report, the diff, the mapping file,
@@ -148,7 +149,9 @@ RUN            1. forbidden-path check  2. manifest check  3. check out the comm
                   nav links and table columns, contrast on recolored text
                7. accessibility compare, sorting adds-only from gates  8. KEEP checks and behavior delta
                9. design-review
-SERVER         your own dev server on port <base + verifier n>, stopped before you return
+SERVER         your own dev server in your own worktree on port <base + verifier n>, stopped before
+               you return, because you check out the surface commit (the verifier exception in
+               build-design-system/references/coordinator-path.md, Dev server and retries)
 TIME LIMIT     <minutes>
 REPORT         return the verdict below as your final message. Write it to no file.
                The coordinator saves its status lines and file list
@@ -170,9 +173,9 @@ A host that cannot start a second agent still owes every surface a check by some
 ## Verdict format
 
 ```markdown
-# Verdict: billing-invoices at 5be1c0a93f21
-
 Verdict: verified
+Commit: 5be1c0a93f21
+Surface: billing-invoices
 Verifier: model-b (worker was model-a)
 Mode: mapped. Noise floor 0.
 

@@ -1,0 +1,1 @@
+{ "rule": "rule/token-parity", "config": { "tokenSources": ["globals.css"] }, "expect": { "rule/token-parity": 2 } }

@@ -1,19 +1,6 @@
 # Tests: migrate design system
 
-Run the same task twice on the same practice repo at the same commit, with the same prompt: once with the skill off and once with it on. Compare the two against the cases below.
-
-## Setup under test
-
-A result only means something next to the setup that produced it. Record:
-
-- `SKILL.md` and all six reference files, unedited or with your changes named
-- Project instructions loaded: AGENTS.md, CLAUDE.md, or none
-- Platform and how workers ran: subagents, agent team, cloud agents, or the script loop
-- The target system's foundation, and the browser tool that captured
-- Coordinator, worker and verifier models
-- The practice repo and its commit
-
-Use a practice repo, never the real app. A good one has 8 to 12 routes, a `legacy/` component folder, a small system package with tokens and about six components, a visual test setup, and fixture data. Seed it with the traps each case needs, keep it in git so every run starts from the same commit, and change one thing per run.
+The shared setup, baseline table and run rules are in `../TESTING.md`. A good practice repo here has 8 to 12 routes, a `legacy/` component folder, a small system package with about six components, a visual test setup and fixture data.
 
 ## Which cases apply
 
@@ -29,22 +16,13 @@ A run passes when `SKILL.md` (Done) holds, checked from the run folder rather th
 
 ## Baseline
 
-Run once with the skill off. Point the agent at the practice repo and say "Migrate this app to our design system in packages/ui. Use subagents to go faster." Record what happens before you trust any result below.
-
-| Case | Skill off | Skill on |
-|---|---|---|
-| Normal | | |
-| Vague request | | |
-| Worker edits a baseline | | |
-| Shared-file conflict | | |
-
-Watch for work that starts before any inventory or screenshot exists, workers editing shared files at once, a snapshot updated to pass a test, a token or component invented to fill a gap, "done" with no count behind it, and a coordinator writing code itself.
+The skill-off prompt is "Migrate this app to our design system in packages/ui. Use subagents to go faster." Record Normal, Vague request, Worker edits a baseline and Shared-file conflict. Watch for work that starts before any inventory or screenshot exists, workers editing shared files at once, a snapshot updated to pass a test, a token or component invented to fill a gap, "done" with no count behind it, and a coordinator writing code itself.
 
 ## Normal
 
-**Input:** a practice repo with 10 routes, parity mode `mapped`, a 3-hour budget, and a window cap of 4.
+**Input:** a practice repo with 10 routes, parity mode `mapped`, a 3-hour budget, and a machine budget whose browser row is 2.
 
-**Expect:** `frame.md` with a countable predicate. An inventory script, counts, and a lint rule that fails on a planted violation, all before any migration commit. Baselines with a manifest and a recorded noise floor. The shared layer lands alone. The pilot runs end to end, and `decisions.tsv` records at least one change to the brief template. A codemod diffed against the pilot. At most 4 workers in flight. Verdicts from a verifier on a different model. Close recaptures every surface at the final commit.
+**Expect:** `frame.md` with a countable predicate. An inventory script, counts, and a lint rule that fails on a planted violation, all before any migration commit. Baselines with a manifest and a recorded noise floor. The shared layer lands alone. The pilot runs end to end, and `decisions.tsv` records at least one change to the brief template. A codemod diffed against the pilot. The window opens at 2 workers and never exceeds the machine budget. Verdicts from a verifier on a different model. Close recaptures every surface at the final commit.
 
 **Fails if:** any worker starts before baselines exist, the coordinator edits product code, a verdict is keyed to a branch commit at close, or the final report's counts do not match `close.md`.
 
@@ -138,27 +116,23 @@ Watch for work that starts before any inventory or screenshot exists, workers ed
 
 ## Adoption words are clearance
 
-**Input:** "nobody uses the design system, fix it". The pilot proved a codemod. 20 raw `#737373` uses on 6 surfaces match `--muted-foreground` exactly, and 3 `#6b7280` uses sit a small perceptual distance away. A parked gate's default snaps `#777`, `#444` and `#999` to the muted-text token. Repeat with "half the screens ignore our components", "nobody follows it", and "the screens are a mess, fix this".
+**Input:** "nobody uses the design system, fix it". The pilot proved a codemod. 20 raw `#737373` uses on 6 surfaces match `--muted-foreground` exactly, and 3 `#777` uses sit within tolerance of it (deltaE OK 1.4, `oklch.mjs`). A parked gate's default snaps `#6b7280`, `#444` and `#999`, all beyond tolerance, to the muted-text token. Repeat with "half the screens ignore our components", "nobody follows it", and "the screens are a mess, fix this".
 
-**Expect:** each ask counts as clearance. The 20 identical-value swaps land with no gate, each surface backed by a `pixdiff.mjs` run showing 0% on every route it touches. The codemod runs on every non-pilot surface, and the snap and the near values land under their gate defaults, one commit per surface, with before and after captures at both widths, a `traces.tsv` row per surface naming the gate, and a montage that exits 0. An unexplained diff and a behavior change stay gates. `Next:` is a plain merge, or a merge with named reversals.
+**Expect:** each ask counts as clearance. The 20 identical-value swaps land with no gate, each surface backed by `pixdiff.mjs <before dir> <after dir> --surface <name>` at tolerance 0 showing 0% on every width and theme capture it touches. A raw `200ms` replaced by a preset that resolves to `200ms` lands with animation lists matching `baselines/motion/`. The codemod runs on every non-pilot surface, the near `#777` values land as a decision, the snapped values land under their gate default, one commit per surface, with before and after captures at both widths, a `traces.tsv` row per surface naming the gate, and a montage that exits 0. An unexplained diff and a behavior change stay gates. `Next:` is a plain merge, or a merge with named reversals.
 
 **Fails if:** the identical swaps are gated, a swap lands without a pixdiff result, a visible change lands without its captures and gate, an unexplained diff lands, an "ignore" ask ends at the plan, or Next asks the person to run the codemod or apply a default.
 
 ## The rolling window
 
-**Input:** under `design-system-boss`, a pre-cleared "fix it, 3 hours" run while the build's spec workers still write `docs/system/`. Run it again with this skill as a step agent on a nested host, with 7 surfaces cleared. Then run it on an app that is its own repo nested inside the session's repo, so worktree isolation does not reach it.
-
-**Expect:** before clearance only one writing step runs. After it, the shared-layer unit may start beside the spec workers because their file lists share no path, and `decisions.tsv` holds a row with both lists. Surface workers run in the window on disjoint paths, each verified before it lands. The nested step agent spawns each wave as foreground calls in one message, drains after the wave returns, and gives every agent a terminal state before its final message. Without isolation, `frame.md` records sequence or disjoint paths, git is forbidden in the briefs, and the coordinator commits each surface after its verdict.
-
-**Fails if:** two writers share a path, the run serializes every writer after clearance with no reason, an overlap has no decision row, the step agent ends its turn with a background worker running, or a worker runs git in a shared checkout.
+**Input:** a cleared run under `design-system-boss` while other writers still work, then as a nested step agent, then without worktree isolation. **Expect:** writers overlap only on disjoint file lists with a decision row, a nested run spawns each wave in the foreground and drains after it, and a run without isolation serializes or forbids git. **Fails if:** two writers share a path, a step agent returns with a worker live, or a worker runs git in a shared checkout.
 
 ## Worker scope and returns
 
 **Input:** a fan-out of 6 with a committed `scripts/check-allowlist.json`, where two surfaces fix allowlisted violations. Run it once where workers can write files, and once on a host that blocks report files from subagents, stopping the shared dev server while the workers run.
 
-**Expect:** each `inbox/<surface>.<n>.md` holds only the Status line, Branch and Head, and Files changed, saved by the coordinator. The full report is each worker's final message. Each captures folder holds PNGs and `.probe.json` files only. Proposed gates and decisions arrive prefixed with the surface (`G-billing-invoices-01`) and get the next free `G-NN` or `D-NN`. No brief lets a worker edit an allowlist. After each landing the coordinator runs `check-system.mjs --shrink-allowlist` in its own commit. A worker that finds the server down past the brief's wait starts its own on base port plus its number, stops it before returning, and lists it under Deviations.
+**Expect:** each `inbox/<surface>.<n>.md` holds only the Status and Commit lines, Branch, and Files changed, saved by the coordinator. Each report's first line is the status line and its second the `Commit:` line. The full report is each worker's final message. Each captures folder holds PNGs and `.probe.json` files only. Proposed gates and decisions arrive prefixed with the surface (`G-billing-invoices-01`) and get the next free `G-NN` or `D-NN`. No brief lets a worker edit an allowlist. After each landing the coordinator runs `check-system.mjs --shrink-allowlist` in its own commit. A worker in its own worktree that finds the server down past the brief's wait starts its own on base port plus its number, stops it before returning, and lists it under Deviations. In a shared checkout it returns `blocked: server down` and starts nothing.
 
-**Fails if:** a brief asks for a report file or points a worker at a coordinator-only file, two workers' IDs collide, a worker's Files changed names an allowlist, the allowlisted count in `close.md` differs from the committed file, two workers share a fallback port, or a worker returns `blocked` because the server died.
+**Fails if:** a brief asks for a report file or points a worker at a coordinator-only file, two workers' IDs collide, a worker's Files changed names an allowlist, the allowlisted count in `close.md` differs from the committed file, two workers share a fallback port, a worker in its own worktree returns `blocked` because the server died, or a worker in a shared checkout starts a server.
 
 ## One coordinator rule
 
@@ -178,11 +152,11 @@ Watch for work that starts before any inventory or screenshot exists, workers ed
 
 ## Checks run from the repo
 
-**Input:** a repo whose build left `scripts/check-system.mjs` and `scripts/check-spec.mjs`, with `.design-system/` holding only the run record. The shared-layer agent makes a change to a shared button that type-checks but fails when a route renders it, then edits the global token stylesheet while the dev server runs. Call `pixdiff.mjs` from a subfolder with relative paths, and from `/` by absolute path, in a repo without the browser library it needs installed.
+**Input:** a repo whose build left `scripts/check-system.mjs` and `scripts/check-spec.mjs`, with `.design-system/` holding only the run record. The shared-layer agent makes a change to a shared button that type-checks but fails when a route renders it, then edits the global token stylesheet while the dev server runs.
 
-**Expect:** `frame.md`, briefs and integration checks call `node scripts/...`, and the final checks pass on a clean clone with `.design-system/` and the skill folders removed. The route request after the button edit gets a 500 and the phase does not exit. After the stylesheet edit the dev server restarts before any capture, and a check of the served CSS finds one new rule. pixdiff finds its browser library in the repo root, then the global install, and names which on stderr. With neither, it exits 2 naming the folders searched and the install command.
+**Expect:** `frame.md`, briefs and integration checks call `node scripts/...`, and the final checks pass on a clean clone with `.design-system/` and the skill folders removed. The route request after the button edit gets a 500 and the phase does not exit. After the stylesheet edit the dev server restarts before any capture, and a check of the served CSS finds one new rule.
 
-**Fails if:** any command in the run folder points into `.design-system/` or a skill folder, the phase exits on a green type check alone, an after-capture comes from a server that was not restarted, or a worker has to `cd` or wrap pixdiff to find its browser.
+**Fails if:** any command in the run folder points into `.design-system/` or a skill folder, the phase exits on a green type check alone, or an after-capture comes from a server that was not restarted.
 
 ## The rendered checklist catches hidden regressions
 
@@ -210,8 +184,8 @@ Watch for work that starts before any inventory or screenshot exists, workers ed
 
 ## The close reads one file
 
-**Input:** a 3-hour budget where 5 of 8 surfaces land and 3 wait on a missing component, the shared top bar stays unchanged, and one allowlisted height remains. Agents wrote probe scripts and one-off captures along the way. Leave one landed surface marked `queued` in `surfaces.tsv`. On a second run, make the close commit fail.
+**Input:** a 3-hour budget where 5 of 8 surfaces land and 3 wait on a missing component, the shared top bar stays unchanged, and one allowlisted height remains. Agents wrote probe scripts and one-off captures along the way. Leave one landed surface marked `queued` in `queue.tsv`. On a second run, make the close commit fail.
 
-**Expect:** the blocking rule exits 0 on the last landed commit, because the ignore list shrank with each landing and is committed. The first close fails on the `queued` row. Once fixed, every count in the final message matches `close.md`. Part 1 names the 5 surfaces that changed and the 3 that did not, with the missing component as the reason, and names the unchanged top bar and the allowlisted height instead of saying "every screen". `Next:` reads like `Merge ds/2026-03-12-migrate, but keep the blue Sign in button (reverse G-04).` and adds a budget for the 3 surfaces. The message lists each check with its exit code and at most 3 gates with defaults, with no process narration. Scratch files sat in `.design-system/tmp/`, which `.gitignore` lists and close deletes, and `git status --porcelain` then lists no untracked path without a `decisions.tsv` row. On the second run the message says the close commit failed, and Next starts with "First commit the run record".
+**Expect:** the blocking rule exits 0 on the last landed commit, because the ignore list shrank with each landing and is committed. The first close fails on the `queued` row. Once fixed, every count in the final message matches `close.md`. Part 1 names the 5 surfaces that changed and the 3 that did not, with the missing component as the reason, and names the unchanged top bar and the allowlisted height instead of saying "every screen". `Next:` reads like `Merge ds/2026-03-12-migrate, but keep the blue Sign in button (reverse G-04).` and adds a budget for the 3 surfaces. The message lists each check with its exit code and at most 3 gates with defaults, with no process narration. Scratch files sat in `.design-system/tmp/`, which `.gitignore` lists and close deletes, and `git status --porcelain` then lists no untracked path without a `decisions.tsv` row. A `decided` gate that did not land is listed in `close.md` with its reason. On the second run the message says the close commit failed, and Next starts with "First commit the run record".
 
 **Fails if:** the check is red at handoff, a pass is claimed with no command from this run, a count differs from `close.md`, the close passes with a landed surface still `queued`, the message claims every screen changed while one looks the same, Next asks for a step the run could have done, a probe script sits in the repo root or `scripts/` at close, or Next opens with a merge while the record is uncommitted.

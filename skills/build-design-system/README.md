@@ -8,7 +8,7 @@ It uses three sibling skills: `token-mapping` to fold existing values into the n
 
 ## Use as-is
 
-Run `npx skills add arla6ka/designhow` to install it with its sibling skills. To install by hand, copy the folder to `.agents/skills/build-design-system/` in your repo, which most agents read directly, or link it into `.claude/skills/` for Claude Code. Then ask your agent for one phase, such as "extract tokens from the app" or "add states and specs to our components". A whole-app ask like "set up a design system" goes to `design-system-boss` when it is installed, which calls this skill. A loose request is fine. The skill finds the run command, picks a pilot and a budget, states them in one message and starts reading the repo while you check them.
+Run `npx skills add arla6ka/designhow` to install it with its sibling skills. To install by hand, copy the folder to `.agents/skills/build-design-system/` in your repo, which most agents read directly, or link it into `.claude/skills/` for Claude Code. Then ask your agent for one phase, such as "extract tokens from the app" or "add states and specs to our components". A whole-app ask like "set up a design system" goes to `design-system-boss` when it is installed, which calls this skill. A loose request is fine. The skill finds the run command, picks a pilot and a budget, states them in one message and starts reading the repo while you check them. An agent may pick it without being named, which is safe because the first two phases only read, and every write lands on a run branch you merge or drop.
 
 It works on any web stack it can read and run, and its specs are framework-agnostic, though some examples and the component scan assume JSX. It assumes file access, a shell, Node 18 or later for the scripts, and a command that starts the app. A browser and subagents are optional. Without a browser, the run stops before the pilot.
 
@@ -26,13 +26,13 @@ It works on any web stack it can read and run, and its specs are framework-agnos
 
 ## Invariants
 
-Keep these unless your situation really differs.
+Change one only when its stated reason doesn't apply to you.
 
 - Screenshots before the first edit. Without them, nobody can tell an intended change from a regression.
-- Scripts count, the model judges. Counts read by eye miss re-exports and aliases, and the handoff needs the same scripts rerun.
+- Scripts produce every count so the handoff can rerun them. Counts read by eye miss re-exports and aliases.
 - No new visual direction. The system describes the app you have. Brand and taste changes are gates for a person.
 - Gates with defaults, not questions that stop work. A run that waits on a naming answer for a day produces nothing.
-- One writer per shared file. The token source, registry, barrel and migration map belong to the coordinator. Workers report requests.
+- One writer per shared file. The token source belongs to the one writer `references/coordinator-path.md` names, and the registry, barrel and migration map to the coordinator. Workers report requests.
 - Generated docs. A hand-written twin drifts on the first change, and agents trust it anyway.
 - The repo works after the run. Scripts, config, allowlist, specs and docs live in the repo. A check that reads from `.design-system/` or a skill folder breaks the day either is gone.
 - One page skeleton for every component. Agents learn where Props and States sit once, and the docs check can test it.
@@ -40,10 +40,6 @@ Keep these unless your situation really differs.
 - The foundation's files stay the foundation's. A generator that owns the foundation's token file, or a rewrite of a stock component, breaks the next upstream update.
 - Every check is seen failing once, and the full check exits 0 at handoff. A check that never failed may not check anything, and a red one teaches every later agent to ignore it.
 - One pilot, then only cleared surfaces, one per commit, on the run branch. Nothing lands on your branch until you merge, and an unexplained diff becomes a gate instead of a commit.
-
-## Why it is invocable by the model
-
-The frontmatter does not set `disable-model-invocation`, so an agent can pick this skill when a request matches. That is safe because the first two phases only read the repo and write into `.design-system/` and the copied `scripts/`. The one destructive step, deleting unused code, runs through a validated plan. Every write lands on a run branch the person merges or drops, and the codemod runs only where the run is cleared to move screens. `migrate-design-system` is also model-invocable, so the handoff can start it.
 
 ## Optional tools
 
@@ -54,32 +50,8 @@ The frontmatter does not set `disable-model-invocation`, so an agent can pick th
 
 ## Check after changing
 
-Run `node scripts/check-system.mjs --self-test` from the skill folder, then `TESTS.md`. At minimum, run the Missing required input case (it stops before the pilot without a way to run the app), the Enforcement case (a seeded violation fails) and the Scope creep case (the codemod stays inside the pilot). Then run the Vague request case, and read one generated component twin against its page to confirm the headings match.
+From the skill folder, run `--self-test` on `check-system.mjs`, `check-spec.mjs`, `gen-docs.mjs`, `copy-check.mjs` and `oklch.mjs`, then the cases in `TESTS.md` per `../TESTING.md`. At minimum, run Missing required input, Enforcement proves itself and Scope creep.
 
 ## Adapt this skill
 
-Give an agent the prompt below with the whole skill folder attached.
-
-```
-I want to fit the attached build-design-system skill to our codebase and team.
-
-Interview me, one question per message. Cover:
-- where our shared UI lives now, and our framework, styling method and router
-- whether we already have a token file or theme config other tools read
-- our docs site, if any, and the URL shape we want for the system pages
-- the words we use for token roles and component variants
-- our behavior library and test runner, if any
-- which viewports and themes we ship
-- which source wins when two token files disagree, and why
-- who confirms gates, and how quickly
-
-Rules for you while we do this:
-- Leave the phases, the stop rules, the gate rule and the final checks alone
-  unless an answer of mine contradicts one.
-- Only use names, paths and commands I give you or that you read in our repo.
-  Anything I can't answer gets marked UNDECIDED.
-
-When the interview ends, split your proposed edits into two lists. First, changes
-to what the skill does, stops on, gates or hands to a person. Second, changes to
-paths, names and wording only. Show both and edit nothing until I say go.
-```
+Use the interview prompt in `../ADAPTING.md` with this folder attached. Topics for this skill: where shared UI lives, with the framework, styling method and router; any token file or theme config other tools read; the docs site and the URL shape for system pages; the words for token roles and variants; the behavior library and test runner; the viewports and themes you ship; which source wins when two token files disagree; and who confirms gates, and how fast.

@@ -10,7 +10,7 @@ It uses the other skills in this repo. `token-mapping` builds each surface's mig
 
 Ask for a migration and give a budget, or let the session be the budget. A loose request is fine. The run works on its own branch, `ds/<yyyy-mm-dd>-migrate`, and merging it into yours is always your call. The coordinator looks for the system itself (a `build-design-system` handoff, `registry.json`, a token source or a UI package) and writes what it found, plus every other default, into `frame.md` for you to check. For a first try, ask for audit mode, read `plan.md`, then start the real run from it.
 
-The skill is model-invocable, so a router skill or `build-design-system`'s handoff can start it. Its description triggers only on moving an app onto an existing system. It spawns many agents and spends real money, so the cost guard sits in the procedure: inventory and audit are read-only, and no editing worker starts before `frame.md` states a budget. To start it only by hand, add `disable-model-invocation: true` to the frontmatter, and a router can no longer call it.
+The model can invoke it so a router or `build-design-system`'s handoff can start it, and no editing worker starts before `frame.md` states a budget. To start it only by hand, add `disable-model-invocation: true` to the frontmatter.
 
 ## Replace first
 
@@ -22,14 +22,14 @@ The skill is model-invocable, so a router skill or `build-design-system`'s hando
 
 ## Invariants
 
-Each prevents a failure that shows up at scale. Keep them unless your setup really differs.
+Each prevents a failure that shows up at scale. Change one only when its stated reason doesn't apply to you.
 
-- One coordinator rule, stated once under Boundaries in `SKILL.md`. It exists because a coordinator that starts fixing things stops draining, and every worker behind it waits.
+- One coordinator rule, stated once under Boundaries in `SKILL.md`. It exists because while the coordinator fixes code, no worker return gets processed and free slots stay empty.
 - Inventory by script. A search the model runs by hand gives a different count each time, so "done" means nothing.
 - Block new legacy usage before migrating. Otherwise feature work adds it back as fast as workers remove it.
-- Baselines first, and never edited. A reference the worker can change is not a reference.
+- Baselines first, and never edited. A worker that can edit the baseline can make any diff pass.
 - One writer per file, in the repo and in the run folder. Instructions to take turns do not stop two agents overwriting each other.
-- Shared layer alone, before fan-out. Twenty workers each patching the theme provider produce twenty versions of it.
+- Shared layer alone, before fan-out. Workers that each patch the theme provider leave one version of it per worker.
 - A verifier that did not write the code, keyed to a commit. A new commit voids the verdict, and close re-verifies every surface on the final commit.
 - Gaps go to the system owner. A worker that invents a component leaves the migration with a new legacy component.
 - State lives in files. The coordinator will lose its context, and the next one resumes from the run folder alone.
@@ -44,24 +44,4 @@ Run `TESTS.md` on a practice repo. At minimum, confirm that a worker who updates
 
 ## Adapt this skill
 
-Give an agent this prompt with the skill folder attached.
-
-```
-I want to fit the attached migrate-design-system skill to our app and our agents.
-
-Interview me, one question per turn. Cover:
-- where our design system lives, its version, and who owns it
-- how our app is structured (routes, feature folders, packages) and what a surface should be
-- what counts as legacy for us, and which raw values are allowed to stay
-- which files are shared and must never go to a worker
-- how we run the app and tests in CI, and which widths and themes we support
-- whether our migration should look identical (exact) or adopt new values (mapped)
-- which agent platform we use and how many agents we can afford at once
-- who answers gates
-
-Rules for you while we do this:
-- Leave the phase order, the one-writer rule, the anti-tamper rules, and the verdict states alone unless an answer of mine contradicts one.
-- Use only paths, commands and names I give you or that you read from our repo. Mark anything else UNDECIDED.
-
-When the interview ends, split your proposed edits into behavior changes (what the skill stops on, checks, allows, or hands to a person) and wording changes. Show both lists and edit nothing until I say go.
-```
+Use the prompt in `../ADAPTING.md` with this skill's topics: where the system lives, its version and owner; what a surface is in your app; what counts as legacy and which raw values may stay; which files are shared; how CI runs the app, with which widths and themes; exact or mapped parity; your agent platform and how many agents you can afford; and who answers gates. Leave the phase order, the one-writer rule, the anti-tamper rules and the verdict states alone unless an answer contradicts one.

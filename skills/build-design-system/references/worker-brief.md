@@ -1,11 +1,11 @@
 # Worker brief
 
-> For the team setting this up: this template is for phase 4, when the coordinating agent hands one component family to another agent, whether a subagent, a background task or a separate session on its own branch. Keep every field. A brief with an empty field goes back to the coordinator, not to a worker.
+This template is for phase 4, when the coordinator hands one component family to another agent: a subagent, a background task or a separate session on its own branch. A brief with an empty field goes back to the coordinator, not to a worker.
 
 Contents
 
 - When to delegate
-- What the coordinator keeps
+- What one writer keeps
 - The template
 - The spec-worker variant
 - Filling it in
@@ -18,11 +18,11 @@ Contents
 
 Delegate a family when its files do not overlap with any other open family, and the first family has landed and set the pattern. Do not delegate:
 
-- the first family, because its result is what the briefs point to. When the build runs directly, the coordinator writes it. Under a boss, the boss's rule governs, and the build seat may be a subagent that writes it alone before any fan-out
+- the first family, because its result is what the briefs point to. Its one writer is named in `coordinator-path.md` (Lock before fan-out), and it lands before any fan-out
 - a family whose canonical pick waits on a gate
 - work that edits the token source, generated files, barrel export, registry or migration map
 
-Keep as many workers in flight as your reviews keep up with, never above the Frame's cap (`coordinator-path.md`, Phase caps). Refill a slot when a worker finishes instead of waiting for a batch. A report waiting for review holds up the run as much as a slow worker.
+Size the fan-out first. In a small layer, by default under 15 component files and one theme, the coordinator writes the components and only specs fan out, because a brief costs more than the code. Otherwise families fan out too, one per worker. The window starts at the browser row of `coordinator-path.md` (Machine budget) and never exceeds the budget. Refill a slot only when no report waits for review, and never wait for a whole batch.
 
 Give each worker its own branch or worktree, cut from the run branch, and merge verified work back into the run branch. Two agents in one checkout overwrite each other, and no instruction in a brief prevents that. When the host cannot give a worktree, fall back to disjoint file scopes on one branch: split any shared file first (one stylesheet per component, for example), forbid git commands in workers, and have the coordinator commit each family after review. Record the fallback in the run record, and use the shared brief below.
 
@@ -30,13 +30,12 @@ Before fan-out, remove the reasons a worker would need a shared file. Make the s
 
 Read-only workers, such as phase 2's screen notes, get the same brief with an empty write scope. They return notes as text, and the coordinator saves each, such as `.design-system/inventory/screens/<route>.md`.
 
-The coordinator owns the dev server. It starts one before the fan-out and keeps it running until every worker has returned.
+The dev server and the browser follow `coordinator-path.md` (Dev server and retries).
 
-## What the coordinator keeps
+## What one writer keeps
 
-These files have one writer, the coordinator. Workers read them and report what they need changed.
+Workers read these files and report what they need changed. The token source `tokens/` and every generated token file belong to the one writer `coordinator-path.md` (Lock before fan-out) names for the host. The coordinator writes the rest:
 
-- `tokens/` and every generated token file
 - the barrel export (`components/ui/index.ts` or its equivalent)
 - `registry.json` and the migration map
 - the check scripts, their config, fixtures, allowlist and drift list
@@ -61,9 +60,10 @@ You may write: <component folder>, <examples folder for this family>,
 Scratch drafts go in .design-system/tmp/<worker id>/ only.
 You may read anything in the repo.
 Your branch: <branch or worktree, or "shared branch, no git commands">.
-Dev server: http://localhost:<base port>. If it is down for a minute, start
-your own with <run command> on port <base port + worker n>, and stop it when
-you finish. Browser session name: ds-worker-<n>. Absolute paths only.
+Dev server: http://localhost:<base port>. If it does not answer, in your own
+worktree start <run command> on port <base port + worker n> and stop it when
+you finish. In a shared checkout, return blocked: server down.
+Browser session name: ds-worker-<n>. Absolute paths only.
 
 CONTEXT
 Family members from the inventory (name, file, call sites, root element, props):
@@ -87,7 +87,7 @@ ACCEPTANCE
   importing from <import path>
 - Every Usage rule has its ID, shape, ground, check and Don't and Do lines
   (rule-method.md), and a row in docs/system/rule-tests/<component>.tsv with
-  verdict ship or gate. The rules land with the component, not later
+  verdict ship, rewritten or gate. The rules land with the component, not later
 - Tests pass: <test command>
 - Every trap you mark fixed has measured before and after numbers in
   .design-system/evidence/<family>/, such as the button box idle and pending
@@ -107,7 +107,7 @@ needs --surfaces with a states column; --routes captures the load state only>
 
 TIMEBOX
 <N> tool calls, sized from phase 4's cap in coordinator-path.md. At the limit, stop and report what you have,
-with status PARTIAL.
+with status partial.
 
 FORBIDDEN
 - Writing outside SCOPE, including tokens, generated files, the barrel,
@@ -125,8 +125,8 @@ Return this block as your final message, as text. Write it to no file.
 The coordinator saves it. Name any decision or gate you propose with your
 family as prefix, such as D-button-01 or G-button-01. The coordinator
 renumbers it into the run record.
-Status: DONE, PARTIAL or BLOCKED
-Branch and last commit:
+Status: done, partial, blocked: <reason> or failed: <reason>
+Commit: <sha> on <branch>
 Files changed:
 Commands run and their results (pasted):
 Screenshots: paths
@@ -145,7 +145,7 @@ STANDING
 
 ## The spec-worker variant
 
-When only specs fan out (`SKILL.md` phase 1, step 5), or a document-everything run specs components that already exist (`coordinator-path.md`), a spec worker takes one family. It writes each member's spec, its rule-tests file and its missing example files, and nothing else. The family template asks for code this worker must not touch, so use this variant. Keep every field.
+When only specs fan out (When to delegate), or a document-everything run specs components that already exist (`coordinator-path.md`), a spec worker takes one family. It writes each member's spec, its rule-tests file and its missing example files, and nothing else. The family template asks for code this worker must not touch, so use this variant. Keep every field.
 
 ```
 GOAL
@@ -158,11 +158,13 @@ your report, not in the code.
 SCOPE
 You may write: docs/system/<component>.md, docs/system/rule-tests/<component>.tsv,
 <examples dir>/<component>/ for missing example files, and
-.design-system/evidence/<component>/ for probe scripts, captures and
-measurements. Evidence there survives the run.
-Never cite a file in .design-system/tmp/, which is deleted at close.
+.design-system/evidence/<component>/ for captures and measurements, and
+.design-system/scripts/ for a probe script a spec cites as its test.
+One-off probes go in .design-system/tmp/<worker id>/, which is deleted at
+close, so never cite a file there.
 You may read anything in the repo. No git commands. The coordinator commits.
-Dev server: http://localhost:<base port>. Do not start or restart it.
+Dev server: http://localhost:<base port>. Do not start or restart it. If it
+does not answer, return blocked: server down.
 Browser session name: ds-spec-<n>. Absolute paths only.
 
 CONTEXT
@@ -184,7 +186,7 @@ ACCEPTANCE
   the component at HEAD
 - Every States, Keyboard and ARIA row names how it was checked. "test" or
   "snapshot" points at a file in .design-system/evidence/<component>/. With no
-  test runner in the repo, a probe script saved there counts as the test
+  test runner in the repo, a probe script in .design-system/scripts/ counts as the test
 - Contrast is measured in each theme with a command, and the ratio is written down
 - Every answer names its source: a command, a file and line, a capture, or a gate
 - Examples opens with "Real uses, <n> call sites", counted with
@@ -192,8 +194,9 @@ ACCEPTANCE
   check-spec fails the count, and any file:line you cite, once the code moves
 - In prose, element names go in backticks (`<a>`), since check-spec reads a bare
   angle bracket as a template placeholder
-- Every rule passed the four tests in rule-method.md, or is a gate. Two-agent
-  runs use two fresh subagents given only the rule and one task from this app
+- Every rule passed the tests in rule-method.md, or is a gate. The two-agent
+  test runs for Anti-slop and Limits rules, with two fresh subagents given only
+  the rule and one task from this app
 - Every Limits rule cites a probe --grow result saved in the evidence folder
 
 VERIFY
@@ -205,7 +208,7 @@ needs capture.mjs --surfaces <tsv with a states column> --states <module>;
 
 TIMEBOX
 <N> tool calls, sized from phase 4's cap in coordinator-path.md. At the limit, stop and report what you have,
-with status PARTIAL.
+with status partial.
 
 FORBIDDEN
 - Editing the component, its tests, tokens, barrel, registry, check
@@ -221,7 +224,7 @@ REPORT
 Return this block as your final message, as text. Write it to no file.
 Name any decision or gate you propose with your component as prefix, such
 as D-combobox-01. The coordinator renumbers it into the run record.
-Status: DONE, PARTIAL or BLOCKED
+Status: done, partial, blocked: <reason> or failed: <reason>
 Files written:
 Commands run and their results (pasted):
 Rules: shipped, rewritten and gated, counted from rule-tests
@@ -305,20 +308,17 @@ Open a worker's files only after its final message returns, since it may still b
 3. Verify. Rerun the VERIFY commands yourself on the worker's branch. Your output is the result that counts.
 4. Screenshots. Open the example screenshots for each variant and state, in each theme, beside the baselines of the replaced implementations at the same size.
 5. Contract. Walk `component-contract.md` against the code. For accessibility and API shape, which need judgment, use a second reviewer that did not write the code, a different model when one is available, given only the diff, the brief and the contract.
-6. Requests. Apply accepted token, barrel and registry changes yourself, one change per family, after the family merges.
+6. Requests. The one writer of each file applies accepted token, barrel and registry changes, one change per family, after the family merges.
 7. Record. Save the worker's status line and file list to `.design-system/returns/<family>.<attempt>.md`. Renumber its proposed decisions and gates into the run record (`run-record.md`, Rules), and add a ledger row. Anything that ran on a different commit from the one merging is not verified.
 
 ## Retries and dropouts
 
-- Failed on a check: send the same brief back with the failing output pasted into CONTEXT. Retries with the real error work better than rewording the brief.
-- Ran out of time: split the family (for example, the component first, then examples and docs) and send two smaller briefs.
-- Tool or environment error: retry once as-is. If it fails again, do the family yourself.
-- Two failed retries: stop delegating that family, record why in the run record, and either do it yourself or mark it blocked.
+- A failed, timed-out or lost worker gets the one retry in `coordinator-path.md` (Dev server and retries), with the failing output pasted into CONTEXT. A split sends the component first, then examples and docs.
 - A worker that never reports gets a ledger row saying so. Do not quietly redo its work without that row.
-- Judge a worker by its commits and its report. Do not message it to ask how it is going, because that restarts it or pulls it off the task. Past its TIMEBOX with no new commit, treat it as lost and retry once.
+- Judge a worker by its commits and its report. Do not message it to ask how it is going, because that restarts it or pulls it off the task. Past its TIMEBOX with no new commit, treat it as lost.
 - A retry is a fresh brief with the failing output folded in, never a follow-up message to the old worker, because follow-ups get dropped on the next restart.
 
-If three or more families fail on the same cause, stop spawning. The cause is in the brief, the contract or the reference implementation. Fix it there, then resend.
+Two units failing on the same cause stop refills for that cause (`coordinator-path.md`, Dev server and retries).
 
 ## Running without subagents
 

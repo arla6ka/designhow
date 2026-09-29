@@ -5,30 +5,31 @@ Each route is a list of steps. Copy the chosen route's steps into the task list 
 These rules hold on every route:
 
 - A writing step works on the run branch and starts only after the step before it has a verdict. Read-only steps may run side by side.
-- Decided gate defaults land on the run branch (`SKILL.md`, The branch model). A gate is decided when its row has a default, and every gate from a sibling record does.
-- The migrate audit is read-only. On Build and Harden it starts right after the build's token commit, pinned to it, and runs beside the rest of the build, so the person always wakes up to a plan. At close, the boss reconciles the audit's gates with the build's or harden's. If the build changed a token, component API or file the plan names after the pin, the pin is stale. Rerun the audit pinned to the final commit, or re-pin it and redo the affected rows, and record which. A minimal footprint writes no audit plan, since the state file's edit list is its plan.
-- Identical-value swaps land on every route without clearance, in build, harden or a swap step the boss briefs, with a 0% result from `<skills>/build-design-system/scripts/pixdiff.mjs` saved per route (`<skills>` is `.agents/skills/` or `.claude/skills/`). Other component swaps outside the pilot need clearance, unless a decided gate default names them.
-- The repo works after the run. The check scripts, check-spec, the docs generator and the docs live in the repo (`scripts/`, `docs/`), and `.design-system/` holds only the run record. The check passes on a clean clone. On a minimal footprint nothing is vendored, the repo's own checks are the check, and `.design-system/` goes in `.git/info/exclude`.
+- Decided gate defaults land on the run branch (`build-design-system/references/run-record.md`, Terms). A gate is decided when its row has a default, and every gate from a sibling record does.
+- The migrate audit is read-only. On Build and Harden it starts right after the build's token commit, pinned to it, and runs beside the rest of the build, so plan.md exists even if the build hits its cap. At close, the boss reconciles the audit's gates with the build's or harden's. If the build changed a token, component API or file the plan names after the pin, the pin is stale. Rerun the audit pinned to the final commit, or re-pin it and redo the affected rows, and record which. A minimal footprint writes no audit plan, since the state file's edit list is its plan.
+- Identical-value swaps land on every route without clearance, in build, harden or a swap step the boss briefs, each proven as `build-design-system/references/run-record.md` (Terms) defines, with the proof saved per route. Other component swaps outside the pilot need clearance, unless a decided gate default names them.
+- The repo works after the run. The check scripts, check-spec, the docs generator and the docs live in the repo (`scripts/`, `docs/`), and `.design-system/` holds only run records and the rerun scripts in `.design-system/scripts/`, nothing the check reads. The check passes on a clean clone. On a minimal footprint nothing is vendored, the repo's own checks are the check, and `.design-system/` goes in `.git/info/exclude`.
 - On a writing route, a cheap CSS fix a `design-review` finding names lands on the run branch as a decision when existing tokens cover it, per `build-design-system/references/coordinator-path.md` (Sibling skills under this coordinator). It goes to a worker, not a follow-up.
 - On Full and Harden, horizontal overflow at the narrow width in shared layout is a decided default, per the same file (Clearance).
 - A step's output passes to the next by path. Never paste a summary of it in place of the file.
+- A read-only ask (review, document) that arrives mid-run runs against the starting branch and writes nothing to docs/system until the run lands. A writing ask queues after the current run or becomes a gate.
 - Every brief names the foundation from triage and the base reference it loads (`build-design-system/references/base-*.md`). The foundation changes where tokens live and how drift is measured, never the steps.
 
-## Three jobs, four foundations
+## Jobs and routes
 
 Most asks are one of three jobs, and the route follows the job.
 
 | Job | Route |
 |---|---|
 | A big app with no system. Build one from it, then move every surface | Build, then Full |
-| A big app with a weak system. Harden it, then converge the app onto it | Harden, then Full from clearance |
-| No app yet. Start from brand bits or defaults | Seed |
+| A big app with a weak system. Harden it, then converge the app onto it | Harden, then Full from step 5 (clearance) |
+| No app yet. Start from brand material or defaults | Seed |
 
 The foundation changes what each step reads and writes, and each base reference covers its own case, including how the system ships. On a package library, the system wraps the library and its theme object is the token source. On the team's own package, the package is the target and the app pins a version of it. On raw code, the build picks a canonical implementation per family. For Seed with no foundation, the default is shadcn. Nothing publishes to a package registry unless a person asks, and that is a stop.
 
 ## Budget
 
-Phase caps set the budget, not a formula. Take the session from the person, else the host, else 2 hours, and give each phase its share. Write the caps as clock times into the state file before the Frame. The shares are defaults. Move them once a few runs show where the time goes.
+Phase caps set the budget, not a formula. Take the session from the person, else the host, else 2 hours, and give each phase its share. Write the caps as clock times into the state file before the Frame. Under the boss, the build uses these caps, not its own. The shares are defaults. Move them once a few runs show where the time goes.
 
 | Phase | Cap |
 |---|---|
@@ -40,7 +41,7 @@ Phase caps set the budget, not a formula. Take the session from the person, else
 | `design-review`, `token-mapping`, `component-docs` | 10%, side by side with other work |
 | Close: after-triage, clean-clone check, captures, montage, report | 15%, never cut |
 
-A phase that finishes early passes its time on. A phase at its cap starts nothing new and closes what is running. Past about 70% of the session no new writing step starts, which leaves close its time. The decided-defaults step is the exception. It has its own reserved share, it is cheap, and it is what makes screens change, so it starts at its turn. When the session is short, cut the build's scope, never close. The build settles its formats before any fan-out and runs its phases in the order `build-design-system/references/coordinator-path.md` (Lock before fan-out) gives. Brief the build or harden in this order, and write the planned cut into the Frame:
+A phase that finishes early passes its time on. A phase at its cap starts nothing new and closes what is running. Past 70% of the session no new writing step starts, which leaves close its time. The decided-defaults step is the exception. It has its own reserved share, it is cheap, and it is what makes screens change, so it starts at its turn. When the session is short, cut the build's scope, never close. The build settles its formats before any fan-out and runs its phases in the order `build-design-system/references/coordinator-path.md` (Lock before fan-out) gives. Brief the build or harden in this order, and write the planned cut into the Frame:
 
 1. The change that answers the named complaint, including the value-identical swaps on every route.
 2. The token source, then the AGENTS.md block right after it. The block is never cut.
@@ -55,7 +56,7 @@ For an app with no system, or one where the ask is to make one.
 1. `build-design-system`. Receives the target app, the pilot if the ask named one, its phase cap, the order from Budget, and the triage folder as a first read. Done when it returns its handoff report or stop shape, and `.design-system/run.md` has a Handoff section.
 2. `migrate-design-system`, audit mode, beside step 1 and pinned to the build's token commit. Receives the inventory, the triage folder and the families the build is making. Done when `.migration/<run>/plan.md` exists and its gates are reconciled with the build's at close.
 3. Check the build. Walk the "Done, page by page" table in `build-design-system/references/system-structure.md` against the repo. The generated twins, `llms.txt`, the index and the AGENTS.md block are required rows. HTML pages are met or listed as follow-up. Clone the run branch into a temp folder, install, run the repo's own prerequisites for its typecheck, and see the check and the typecheck exit 0 there. Check fixtures must be invisible to the compiler, by an extension it skips or a folder it excludes, so an error from a fixture fails this step. Done when each row is marked met or not met with a path. The handoff's migration map, codemod command and counts by route go into the clearance message beside `plan.md`.
-4. Apply decided defaults. `migrate-design-system`, edit mode, budgeted to the decided defaults the build did not land and nothing more, such as the codemod on non-pilot screens, color moves and renames. One surface per commit, each with captures and a verifier. Done when every decided default reads `applied on <branch>` with its commit, or a gate row says why it could not land.
+4. Apply decided defaults. `migrate-design-system`, edit mode, budgeted to the decided defaults the build did not land and nothing more, such as the codemod on non-pilot screens, color moves and renames. One surface per commit, each with captures and a verifier. Done when every decided default reads `applied` with its commit, or a gate row says why it could not land.
 
 Without clearance the route ends here. With it, including an adoption ask, it continues as Full from clearance.
 
@@ -93,27 +94,18 @@ For "fix it" asks. Build or harden, then migrate, then review.
 For an ask that names component families and a PR or upstream. It always runs with a minimal footprint and never through Harden, whose specs and checks are what minimal leaves out. The ask clears the named families and nothing else.
 
 1. Edit list, read-only. One worker starts from `triage/raw-families.tsv` and lists every instance of each named family: the shared component if one exists, raw elements that copy its classes, and the variants that drifted from it. It picks each family's canonical look from evidence, the look most routes already render, and gives every listed file an importer count. The list goes in the state file, one decision row per family. Done when every instance has a path, a line and an importer count.
-2. Edits. One worker per family on disjoint files, briefed from `references/delegation.md` with the edit list as its plan, one commit per family. The smallest seam wins: a missing prop on the component, never a new abstraction, dependency or token. A file with 0 importers stays out and goes in the PR body's follow-ups. Done when each family has its commit and every changed surface has before and after captures.
+2. Edits. One worker per family on disjoint files, briefed from `references/delegation.md` with the edit list as its plan, one commit per family. Make the smallest change that fixes the family: a missing prop on the component, never a new abstraction, dependency or token. A file with 0 importers stays out and goes in the PR body's follow-ups. Done when each family has its commit and every changed surface has before and after captures.
 3. Check. On a clean clone of the run branch, the repo's own lint, typecheck and build, after its typecheck prerequisites, and the repo's formatter in check mode on the changed files. Done when each command's exit code is in the state file.
-4. The minimal footprint close, below.
-
-## Minimal footprint close
-
-Every route with a minimal footprint ends with these steps, after the clean-clone check and before `close.md`.
-
-1. Drop dead hunks. For each changed file, grep for importers of its path and of each changed export's name, with the repo's path aliases. A hunk in a file or export that nothing imports renders nowhere, unless the framework loads the file by name, as file-based routers do with route and layout files. Revert those hunks in one commit and list them as follow-ups. Done when every changed file in `git diff <base>...HEAD` has an importer or a framework name.
-2. Check the base. The upstream tip is `<remote>/<default branch>` when a remote points at the upstream. With no such remote, it is the newest commit on the starting branch whose author is not the local setup, named in a decision row. `git log --oneline <tip>..<base>` must be empty, where `<base>` is the commit the run branch started from. If it lists commits, record them, and Next says to rebase onto the tip first: `git rebase --onto <tip> <base> <run-branch>`.
-3. Write the PR body to `.design-system/pr.md`, untracked under `.git/info/exclude`. It holds a title, then one line per family on what changed and why, with the evidence for each canonical choice. Then the before and after numbers from `close.md`, with units. Then every deliberate visual change with its surface and capture paths, including any a reviewer could argue with, such as a quiet control made heavier. Last come the follow-ups, dead files and what the PR left out on purpose. It never names the skills or the run record.
-4. Next is `Open the PR from <run-branch> with .design-system/pr.md as the body.` When step 2 found commits, it starts with `First rebase onto <tip>, since <base> carries <N> commits upstream doesn't have.`
+4. Close per `build-design-system/references/coordinator-path.md` (Close, Minimal footprint).
 
 ## Values
 
 For a token source the code does not follow.
 
 1. `token-mapping`. Receives the raw value lists from `triage/` and the existing token source. Done when it returns a report with a status line.
-2. Branch on the system first, then the status. A weak system continues with Harden step 1 whatever the status, because a `not actionable (gap threshold)` result there means the roles are missing, not the system. With clearance, such as "make it consistent" in the ask, Harden continues as Full. Otherwise `not actionable` continues with Build step 1, and `complete` with Adopt step 1. Each gets the report passed in.
+2. Branch on the system first, then the status. A weak system continues with Harden step 1 whatever the status, because a `not actionable (gap threshold)` result there means the roles are missing, not the system. With clearance, such as "make it consistent" in the ask, Harden steps 1 to 4 run, then Full from step 5. Otherwise `not actionable` continues with Build step 1, `stopped` with Build step 1 and the report as its groundwork, and `complete` with Adopt step 1. Each gets the report passed in.
 
-A raw color with a nearby role defaults to a new token pair, or to that nearest role, and the gate records it. "Keep raw" is the default only for brand art, such as a wordmark or an illustration (`build-design-system/references/modes.md`, Harden step 2). On the Adopt branch, `migrate-design-system` never adds a token, so the default there is the nearest role, and a color with no role near it stays raw under a gate for the system owner.
+Which values stay raw, `graphic` brand art among them, is in `build-design-system/references/token-architecture.md` (What never becomes a token). A raw color within tolerance of a role maps to the existing token. Beyond tolerance, it becomes a new token pair under a gate. On the Adopt branch, `migrate-design-system` never adds a token, so a color beyond tolerance stays raw under a gate for the system owner, unless an existing token covers its role, in which case the gate's default moves it to that token.
 
 The person named raw values, so the first writing step's GOAL is the report's identical-value swaps, on every route. Name their count in the Frame, and lead the report with how many raw values are left in product code. On the Adopt branch, those swaps run as their own step before the audit, under the swap rule at the top of this file.
 

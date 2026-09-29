@@ -5,8 +5,9 @@
 // Fails a component spec that leaves a question from references/spec-template.md open, and a rule line that breaks
 // the shape in references/rule-method.md. Prints "file:line rule-id message" per failure. Exit 0 clean, 1 on
 // failures or no specs found, 2 on bad input. No dependencies.
-// Folders are searched for *.md files with a "## States" heading outside code fences (component specs) and for
-// foundation pages (basename in FOUNDATIONS, the list gen-docs.mjs uses). Foundation pages get the rule-line rules
+// A file is a component spec only when it holds the spec marker "### State precedence" outside code fences. A plain
+// component-docs entry has none, so it is skipped and counted. Foundation pages (basename in FOUNDATIONS, the list
+// gen-docs.mjs uses) are checked too. Foundation pages get the rule-line rules
 // only: spec/rule-id, spec/rule-shape, spec/vague-word, spec/dont-instead, spec/rule-cite and spec/rule-tests.
 // "-" reads one spec from stdin, for an entry that exists only as text (component-docs under a coordinator).
 // spec/props-drift compares the spec with the component at HEAD, through scripts/props-table.mjs: every Variants
@@ -194,6 +195,7 @@ const vague = (() => {
 
 // ---------- which files ----------
 const files = [];
+const plain = []; // .md files with "## States" and no spec marker: plain entries, skipped
 const kinds = new Map(); // file -> "component" | "foundation"
 const stripFenced = (t) => t.replace(/^(```|~~~)[\s\S]*?^\1/gm, "");
 const walk = (p) => {
@@ -205,9 +207,10 @@ const walk = (p) => {
   }
   if (!p.endsWith(".md")) return;
   const isFoundation = FOUNDATIONS.includes(basename(p, ".md"));
-  if (/^## States\s*$/m.test(stripFenced(readFileSync(p, "utf8")))) { files.push(p); kinds.set(p, "component"); }
+  const text = stripFenced(readFileSync(p, "utf8"));
+  if (/^### State precedence\s*$/m.test(text)) { files.push(p); kinds.set(p, "component"); }
   else if (isFoundation) { files.push(p); kinds.set(p, "foundation"); }
-  else if (targets.includes(p)) { files.push(p); kinds.set(p, "component"); }
+  else if (/^## States\s*$/m.test(text) || targets.includes(p)) plain.push(p);
 };
 // A path resolves against the current folder, and against the root when nothing is there.
 const targets = args.filter((a) => a !== "-").map((a) => (existsSync(resolve(a)) || !existsSync(join(root, a)) ? a : join(root, a)));
@@ -469,7 +472,7 @@ for (const file of files) {
     fail(h2[0]?.line ?? 1, "spec/sections", `H2s must be ${SECTIONS.join(", ")} in order. Found: ${names.join(", ") || "none"}`);
   const usage = h3.filter((s) => s.h2 === "Usage").map((s) => s.name);
   if (usage.join("|") !== USAGE.join("|"))
-    fail(body("Usage")?.start ?? 1, "spec/usage-h3", `Usage H3s must be ${USAGE.join(", ")}. Found: ${usage.join(", ") || "none"}${usage.some((u) => OLD_USAGE.includes(u)) ? ". Older headings: see system-structure.md, Where the older component-docs headings land" : usage.some((u) => PREV_USAGE.includes(u)) ? ". Behavior and Best practices merge into Rules: see spec-template.md, Moving an older spec" : ""}`);
+    fail(body("Usage")?.start ?? 1, "spec/usage-h3", `Usage H3s must be ${USAGE.join(", ")}. Found: ${usage.join(", ") || "none"}${usage.some((u) => OLD_USAGE.includes(u)) ? ". Older headings: see spec-template.md, Moving an older spec" : usage.some((u) => PREV_USAGE.includes(u)) ? ". Behavior and Best practices merge into Rules: see spec-template.md, Moving an older spec" : ""}`);
 
   // spec/usage-empty
   for (const name of USAGE) {
@@ -746,8 +749,9 @@ function gapRow(t) {
   return !!(m && coverageAreas && coverageAreas.has(m[1].trim().toLowerCase()));
 }
 
-if (!files.length) { console.log("no specs found. A spec is a .md file with a '## States' heading"); process.exit(1); }
-console.log(`${files.length} spec(s) checked, ${failures} failure(s)`);
+const skipped = plain.length ? `, ${plain.length} plain entr${plain.length === 1 ? "y" : "ies"} skipped (no '### State precedence')` : "";
+if (!files.length && !plain.length) { console.log("no specs found. A spec is a .md file with a '### State precedence' heading"); process.exit(1); }
+console.log(`${files.length} spec(s) checked${skipped}, ${failures} failure(s)`);
 process.exit(failures ? 1 : 0);
 
 // ---------- self-test ----------
