@@ -482,7 +482,7 @@ if (process.argv[1] && (await import("node:path")).resolve(process.argv[1]) === 
     const { join, dirname } = await import("node:path");
     const { fileURLToPath, pathToFileURL } = await import("node:url");
     const i = argv.indexOf("--fixtures");
-    const dir = i >= 0 && argv[i + 1] ? resolve(argv[i + 1]) : join(dirname(fileURLToPath(import.meta.url)), "fixtures", "probe");
+    const dir = i >= 0 && argv[i + 1] ? resolve(argv[i + 1]) : ((p) => existsSync(p) ? p : join(dirname(fileURLToPath(import.meta.url)), "..", "fixtures", "probe"))(join(dirname(fileURLToPath(import.meta.url)), "fixtures", "probe"));
     if (!existsSync(dir)) { console.error(`probe: no fixtures at ${dir}`); process.exit(2); }
     const ri = argv.indexOf("--root");
     const launched = await launchChromium({}, { root: repoRoot(ri >= 0 ? argv[ri + 1] : undefined) });

@@ -84,7 +84,7 @@ Before phase 1, create the run branch and `.design-system/run.md` (`references/c
 
 ### 5. Checks
 
-Follow `references/checks.md`. The check exits 0 before phase 6. Prove the shipped rules with `node scripts/check-system.mjs --self-test --fixtures <skills>/build-design-system/scripts/fixtures/check-system`.
+Follow `references/checks.md`. The check exits 0 before phase 6. Prove the shipped rules with `node scripts/check-system.mjs --self-test --fixtures <skills>/build-design-system/fixtures/check-system`.
 
 ### 6. Pilot, then surfaces
 

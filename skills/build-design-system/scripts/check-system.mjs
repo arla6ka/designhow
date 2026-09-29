@@ -24,7 +24,7 @@ Options
   --self-test          run only the fixtures, from --fixtures <dir> or from
                        fixtures/check-system/ beside this script. The standard
                        fixtures stay in the skill folder: --self-test --fixtures
-                       <skill>/scripts/fixtures/check-system proves this copy
+                       <skill>/fixtures/check-system proves this copy
   --fixtures <dir>     the fixture folder for the self-test
   --no-self-test       skip the fixtures. With no fixture folder beside the script,
                        the default run skips them anyway
@@ -885,7 +885,7 @@ function checkBans(cfg, files, report, onlyGiven) {
 }
 
 // ---------- self-test ----------
-const defaultFixtures = () => join(dirname(fileURLToPath(import.meta.url)), "fixtures", "check-system");
+const defaultFixtures = () => ((p) => existsSync(p) ? p : join(dirname(fileURLToPath(import.meta.url)), "..", "fixtures", "check-system"))(join(dirname(fileURLToPath(import.meta.url)), "fixtures", "check-system"));
 function selfTest(dirArg) {
   const dir = dirArg ? resolve(dirArg) : defaultFixtures();
   if (!existsSync(dir)) { console.log(`self-test: FAIL, no fixtures at ${dir}`); return false; }

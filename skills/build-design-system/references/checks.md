@@ -25,7 +25,7 @@ node scripts/check-system.mjs --init              # writes scripts/check-system.
 node scripts/check-system.mjs --hash-stock        # copy-in or library ui files: hash every row of scripts/ui-drift.tsv
 node scripts/check-system.mjs --save-stock components/ui/button.tsx .design-system/tmp/button.json   # upstream's copy of a customized file
 node scripts/check-system.mjs --rehash components/ui/dialog.tsx --note "G-04: close button kept, reviewed"   # after a reviewed edit
-node scripts/check-system.mjs --self-test --fixtures <skills>/build-design-system/scripts/fixtures/check-system   # every rule fails its bad fixture, passes its good one
+node scripts/check-system.mjs --self-test --fixtures <skills>/build-design-system/fixtures/check-system   # every rule fails its bad fixture, passes its good one
 node scripts/check-system.mjs --init-allowlist    # once, to record today's violations
 node scripts/check-system.mjs                     # the repo against the allowlist
 node scripts/check-system.mjs --files app/team/invite/page.tsx   # the pilot, no allowlist
@@ -126,7 +126,7 @@ Every report ends with "The check cannot see", from `--list-blind-spots` (`blind
 
 ## Proving each rule
 
-Every rule gets a failing and a passing fixture under `fixtures/check-system/<rule>/`, in `fail/` and `pass/` folders with a `case.json` naming the rule and the exact count the failing folder must produce. Fixture sources end in `.fixture` (`list.tsx.fixture`), so the typecheck, lint and framework never compile them, and the self-test reads each under its inner name. The standard fixtures stay in the skill folder, and `node scripts/check-system.mjs --self-test --fixtures <skills>/build-design-system/scripts/fixtures/check-system` proves the repo's copy against them. A rule the run adds keeps its pair in the repo's `scripts/fixtures/check-system/`, and the default run self-tests whatever sits there.
+Every rule gets a failing and a passing fixture under `fixtures/check-system/<rule>/`, in `fail/` and `pass/` folders with a `case.json` naming the rule and the exact count the failing folder must produce. Fixture sources end in `.fixture` (`list.tsx.fixture`), so the typecheck, lint and framework never compile them, and the self-test reads each under its inner name. The standard fixtures stay in the skill folder, and `node scripts/check-system.mjs --self-test --fixtures <skills>/build-design-system/fixtures/check-system` proves the repo's copy against them. A rule the run adds keeps its pair in the repo's `scripts/fixtures/check-system/`, and the default run self-tests whatever sits there.
 
 - The failing fixture holds exactly the patterns the rule catches, such as a three-line `<div onClick>` or `p-[13px]`.
 - The passing fixture holds the nearest correct form, such as `<Button>` or `p-3`, and must produce no finding at all.

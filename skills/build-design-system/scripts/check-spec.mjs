@@ -761,7 +761,7 @@ process.exit(failures ? 1 : 0);
 // and pass/ none at all.
 function selfTest(dirArg) {
   const here = dirname(fileURLToPath(import.meta.url));
-  const dir = dirArg ? resolve(dirArg) : join(here, "fixtures", "check-spec");
+  const dir = dirArg ? resolve(dirArg) : ((p) => existsSync(p) ? p : join(here, "..", "fixtures", "check-spec"))(join(here, "fixtures", "check-spec"));
   if (!existsSync(dir)) { console.log(`self-test: FAIL, no fixtures at ${dir}`); return false; }
   let ok = true, n = 0;
   for (const c of readdirSync(dir).sort()) {

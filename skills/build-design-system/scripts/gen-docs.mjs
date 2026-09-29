@@ -491,7 +491,7 @@ process.exit(drift ? 1 : 0);
 // (default 1). pass/ must print none and exit 0. contains maps an output path to strings it must hold, in pass/.
 function selfTest(dirArg) {
   const here = dirname(fileURLToPath(import.meta.url));
-  const dir = dirArg ? resolve(dirArg) : join(here, "fixtures", "gen-docs");
+  const dir = dirArg ? resolve(dirArg) : ((p) => existsSync(p) ? p : join(here, "..", "fixtures", "gen-docs"))(join(here, "fixtures", "gen-docs"));
   if (!existsSync(dir)) { console.log(`self-test: FAIL, no fixtures at ${dir}`); return false; }
   const me = fileURLToPath(import.meta.url);
   let ok = true, n = 0;

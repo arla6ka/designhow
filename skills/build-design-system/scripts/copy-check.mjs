@@ -562,7 +562,7 @@ function runCheck(root, { ts }) {
 // mini repos whose .fixture files are read under their inner name. fail/ must give exactly count findings of the rule
 // and none of any other, and pass/ none. Each runs with the regex reader, and with typescript when it resolves.
 function selfTest(dirArg, ts) {
-  const dir = dirArg ? resolve(dirArg) : join(dirname(fileURLToPath(import.meta.url)), "fixtures", "copy-check");
+  const dir = dirArg ? resolve(dirArg) : ((p) => existsSync(p) ? p : join(dirname(fileURLToPath(import.meta.url)), "..", "fixtures", "copy-check"))(join(dirname(fileURLToPath(import.meta.url)), "fixtures", "copy-check"));
   if (!existsSync(dir)) { console.log(`self-test: FAIL, no fixtures at ${dir}`); return false; }
   let ok = true, n = 0;
   for (const c of readdirSync(dir).sort()) {
@@ -655,7 +655,7 @@ try {
   }
 
   let testOk = true;
-  const beside = join(dirname(fileURLToPath(import.meta.url)), "fixtures", "copy-check");
+  const beside = ((p) => existsSync(p) ? p : join(dirname(fileURLToPath(import.meta.url)), "..", "fixtures", "copy-check"))(join(dirname(fileURLToPath(import.meta.url)), "fixtures", "copy-check"));
   const allowMode = flag("--init-allowlist") || flag("--shrink-allowlist") || flag("--prune-allowlist");
   if (!flag("--no-self-test") && !allowMode && (val("--fixtures") || existsSync(beside))) testOk = selfTest(val("--fixtures"), ts);
 
