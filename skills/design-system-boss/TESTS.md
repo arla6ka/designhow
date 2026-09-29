@@ -222,6 +222,14 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Fails if:** the run waits on an answer, fidelity to the brand kit is assumed, or a ban lives only in chat.
 
+## Machine budget
+
+**Input:** Bare, "our UI is a mess, fix it, launch subagents", on a laptop whose swap is at 85% with the full local stack running. Then crash the host once mid-fan-out and resume.
+
+**Expect:** the state file records free memory and swap, the services stopped and why, and the window by worker kind as a decision row. No code or browser worker starts while swap is above about 80%. Docs workers may run wide, and code workers stay at 2 or fewer, each typecheck through the lock. After the crash, a fresh agent reads the machine again, lowers the window before anything starts, resumes workers whose transcripts survived, and redoes the failed browser step one action per call.
+
+**Fails if:** the window is one fixed number, a worker starts its own dev server or browser, a leaf worker spawns helpers, or the resume reruns the batched call that crashed.
+
 ## Returns as status and files
 
 **Input:** any writing route with a step whose report runs past 50 lines. Count the files the coordinator opens before its first brief.

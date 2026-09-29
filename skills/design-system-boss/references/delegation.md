@@ -6,6 +6,7 @@ The boss runs the route, never the work. It writes briefs, checks what comes bac
 
 - Who writes product code
 - What the host can do
+- Machine budget
 - Three ways to run a step
 - A coordinator with no shell
 - The dev server and live workers
@@ -28,6 +29,27 @@ Find out before the first brief, and write the answers in the state file.
 - **Nesting.** Can that agent start agents of its own? Some hosts allow it and some do not. When unsure, assume not.
 - **Isolation.** Can each agent get its own branch or worktree? Writing workers need it.
 - **Browser.** Can an agent open the running app and take screenshots? The build pilot, baselines and every design review depend on it. Probe with one open and one screenshot of the dev server through a browser tool, per `build-design-system/references/browser.md`, and record which tool answered.
+- **Headroom.** Free memory and swap, from the OS's own tool (`vm_stat` and `sysctl vm.swapusage` on macOS, `free -m` on Linux). It sizes the window (Machine budget, below).
+
+## Machine budget
+
+The window is sized by what workers run, not by one fixed number. A run on one machine that holds the dev stack, a browser, a design tool and four compiling workers at once can run out of memory and crash the host.
+
+| Worker kind | What it runs | Default in flight |
+|---|---|---|
+| Read-only | reads files, returns a report | 6 |
+| Docs writer | edits Markdown, runs the formatter and scans | 5 |
+| Code worker | edits code, runs typecheck and tests | 2 |
+| Browser worker | code plus a browser tab and measurements | 2, sharing one browser |
+
+Before the first fan-out, and after any crash:
+
+1. Read free memory and swap. Near the swap limit, halve the code and browser rows. Above about 80% swap, finish the running workers and start no new ones until it drops.
+2. Stop every service the work does not need, such as a backend when only the showcase is reviewed, and say which ones in the state file.
+3. Give each expensive command one lock, and put the locked form in every brief, such as `flock <lock file> <typecheck command>`. Workers typecheck once near the end and run tests only for their files.
+4. Only the coordinator starts the dev server and the browser.
+
+Record the reading and the window as a decision row, and recheck before each new wave. After a crash, cut the expensive rows first, never the cheap ones. When the person asks for more parallel work, widen the docs lane first. When the person names a model for workers, such as a smaller one for research, use it and record it.
 
 ## Three ways to run a step
 
@@ -96,6 +118,10 @@ Numbered, one rule each, written into the state file before the first brief and 
 13. Scratch files (probe scripts, one-off captures, logs) go in .design-system/tmp/, which is ignored and deleted at close. Never in the repo root, scripts/ or a record folder.
 14. The allowlists (scripts/check-allowlist.json, a migration's allowlist.tsv) belong to the coordinator. Never edit them. Report shrink candidates in your final message.
 15. The person's bans, listed under these orders, hold in every file you write: code, copy, docs, examples and the showcase. The only exception is a Don't: line that shows the ban.
+16. Your scratch lives in .design-system/tmp/<your worker id>/ and nowhere else. Never read, apply or delete another worker's scratch. A script that applies drafts takes an explicit list of your own files, never a folder glob.
+17. In a checkout other workers share, change files with small exact edits that fail when the file changed since you read it. Never rewrite an existing file whole with a write tool or a script. If an edit fails, re-read and redo only your change, and never revert or tidy a change you did not make.
+18. Registries, barrels and indexes that list every component belong to the coordinator or are generated. If your page, export or doc is not picked up, say so in your report.
+19. Start no agents of your own unless your brief names you a coordinator. Start no dev server, browser or container unless your brief names one.
 ```
 
 Project rules from AGENTS.md or CLAUDE.md go under these as their own lines, quoted with their file. The person's bans follow, quoted word for word with the time they were stated.
@@ -123,7 +149,7 @@ For `migrate-design-system` in edit mode, BUDGET is the figure from the clearanc
 
 ## Checking a return
 
-Open a step's files only after its final message returns, since a live worker may still be rewriting them. Then check the claim on the files. A summary is a claim.
+Open a step's files only after its final message returns, since a live worker may still be rewriting them. Then check the claim on the files. A summary is a claim. A review names the commit it read in its first line, and before acting on it, mark the findings that later commits touched as stale.
 
 | Sibling | Check |
 |---|---|

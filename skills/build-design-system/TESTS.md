@@ -109,6 +109,8 @@ Watch for a token file written before any inventory, a palette borrowed from a p
 
 **Fails if:** a worker's change to the token source, barrel, registry or allowlist merges, a report is accepted without rerunning its verify commands, or a spec worker edits a component.
 
+**One-checkout version:** no worktrees, three workers on the same component files, one each for behavior, visual chrome and motion, plus two spec writers with draft scripts. Every task brief starts from the shared brief in `references/worker-brief.md`. Each writer's drafts sit in its own `.design-system/tmp/<id>/`, and its apply script names its files. Every edit is small and exact, no worker rewrites a file whole, and the coordinator runs every touched file's tests once all three return. Each report is under 300 words and leads with what the coordinator must act on.
+
 ## Enforcement proves itself
 
 **Input:** after phase 5, add a file outside the pilot with `color: #ff0000` and a deprecated button import, and remove one allowlist entry. Then add a new file in the ui folder with a raw hex, an arbitrary spacing value, an inline style color and a clickable `div`, a raw `<button>` in a route where the registry has Button, and break the linter config so it throws on load.

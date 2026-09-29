@@ -11,7 +11,7 @@
 
 ## Phase caps
 
-The budget is what the person named, else the session the host gives, else 2 hours, which fits one pilot and a first pass of surfaces. At a cap, record what is left as follow-up and move on. Keep up to 4 workers in flight by default, since the coordinator's review limits a fan-out. Stop spawning at 70% of the session by default, so the rest covers review, the check and the close. Under design-system-boss the build is a nested coordinator. It runs every worker in the foreground or blocks on it, and never returns while one of its workers is still running.
+The budget is what the person named, else the session the host gives, else 2 hours, which fits one pilot and a first pass of surfaces. At a cap, record what is left as follow-up and move on. Size the window by the machine budget in `design-system-boss/references/delegation.md`: docs workers wide, workers that compile or drive a browser narrow, and never more than the coordinator's reviews keep up with. Stop spawning at 70% of the session by default, so the rest covers review, the check and the close. Under design-system-boss the build is a nested coordinator. It runs every worker in the foreground or blocks on it, and never returns while one of its workers is still running.
 
 The shares are defaults. Move time between phases when the app calls for it, and record why in the Frame.
 

@@ -33,7 +33,7 @@ Keep two levels, the coordinator and the agents it spawns. Add track leads only 
 
 ## The rolling window
 
-After the pilot, start a small window and grow it while drains keep up and the verified rate holds, never above the cap in `frame.md`. The default is 3 to 5 at first, growing toward 10. Small at first because the brief has only survived one surface. Around ten because past that one coordinator stops draining in time. Go lower on a host with tight rate limits, or when few surfaces have disjoint paths.
+After the pilot, start a small window and grow it while drains keep up and the verified rate holds, never above the cap in `frame.md`. The default is 3 to 5 at first, growing toward 10. Small at first because the brief has only survived one surface. Around ten because past that one coordinator stops draining in time. Go lower on a host with tight rate limits, when few surfaces have disjoint paths, or when the machine is short of memory, since each worker compiles and captures (`design-system-boss/references/delegation.md`, Machine budget).
 
 When a worker finishes, start the next ready surface at the next drain. Do not run fixed batches. A batch waits for its slowest member, while a window refills as soon as a slot opens.
 

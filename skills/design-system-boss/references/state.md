@@ -66,7 +66,7 @@ Branch: ds/2026-03-12-full, from main at 7dc8f3d. main gets no commits. Merging 
 Clearance: the ask ("make it look like one thing"), within the session budget.
 
 ## Budget
-Session 2h (host), 4 workers in flight. Phase caps from routes.md:
+Session 2h (host). Workers: 5 docs, 2 code (9 GB free, swap 20%, backend stopped). Phase caps from routes.md:
 - triage and Frame 6m (10:08)
 - build 48m (10:56), audit beside it
 - migration 36m (11:32), review 12m beside it
@@ -135,7 +135,8 @@ A fresh agent with this skill and the repo does this, in order:
 2. Take the first step not marked done, skipped or stopped, and open its record path.
 3. If that sibling record exists, the sibling resumes from it by its own rules. Brief a new step agent with the same brief file and a note that a record exists, or hold the seat again per `delegation.md`, "Who writes product code".
 4. Check the facts that drift: the run branch exists and is checked out, its head matches what the last step reported, and `git status` outside the run's scopes matches the last save. Record any difference as a decision first.
-5. Leave finished steps alone. Recheck only the one claim the next step builds on.
+5. After a crash, read the machine again (`delegation.md`, Machine budget) and lower the window before anything starts. Resume a worker whose transcript survived instead of briefing a new one, unless its files are gone, and redo the step that was running in smaller calls.
+6. Leave finished steps alone. Recheck only the one claim the next step builds on.
 
 ## The close file
 

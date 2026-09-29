@@ -64,7 +64,7 @@ Target: apps/web (CSS variables in styles/globals.css)
 Themes: light, dark (data-theme attribute)
 Viewports: 390, 1280 (the app's narrowest and widest supported widths)
 Pilot: Invite teammate (Settings > Members > Invite). Uses Button, Input, Select, Dialog, Toast. Has an invalid-email error state.
-Workers: yes, up to 4 in flight. 31 component files, 2 themes.
+Workers: 5 docs, 2 code (machine budget: 9 GB free, swap 20%, backend stopped). 31 component files, 2 themes.
 Budget: 2 hours (the default: nobody named one and the host set no session length), split by the phase caps in coordinator-path.md.
 Clearance: yes, the ask "make every page look like one product" counts (coordinator-path.md).
 Check command in CI: npm run check (read from .github/workflows/ci.yml)
@@ -224,5 +224,6 @@ A new session or restarted agent reads this file first.
 
 1. Read Frame and Standing orders.
 2. Find the last phase marked `done`. Start the next one.
-3. For units in the Ledger that are not verified, check the branch. If the commit moved, rerun its verify commands before trusting the row.
-4. Do not redo finished work to feel sure. Recheck, on the real files, the one claim you are about to build on.
+3. After a crash, read the machine again and lower the window first (`design-system-boss/references/delegation.md`, Machine budget), and redo the step that was running in smaller calls.
+4. For units in the Ledger that are not verified, check the branch. If the commit moved, rerun its verify commands before trusting the row.
+5. Do not redo finished work to feel sure. Recheck, on the real files, the one claim you are about to build on.

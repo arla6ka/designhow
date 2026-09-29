@@ -9,6 +9,7 @@ Contents
 - The template
 - The spec-worker variant
 - Filling it in
+- Parallel workers in one checkout
 - Reviewing a report
 - Retries and dropouts
 - Running without subagents
@@ -23,7 +24,9 @@ Delegate a family when its files do not overlap with any other open family, and 
 
 Keep as many workers in flight as your reviews keep up with, never above the Frame's cap (`coordinator-path.md`, Phase caps). Refill a slot when a worker finishes instead of waiting for a batch. A report waiting for review holds up the run as much as a slow worker.
 
-Give each worker its own branch or worktree, cut from the run branch, and merge verified work back into the run branch. Two agents in one checkout overwrite each other, and no instruction in a brief prevents that. When the host cannot give a worktree, fall back to disjoint file scopes on one branch: split any shared file first (one stylesheet per component, for example), forbid git commands in workers, and have the coordinator commit each family after review. Record the fallback in the run record.
+Give each worker its own branch or worktree, cut from the run branch, and merge verified work back into the run branch. Two agents in one checkout overwrite each other, and no instruction in a brief prevents that. When the host cannot give a worktree, fall back to disjoint file scopes on one branch: split any shared file first (one stylesheet per component, for example), forbid git commands in workers, and have the coordinator commit each family after review. Record the fallback in the run record, and use the shared brief below.
+
+Before fan-out, remove the reasons a worker would need a shared file. Make the showcase registry, the docs page list and the rules index find files by glob or generation, and add each family's barrel line and registry entry as a stub first. Then a worker's page renders the moment its file exists, and its imports use the public path from the first line. A worker that cannot see its own page ships unmeasured contrast and unchecked states.
 
 Read-only workers, such as phase 2's screen notes, get the same brief with an empty write scope. They return notes as text, and the coordinator saves each, such as `.design-system/inventory/screens/<route>.md`.
 
@@ -55,6 +58,7 @@ SCOPE
 You may write: <component folder>, <examples folder for this family>,
 <tests for this family>, <docs entry path for this family>,
 .design-system/evidence/<family>/ for measurements and captures.
+Scratch drafts go in .design-system/tmp/<worker id>/ only.
 You may read anything in the repo.
 Your branch: <branch or worktree, or "shared branch, no git commands">.
 Dev server: http://localhost:<base port>. If it is down for a minute, start
@@ -113,6 +117,8 @@ FORBIDDEN
 - New colors, fonts, shadows or motion
 - Editing a test, fixture or check so it passes
 - Writing a report file anywhere. The report is your final message
+- Starting a dev server, browser or container the brief does not name
+- Starting agents of your own. Do the reading and the work yourself
 
 REPORT
 Return this block as your final message, as text. Write it to no file.
@@ -207,6 +213,9 @@ FORBIDDEN
 - Git commands, and starting or stopping the dev server
 - Copying an answer from the example
 - Writing a report file anywhere. The report is your final message
+- Starting a browser or container the brief does not name
+- Starting agents of your own. Run the two-agent test only through the
+  subagents the brief allows
 
 REPORT
 Return this block as your final message, as text. Write it to no file.
@@ -232,6 +241,58 @@ Review a spec report like a family report, minus the code steps: rerun `check-sp
 - Paste inventory rows and token lists in full. A worker told "see the inventory" builds its own, differently.
 - One family per brief. Two families mean two sets of files and a report nobody can grade in one pass.
 - The standing orders go in every brief, including retries, because instructions only in the first message get lost when a worker restarts.
+- Ask for a report under 300 words that leads with what the coordinator must act on: a shared-file change, a conflict with a decision, a failing command. The report is the final message itself, never a pointer to one.
+
+## Parallel workers in one checkout
+
+When several workers edit neighboring files in one checkout, sometimes the same component file for different concerns (behavior, visual chrome, motion), save this shared brief as a file in `.design-system/briefs/` and start every task brief with "Read <path> fully and follow it".
+
+```markdown
+# Shared brief for every worker in this run
+
+Repo: <path>. The system lives in <component folder> (import <public path>), specs in
+<docs folder>, the showcase at <dev url>/<showcase root>/<slug>. Before touching
+anything, read the agent instructions, the writing page, the decisions log and the spec
+of every component you work on.
+
+## Other workers edit at the same time
+- Re-read a file right before each edit, make small exact edits, and never rewrite an
+  existing file whole. If an edit fails because the file changed, re-read and redo only
+  your edit. Never revert or tidy a change you did not make.
+- Stay inside the files your task names. Shared files (<token source>, <barrel>,
+  <registry>, <showcase shell>, <fixtures file>) change only if your task says you own
+  that part. Otherwise describe the change in your report.
+- No git commands. The coordinator commits.
+- Do not run the index generators or edit generated files.
+- Scratch goes in .design-system/tmp/<your id>/ only.
+- Browser: open your own tab and pass its id to every call. Never click the theme
+  toggle, since it flips the theme for every worker. Set the theme on your tab's root.
+- The machine is short of memory. Typecheck once near the end through the lock:
+  <locked typecheck>. Tests only for your files, through their lock. Formatter from the
+  repo root on your files only.
+
+## House rules
+<tokens only, the person's bans, the icon rule, prop naming, the spec format>
+
+## Final report, under 300 words
+What you changed by file, what you found and did not fix and why, any shared-file change
+you need, and the results of typecheck, tests, lint and formatter.
+```
+
+The task brief on top of it:
+
+```
+First read <shared brief path> fully and follow it.
+Your job: <one sentence>.
+You own: <exact file list or globs>. Others own <the neighboring concerns> in the same
+files at the same time, so you change <your concern> only, such as only animation and
+transition classes.
+Also fix: <each known issue, with its file and the decision it must match>.
+Leave: <the specimen, spec section or test the job must add>.
+Run your tests, lint, formatter and the locked typecheck at the end, then report.
+```
+
+When several concerns share a file, the coordinator runs the tests of every touched file once all their workers return, since a failure mid-run may belong to another worker.
 
 ## Reviewing a report
 
