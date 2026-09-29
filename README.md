@@ -1,7 +1,3 @@
-<a href="https://design.how">
-<img width="360" alt="design.how" src="https://design.how/opengraph-image" />
-</a>
-
 # Skills for Design Systems
 
 Skills that turn the UI your app already ships into a design system your coding agent can use, then move every screen onto it.
