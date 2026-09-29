@@ -214,8 +214,8 @@ FORBIDDEN
 - Copying an answer from the example
 - Writing a report file anywhere. The report is your final message
 - Starting a browser or container the brief does not name
-- Starting agents of your own. Run the two-agent test only through the
-  subagents the brief allows
+- Starting agents of your own, apart from the two fresh agents each
+  two-agent test needs
 
 REPORT
 Return this block as your final message, as text. Write it to no file.

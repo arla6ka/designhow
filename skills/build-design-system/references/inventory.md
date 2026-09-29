@@ -6,6 +6,7 @@ Contents
 
 - Why scripts, not reading
 - Where the output goes
+- Surface map and research
 - Routes
 - Component definitions and call sites
 - Families and duplicates
@@ -33,6 +34,26 @@ Save every script under `.design-system/scripts/`. Each writes a TSV or JSON fil
 ```
 
 Commit `run.md`, `scripts/` and `inventory/`. Captures live in `.design-system/review/` (`coordinator-path.md`, Start).
+
+## Surface map and research
+
+On a whole-app run, the screen notes fan out as read-only workers, one per product area, each with this brief:
+
+```
+READ-ONLY. Do not edit files, run servers, change git state or start agents.
+AREA: <routes and folders for one product area>
+KNOWN SET: <the existing component list, pasted>
+For each screen: its route and how a user reaches it, its purpose in one line, every
+action and state (loading, empty, error, no permission, saving), and which parts use
+the known set, custom components or raw markup. Then every component or pattern beyond
+the known set: path, what it does, where it is reused, and whether it should become a
+system component. Flag duplicates, raw colors and theme gaps with file:line.
+Return the report as your final message, with a 15-line summary first.
+```
+
+The coordinator saves each report under `.design-system/inventory/screens/`. The notes feed judgment. The counts still come from the scripts below.
+
+For each design file, brand kit, reference system or product the person names, one more read-only worker writes `.design-system/research/<source>.md`: what it offers in the run's own words, which parts are marketing art, and what it decides per `modes.md` (Following a design source). Later briefs cite these files by path.
 
 ## Routes
 

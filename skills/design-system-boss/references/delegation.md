@@ -121,7 +121,7 @@ Numbered, one rule each, written into the state file before the first brief and 
 16. Your scratch lives in .design-system/tmp/<your worker id>/ and nowhere else. Never read, apply or delete another worker's scratch. A script that applies drafts takes an explicit list of your own files, never a folder glob.
 17. In a checkout other workers share, change files with small exact edits that fail when the file changed since you read it. Never rewrite an existing file whole with a write tool or a script. If an edit fails, re-read and redo only your change, and never revert or tidy a change you did not make.
 18. Registries, barrels and indexes that list every component belong to the coordinator or are generated. If your page, export or doc is not picked up, say so in your report.
-19. Start no agents of your own unless your brief names you a coordinator. Start no dev server, browser or container unless your brief names one.
+19. Start no agents of your own unless your brief names you a coordinator, apart from the two fresh agents a rule's two-agent test needs. Start no dev server, browser or container unless your brief names one.
 ```
 
 Project rules from AGENTS.md or CLAUDE.md go under these as their own lines, quoted with their file. The person's bans follow, quoted word for word with the time they were stated.

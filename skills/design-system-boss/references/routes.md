@@ -40,7 +40,7 @@ Phase caps set the budget, not a formula. Take the session from the person, else
 | `design-review`, `token-mapping`, `component-docs` | 10%, side by side with other work |
 | Close: after-triage, clean-clone check, captures, montage, report | 15%, never cut |
 
-A phase that finishes early passes its time on. A phase at its cap starts nothing new and closes what is running. Past about 70% of the session no new writing step starts, which leaves close its time. The decided-defaults step is the exception. It has its own reserved share, it is cheap, and it is what makes screens change, so it starts at its turn. When the session is short, cut the build's scope, never close. Brief the build or harden in this order, and write the planned cut into the Frame:
+A phase that finishes early passes its time on. A phase at its cap starts nothing new and closes what is running. Past about 70% of the session no new writing step starts, which leaves close its time. The decided-defaults step is the exception. It has its own reserved share, it is cheap, and it is what makes screens change, so it starts at its turn. When the session is short, cut the build's scope, never close. The build settles its formats before any fan-out and runs its phases in the order `build-design-system/references/coordinator-path.md` (Lock before fan-out) gives. Brief the build or harden in this order, and write the planned cut into the Frame:
 
 1. The change that answers the named complaint, including the value-identical swaps on every route.
 2. The token source, then the AGENTS.md block right after it. The block is never cut.

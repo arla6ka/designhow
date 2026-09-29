@@ -331,6 +331,14 @@ Watch for a token file written before any inventory, a palette borrowed from a p
 
 **Fails if:** the check needs a file only the run folder or a skill folder had, fixtures or capture scripts land in the repo, a PNG is committed, a linked record is missing from the clone, or the minimal run copies scripts or edits `.gitignore`.
 
+## Lock before fan-out
+
+**Input:** a whole-system run with 8 families on a host with subagents. Midway, after four families land, the person changes the rule format.
+
+**Expect:** before the first family worker starts, the run record shows each row of `references/coordinator-path.md` (Lock before fan-out) settled with its path: the branch, the bans in the check config, the design-source answer, the spec format with the first family's spec as exemplar, the icon sizes, the motion presets and the showcase shell. The person has seen the first family's page. The format change runs as its own migration of every spec already written, one commit per family, with `check-spec.mjs` exiting 0 after each.
+
+**Fails if:** a family worker starts before those rows are settled, or the change reaches only the next briefs and leaves four families in the old format.
+
 ## Phase caps
 
 **Input:** a run with a two-hour budget, then the same run with none named.

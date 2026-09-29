@@ -29,6 +29,32 @@ The shares are defaults. Move time between phases when the app calls for it, and
 
 With no clearance, the surfaces share goes to components and docs, except the time decided gate defaults need. Landing them is exempt from the spawn stop, because it is cheap and it is what makes screens change.
 
+## Lock before fan-out
+
+A worker writes against the brief it gets today. Each item below changes every file a family touches, so it is settled, written into the repo and shown to the person before the first family worker starts. Changing one after fan-out is a migration of every file already written, with its own check, never a note in the next brief.
+
+| Settle | Where it lives | Shown to the person as |
+|---|---|---|
+| The run branch and what stays local | the Frame | one line in the plan |
+| The person's bans | the standing orders, the writing page and `bans` in the check config | the plan's bans line |
+| How closely to follow a design source | the Frame, then the sample (`modes.md`) | the sample beside the source |
+| The spec format and the rule shape | `docs/system/spec-template.md` and the first family's spec | that family's page |
+| The icon set, its sizes and its alignment rule | the brand page and the icon component | the icon row on the first family's page |
+| Motion presets | the token source and the motion page | a replayable demo per preset |
+| The showcase shape, when the person reviews in a browser | the showcase shell and its registry | the first family's page |
+| How a new page, export or doc is picked up | a registry that finds files, or a generated index | nothing. Workers never edit it |
+
+In phase order, a whole-system run goes:
+
+1. Frame: the branch, the standing questions and the plan.
+2. Inventory: one read-only worker per product area for the surface map, and one per source the person named (`inventory.md`, Surface map and research).
+3. Foundations: tokens with measured contrast, type, icons, motion presets, the bans in the check, and the showcase shell.
+4. Components: the first family end to end in the final format and shown to the person, the design-source sample when there is one, then fan-out by file ownership with the foundation rule pages beside it, then the optical pass and the stress test.
+5. Checks. The workers' output already passes the spec check and the ban scan, which run from phase 1.
+6. Pilot, then surfaces.
+7. Docs, then Review, decide, fix.
+8. Project skills, then the handoff.
+
 ## Clearance
 
 The person gives clearance by naming surfaces or a budget. Adoption asks, listed in `design-system-boss/references/triage.md` (The ask's intent), count as clearance within the session budget. So does an ask about how screens look, such as "every page looks like a different product".
