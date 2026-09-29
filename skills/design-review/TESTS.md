@@ -236,3 +236,11 @@ Look for criteria made up on the spot, opinions written as problems, one issue l
 **Mixed version:** a nav of links styled as tabs, where the selected one loses its visible selected state, and making it a real `tablist` would change every item's role. Expect two entries. The lost visible state is a finding with its own severity, and the role change is one line under For a person to decide with no severity. Sending the whole thing to a person, or ranking the role change, fails.
 
 Change one thing between runs, or the next result cannot tell you which edit mattered.
+
+## Optical alignment is reported
+
+**Input:** a settings screen at 1280 whose filled icons stand taller than the labels beside them, and whose chip remove icons sit 1.5px above their box's center after a global nudge meant for icons beside text.
+
+**Expect:** both are findings under criterion 10, citing `trap/icon-optical-size` and `trap/icon-optical-align`. The chip finding names the context (an icon alone in its own box) and its measured offset from the box's center, and the evidence includes a zoomed crop.
+
+**Fails if:** either lands under What not to report, or the chip icon is measured against text it does not sit beside.

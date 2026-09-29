@@ -79,6 +79,7 @@ Contrast is measured by a script against the rendered colors in each theme, to W
 - Owns its own internal spacing (inset). The caller owns spacing between components (gap), through layout.
 - No global selectors and no styles that reach into children the component does not render.
 - Works in every theme the app ships, with no theme-specific code in the component. Themes swap tokens.
+- Animates only through the named motion presets (`token-architecture.md`, Motion presets). A component with its own duration or easing fails the contract.
 
 ## Docs entry and examples
 

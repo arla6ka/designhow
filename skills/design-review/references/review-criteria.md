@@ -42,7 +42,7 @@ For a product with few neighboring screens, compare against a well-structured pu
 
 **11. Content holds up at the extremes.** The layout survives the longest realistic names, large numbers, translated text, and missing values, as well as very short content.
 
-**12. It works at every reviewed width.** Nothing essential is cut off, hidden without a way to reach it, or reordered so the meaning changes. Controls stay reachable at the narrow width.
+**12. It works at every reviewed width.** Nothing essential is cut off, hidden without a way to reach it, or reordered so the meaning changes. Controls stay reachable at the narrow width, and at the widths in between where the layout switches, such as a sidebar opening.
 
 ## Edge cases
 
@@ -53,7 +53,7 @@ Mark each shown or not shown. A case not shown is a question for the designer, n
 - Error, including a failed save
 - Partial data or some items failing
 - Long content and very short content
-- Narrowest and widest supported viewport
+- Narrowest and widest supported viewport, and a width where the layout switches
 - First use and a returning user with lots of data
 - No permission, or a read-only role
 - Offline or a lost connection
@@ -63,7 +63,7 @@ Mark each shown or not shown. A case not shown is a question for the designer, n
 
 - Preferences no criterion above supports.
 - Design-system compliance, such as token use, component choice or documented states. `token-mapping` and `check-system.mjs` cover those.
-- Pixel alignment and spacing that follow the design system. That belongs in visual QA.
+- Spacing that follows the design system. Optical misalignment and oversized icons are findings under criterion 10, citing `trap/icon-optical-align` or `trap/icon-optical-size`, since a person sees them first.
 - Rewritten copy. Flag the unclear text and say what is unclear.
 - The product decision behind a fix. Keep the finding and hand the decision to a person. Keeping the user's input is not a product decision (criterion 8).
 - Code defects in a running build, such as console errors. Mention them once under For a person to decide so they reach QA.

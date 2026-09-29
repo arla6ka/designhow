@@ -60,7 +60,7 @@ Before phase 1, create the run branch and `.design-system/run.md` per `reference
 
 After any shared UI or token edit, load every route with `capture.mjs --status` and require success. Type checks miss runtime breaks between server and client code (`references/browser.md`).
 
-Make and record any decision a reversible change can settle, including fixes to broken behavior and accessibility changes that only add semantics. Removing or restructuring semantics is a gate (`references/traps.md`, Adds-only accessibility changes). So are brand, product vocabulary, visible change on shipped screens and intentional behavior changes. At a cap, cut the HTML docs site, then specs past the pilot's families, never the rules of a family that landed. Never cut the pilot, the check, the AGENTS.md block or the generated docs.
+Make and record any decision a reversible change can settle, including fixes to broken behavior and accessibility changes that only add semantics. Removing or restructuring semantics is a gate (`references/traps.md`, Adds-only accessibility changes). So are brand, product vocabulary, visible change on shipped screens and intentional behavior changes. At a cap, cut the HTML docs site unless it is the live showcase the person reviews in, then specs past the pilot's families, never the rules of a family that landed. Never cut the pilot, the check, the AGENTS.md block or the generated docs.
 
 ### 1. Frame
 
@@ -86,6 +86,7 @@ Make and record any decision a reversible change can settle, including fixes to 
 4. Run `token-mapping` on the full value inventory. Every raw value maps to a role, a merge under a gate, or a listed exception. A repeating value with no role becomes a role.
 5. Make every identical-value swap, on every route, with no clearance. Prove each route at 0% with an after capture and `montage.mjs --diff`. Revert a route that changed, and give its values to the migration map.
 6. Write the AGENTS.md block (`references/system-structure.md`, Load conditions in AGENTS.md).
+7. Name the motion presets (`references/token-architecture.md`) and the icon sizes per control size. When the person reviews in a browser, start the live showcase shell with its navigator and human and agent views (`references/system-structure.md`, Live showcase).
 
 ### 4. Components
 
@@ -94,7 +95,7 @@ Make and record any decision a reversible change can settle, including fixes to 
 3. Write its old-to-new map and a codemod. Move one pilot screen by hand, run the codemod on a pristine copy, and fix it until the two diffs match. With no duplicates, skip the codemod and record why.
 4. Fan out the other families the pilot and the strays touch with `references/worker-brief.md`, in a rolling window. Review each report as the brief says, and reject any diff outside its scope.
 5. Mark replaced implementations deprecated. Never deprecate a stock foundation component, only the wrapper that duplicates it.
-6. Close the phase per `references/coordinator-path.md` (Components close).
+6. Close the phase per `references/coordinator-path.md` (Components close), with the optical pass (`references/browser.md`, Measuring optical alignment) and the stress test (`references/stress-test.md`).
 
 ### 5. Checks
 
@@ -121,8 +122,9 @@ Docs are generated, never hand-written.
 ### 8. Handoff
 
 1. Rerun the inventory scripts and record what remains by route. Grade each component and fill the predicate's numbers.
-2. Close per `references/coordinator-path.md` (Close), with every exit code pasted. Name the coverage gaps the next likely screen hits.
-3. Write the handoff report into the run record. Your final message is its four parts (`references/run-record.md`). Next is a merge, or a merge with named reversals, never a step the run could have done.
+2. On a full footprint, write the project skills (`references/system-structure.md`, Load conditions in AGENTS.md).
+3. Close per `references/coordinator-path.md` (Close), with every exit code pasted. Name the coverage gaps the next likely screen hits.
+4. Write the handoff report into the run record. Your final message is its four parts (`references/run-record.md`). Next is a merge, or a merge with named reversals, never a step the run could have done.
 
 ## Boundaries
 

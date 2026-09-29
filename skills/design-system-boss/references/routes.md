@@ -46,7 +46,7 @@ A phase that finishes early passes its time on. A phase at its cap starts nothin
 2. The token source, then the AGENTS.md block right after it. The block is never cut.
 3. Specs for the families the pilot touches, and their generated twins, `llms.txt` and index. Generated docs are never cut. The other families become a listed follow-up.
 4. The pilot screen. Every trap in the pilot's own files is fixed, or gated with its measurement.
-5. An HTML docs site, only as a follow-up.
+5. An HTML docs site, only as a follow-up, unless the person reviews in a browser. Then it is the live showcase (`build-design-system/references/system-structure.md`), grown one page per family as each lands, and never cut.
 
 ## Build
 

@@ -10,6 +10,7 @@ Contents
 - Capture every route in one command
 - Compare after a change
 - Measuring a loading state
+- Measuring optical alignment
 - Evidence for a review
 - Review captures on the run branch
 - Run from any folder
@@ -92,6 +93,34 @@ Sort accessibility-tree changes by `traps.md` (Adds-only accessibility changes).
 `trap/loading-layout-shift` and `trap/loading-label-swap` need numbers, not a look. Measure the control's box idle. Hold the request pending so the state stays on screen, trigger the action, and measure the box again. Record both boxes, the accessible name and where focus sits, before and after. Any change in the box fails the shift trap, a changed name fails the label trap, and focus that falls to the page fails `trap/loading-label-swap`'s focus rule.
 
 Take the box by a selector or ref fixed before the action, never by the accessible name, which a label swap changes. Wait for the page to be interactive first. When the submit cannot be held pending from the page, measure the component's idle and loading example files instead.
+
+## Measuring optical alignment
+
+`trap/icon-optical-size` and `trap/icon-optical-align` need numbers to find candidates and a person's eye to decide, because a reference that is right for one context is wrong for another. Box-centered is not visually centered, and one global fix applied everywhere is how an icon that sat fine alone ends up too high.
+
+Sort every icon into one of two contexts before measuring. Beside text: an icon inside a labeled button, a menu item, a link or a tab. Alone in its own box: an icon button, a chip's remove button, an input slot, a checkbox or radio mark, a select chevron. Then run this on each showcase page, saved as a file and run with a browser tool (Tool how-to):
+
+```js
+const rows = [];
+for (const svg of document.querySelectorAll("main svg")) {
+  const host = svg.closest("button, a, label, li, [role=option], [role=menuitem], [role=tab]") || svg.parentElement;
+  const ink = (svg.querySelector("path") || svg).getBoundingClientRect();
+  const box = host.getBoundingClientRect();
+  const text = [...host.childNodes].find((n) => n.nodeType === 3 && n.textContent.trim()) || host.querySelector("span");
+  const row = { page: location.pathname, icon: Math.round(ink.height), vsBox: +(ink.top + ink.height / 2 - (box.top + box.height / 2)).toFixed(2) };
+  if (text) {
+    const r = document.createRange(); r.selectNodeContents(text); const t = r.getBoundingClientRect();
+    const cs = getComputedStyle(text.nodeType === 3 ? text.parentElement : text);
+    const ctx = document.createElement("canvas").getContext("2d"); ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const m = ctx.measureText("H"), capTop = t.top + (t.height - m.fontBoundingBoxAscent - m.fontBoundingBoxDescent) / 2 + m.fontBoundingBoxAscent - m.actualBoundingBoxAscent;
+    Object.assign(row, { text: text.textContent.trim().slice(0, 24), cap: +m.actualBoundingBoxAscent.toFixed(1), vsCap: +(ink.top + ink.height / 2 - (capTop + m.actualBoundingBoxAscent / 2)).toFixed(2) });
+  }
+  rows.push(row);
+}
+rows.filter((r) => Math.abs(r.vsCap ?? r.vsBox) > 0.5 || (r.cap && r.icon > r.cap + 2));
+```
+
+Beside text, the number that counts is `vsCap`. Alone in a box, it is `vsBox`, even when the box also holds text elsewhere. Record the count within 0.5px and the worst offenders before and after, such as "207 of 214 within 0.5px". Then send the person a contact sheet: the same element in every context it appears, cropped and zoomed 300 to 400%, before and after, in both themes. Change one context per round. When the person says a correction went too far, halve it for that context only, never everywhere. The person's call on the crops is final.
 
 ## Evidence for a review
 

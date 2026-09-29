@@ -20,7 +20,7 @@ The shares are defaults. Move time between phases when the app calls for it, and
 | 1 Frame and setup | 5% | `run-record.md` (Frame, Standing orders), the base reference | nothing |
 | 2 Inventory and baselines | 10% | `inventory.md`, `browser.md` (Capture every route in one command, Measuring a loading state). Measure every pilot trap's before state here and save the numbers in `run.md`, since the first edit erases it | screen notes past the pilot |
 | 3 Foundations | 15% | `token-architecture.md` or the base reference | swaps on a route that fails pixdiff go to the map |
-| 4 Components | 15% | `component-contract.md`, `traps.md`, `worker-brief.md`, `rule-method.md` | families past the pilot's, each with a gate naming its missing states |
+| 4 Components | 15% | `component-contract.md`, `traps.md`, `worker-brief.md`, `rule-method.md`, `stress-test.md` | families past the pilot's, each with a gate naming its missing states |
 | 5 Checks | 10% | `checks.md` | never cut. Hits past the cap go to the allowlist |
 | 6 Pilot | 10% | `browser.md` (Compare after a change, Measuring a loading state) | never cut |
 | 6 Surfaces, when cleared | 20% | "Surfaces on the run branch" below | the rest go in Next, by name |
@@ -50,6 +50,8 @@ A visible change lands on the run branch when it traces to a gate or decision an
 ## Components close
 
 Phase 4 closes only when every family in scope has its missing states built or gated. In scope means every family the inventory or the harden gap list marks with missing states, not only the pilot's. A family cut at the cap gets a gate naming each missing state, such as "Table: empty, loading, error. Default: build them on the next surface that lists records". A prop the run removes from a component is a gate listing its call sites, even when no call site uses it today. To find them, compare `props-table.mjs` on each component file the run edited, at the starting commit (a worktree in `.design-system/tmp/`) and at HEAD. The handoff lists every family in scope as built, or gated with the gate id.
+
+Before it closes, one browser worker runs the optical pass on every showcase page (`browser.md`, Measuring optical alignment), and the stress test runs per family group (`stress-test.md`). Every break either lands as a fix or a Limits rule, or becomes a gate.
 
 ## Document everything
 

@@ -1,6 +1,6 @@
 # System structure
 
-> For the team setting this up: the structure below is modeled on Geist. Drop pages your app has no use for and rename the URL root if `/system` is taken. Keep one page per component, the component page sections in the order given here, a generated Markdown twin for every page, and one index an agent reads first. `scripts/gen-docs.mjs` generates the twins, the rules page, the index and `llms.txt` from `docs/system/`, so the docs cost one command and are never cut. An HTML docs site with live examples is an optional follow-up.
+> For the team setting this up: the structure below is modeled on Geist. Drop pages your app has no use for and rename the URL root if `/system` is taken. Keep one page per component, the component page sections in the order given here, a generated Markdown twin for every page, and one index an agent reads first. `scripts/gen-docs.mjs` generates the twins, the rules page, the index and `llms.txt` from `docs/system/`, so the docs cost one command and are never cut. An HTML docs site with live examples is an optional follow-up, unless the person reviews in a browser (Live showcase).
 
 Contents
 
@@ -11,6 +11,7 @@ Contents
 - Writing page
 - Brand page
 - Component pages
+- Live showcase
 - Pattern pages
 - Rules and coverage gaps
 - Markdown twins
@@ -47,7 +48,7 @@ One URL root, default `/system`, with flat slugs. Component slugs are lowercase,
 /system/typography          foundation
 /system/materials           foundation: radius, border, shadow, surface levels
 /system/layout              foundation: space scale, grid, breakpoints
-/system/motion              foundation, only if the app animates
+/system/motion              foundation: presets, durations, easings, reduced motion
 /system/writing             foundation: copy slots, voice rules, verb chains, banned words
 /system/icons               asset
 /system/brand               asset: logo, typeface, product names
@@ -127,7 +128,7 @@ What each foundation adds:
 | Typography | one row per composite text style: family, size, line height, weight, tracking | a line of real product copy per style | smallest size in use, and zoom to 200% without clipping |
 | Materials | radius, border width, shadow, surface level | one card per surface level and per floating level (menu, dialog, toast) | focus ring stays visible on every surface level |
 | Layout | space scale (inset and gap), grid columns, breakpoints, container widths | the scale as bars, one page shell at each breakpoint | target sizes and reflow at 320 px |
-| Motion | durations and easings | each transition, with a reduced-motion toggle | behavior under `prefers-reduced-motion` |
+| Motion | presets first, then durations and easings | each preset, replayable, with a reduced-motion toggle | behavior under `prefers-reduced-motion` |
 
 Contrast values come from a script run in each theme, never typed in.
 
@@ -152,7 +153,7 @@ Assets are files, so this page is a list with rules. Sections, in order:
 
 1. `## Logo`. Each file with its repo path, format (SVG first, PNG where needed), and the background it is for. Clear space and minimum size if the team has them.
 2. `## Typeface`. Loaded families and weights, license status, and the fallback stack. An unknown license is a gate.
-3. `## Icons`. The icon set the app already uses, its import path, the sizes the Typography page allows, and the stroke rule. Give icons their own `/system/icons` page with a generated searchable grid once a list stops being scannable, default about 30. Do not add an icon library.
+3. `## Icons`. The icon set the app already uses, its import path, the size per control size, the alignment rule (`traps.md`, `trap/icon-optical-size` and `trap/icon-optical-align`), and the stroke rule. Give icons their own `/system/icons` page with a generated searchable grid once a list stops being scannable, default about 30. Do not add an icon library unasked. When the person asks for another set, swap every icon in one commit, then rederive sizes and alignment before anyone reviews it.
 4. `## Names`. Product and feature names as the product spells them.
 
 Done when every file listed exists at its path and every rule names who confirmed it, or is a gate.
@@ -189,6 +190,30 @@ Examples import from the same path product code uses. A copy of the component in
 The docs site's own styles never reach inside an example. A selector such as `.docs h2` also styles the `h2` an example renders, so the page shows the component wrong. Scope chrome styles to the chrome, such as `.docs-prose h2` or `@scope (.docs) to (.example)`, and wrap every live example in a container the chrome selectors never enter. The docs check below proves it.
 
 Done, for one component page in an HTML docs site: the spec passes `check-spec.mjs`, and every variant value and triggerable state has a live example in every theme. Every rule has a `rule-tests` row with verdict `ship` or `rewritten`. Accessibility has a measured keyboard walk and measured contrast, or `NEEDS REVIEW`. The twin matches a fresh generation, and the registry entry points at the page, the twin and the source file.
+
+## Live showcase
+
+When the person reviews in a browser, or asks for a page in the app rather than a workbench, the HTML docs site is not a follow-up. It is a dev-only route inside the app, default `/system`, outside the app's shell, built from phase 3 and grown one page per family as each family lands. It is never cut.
+
+- One page per component and per foundation or guideline page, each with its own URL. The overview only links out.
+- The sidebar is a navigator only: groups and links in sentence case, the current page marked, with no previews, counts or content.
+- Each page has one `h1`, the component's name, then examples, variants, states, edge cases, an example from a real screen, and last the Usage rules rendered from the spec, each rule with its Don't and Do pair labeled. Previous and next links close the page.
+- A theme switch sits in the top bar. Examples use inert data from one shared fixtures file in the app's own vocabulary.
+- Pages come from one registry that finds its entries, so a new page needs no edit to a shared file.
+- The pages obey every rule and ban they show, since agents copy them.
+
+Give the person the link, and open it in the host's browser or preview pane when it has one.
+
+### Human and agent views
+
+Each page has a two-option switch, "Human" and "Agent", built as a real radio group with a name, and the choice shows in the URL, such as `?view=agent`, so a link opens the same view. Agent shows the page's source Markdown exactly as an agent reads it, from the same file as the twin, never written by hand.
+
+The agent view is a file viewer, so design it and test it like one:
+
+- One monospace size. Hierarchy comes from brightness only, and the `#`, `-` and backtick markers stay visible.
+- A column of about 640 px, with long lines wrapping inside it and code blocks scrolling on their own, so the page never scrolls sideways at 360 px.
+- A copy button for the whole page, and nothing else added: no card around the switch, no badge and no keyboard hint unless the person asks.
+- Tested like any page: both themes, 360 and 1280 px, the longest spec and one with a wide table, keyboard focus on the switch and the copy button, and text contrast measured.
 
 ## Pattern pages
 
@@ -303,6 +328,8 @@ Before you finish: run `npm run check`, and capture the changed screens at 390 a
 
 Name real paths, the real check command and the Frame's viewports. Before the docs exist, the block names the token file and the check, and phase 7 adds the docs lines. Delete a line when the repo has no such thing.
 
+On a full footprint, phase 8 also writes four project skills in the repo's skills folder, named after the product, and the block names each: use (build screens with the system: the component picker, the bans, page anatomy, states and a pre-ship check), maintain (add or change a component or token end to end, with the verification commands and the dev-environment traps met in the run), review (the four lenses in `coordinator-path.md`, Review, decide, fix) and migrate (one legacy screen per commit, with before and after captures). Each points to the docs and never restates their rules. One worker writes them from the finished system, not from the run's briefs, runs every command it names once, and reports each inconsistency it finds as a fix before close. Everything they cite, trap and rule IDs included, is defined in the repo, never only in an installed skill.
+
 ## Checks for the docs
 
 Add these to the phase 5 check. The first three run on every system. The rest apply once an HTML docs site exists.
@@ -330,3 +357,5 @@ Add these to the phase 5 check. The first three run on every system. The rest ap
 | Twins and `llms.txt` | `gen-docs.mjs --check` exits 0, every `llms.txt` link loads |
 | AGENTS.md | The load-conditions block names real paths and the real check command |
 | HTML docs site, optional | The Done line under Component pages holds, and `check-docs-leak.mjs` exits 0 |
+| Live showcase, when the person reviews in a browser | One page per component and foundation, a navigator-only sidebar, the rules rendered on every page, and the agent view passing its tests in both themes at 360 and 1280 |
+| Project skills, on a full footprint | Use, maintain, review and migrate exist in the repo, every command they name ran once, and the agent-instructions block names them |

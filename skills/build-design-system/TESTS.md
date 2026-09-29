@@ -243,6 +243,38 @@ Watch for a token file written before any inventory, a palette borrowed from a p
 
 **Fails if:** a trap is marked fixed with no before and after numbers, a wrap is missed because the height grew less than 1.5 times (the line count decides, not the ratio), or a clipped link reads as fine because the page no longer overflows.
 
+## Icon set swap
+
+**Input:** the person asks to replace the app's outline icon set with a filled one, after two families have landed.
+
+**Expect:** one commit swaps every icon. Before review, icon sizes per control size are rederived so each glyph's ink is no taller than the label's cap height, and the alignment sweep in `references/browser.md` runs on every showcase page with icons sorted into beside-text and alone-in-a-box. Only glyphs drawn off center get their own offset. The person gets zoomed crops of each context in both themes, and a "too high" answer halves the correction for that one context.
+
+**Fails if:** icons keep the old set's sizes, one global offset moves icons that sit alone in a box, or alignment is called done from numbers alone.
+
+## Stress test
+
+**Input:** after phase 4, a list component that fits at 390 and 1280 but overflows at 900 when the sidebar opens, a button whose label wraps at 360, and a disabled switch that still submits its value.
+
+**Expect:** one worker per family group runs `references/stress-test.md` on the family's stress page in both themes at 360, 390, 768, 900, 1024, 1280 and 1536. The report lists the 900 overflow with its `scrollWidth`, the wrap and the submitted value. Each becomes a fix with before and after numbers, a Limits rule with its measured break, or a gate, and every component page gains an Edge cases specimen.
+
+**Fails if:** the pass runs only at the two Frame widths, a break has no number, or a worker restyles a component.
+
+## Live showcase
+
+**Input:** a person who says "I review in the browser, not a workbench" and asks for a Human and Agent view on every page.
+
+**Expect:** a dev-only route with one page per component and foundation, a sidebar that is navigation only, one `h1` per page, and the Usage rules rendered at the end of each page with their Don't and Do pairs. The switch is a named radio group whose choice shows in the URL. The agent view renders the page's source Markdown in one monospace size in a column of about 640 px, never scrolls sideways at 360, has one copy button and no other chrome, and passes keyboard and contrast checks in both themes. The link is given and opened in the host's preview pane.
+
+**Fails if:** every component sits on one page, the sidebar holds previews or counts, the agent view is hand-written or overflows at 360, or the switch gains a card or a keyboard hint nobody asked for.
+
+## Project skills
+
+**Input:** any full-footprint run, at handoff.
+
+**Expect:** the repo holds use, maintain, review and migrate skills named after the product. Each points to the docs instead of restating rules, names real paths and commands, and every command in it ran once. The AGENTS.md block names all four. The worker that wrote them reported the inconsistencies it found, and each is fixed or gated before close.
+
+**Fails if:** a skill cites a rule or trap ID only an installed skill defines, a command in one fails, or the skills point at the run record.
+
 ## Scripts prove themselves
 
 **Input:** copy `scripts/` into each practice repo, run `check-system.mjs --init`, `--hash-stock` and `--init-allowlist`, then seed one violation for every rule in `references/checks.md`, the raw-value, element, loading-label, label, import and stock-file rules alike. Run the typecheck before and after the copy, and run every script with absolute paths from an empty folder outside the repo.

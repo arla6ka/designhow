@@ -11,6 +11,7 @@ Contents
 - Source format
 - Themes and modes
 - Generation
+- Motion presets
 - What never becomes a token
 - When a new token is allowed
 - Worked example
@@ -116,6 +117,12 @@ Requirements:
 - Output is sorted and stable. Running twice yields no diff.
 - Errors name the token path, the file and the valid options, such as "Unknown alias `{color.grey.900}` in tokens/color.tokens.json. Did you mean `{color.gray.900}`?"
 - Use the generator the repo already has, or a short Node script. Do not add a dependency a short script would replace.
+
+## Motion presets
+
+A system with overlays, toasts, loaders or toggles always makes motion decisions, so motion is a foundation even when the app barely animates. Name a small set of presets in the token source before the first component, one per job: instant, micro (hover and press), enter, exit, overlay, sheet, collapse and loader. Each has a duration, an easing, the properties it animates, an exit faster than its enter, and its reduced-motion form. Decide which surfaces never animate, such as a menu opened from the keyboard. Components read presets through named utilities or variants, never their own durations, and the motion page lists each preset with the components that use it.
+
+The app's own durations and easings are the source, clustered like any value. When the app has none, each new preset is a gate, with the default "instant for menus, a short fade for dialogs, none under reduced motion".
 
 ## What never becomes a token
 
