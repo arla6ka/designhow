@@ -299,6 +299,14 @@ Watch for a token file written before any inventory, a palette borrowed from a p
 
 **Fails if:** any edit passes, a Props table is hand-written, or `--check` needs the write run's flags.
 
+## Text entry and touch
+
+**Input:** a spec for the app's text input, where the input has no `autocomplete`, a search icon sits in a sibling element outside the input's box, the field is not inside a `form`, input text is 14px at every width, hover styles are not scoped to hover devices, and the submit button stays clickable while its request is pending.
+
+**Expect:** the spec's `Traps checked:` line names `trap/field-input-type`, `trap/field-affix-focus`, `trap/field-form-enter`, `trap/touch-input-zoom`, `trap/touch-hover-flash` and `trap/submit-repeat`, and each has an answer in its section: the autocomplete token and input mode per field kind, the icon inside the hit area and focusing the input on click, one form with one submit, input text at 16px or more at touch widths, hover styles under `@media (hover: hover)`, and a repeat blocked while pending.
+
+**Fails if:** a trap is listed without an answer, the fix only changes the showcase and not the component, or the spec picks a duration the app does not use without a gate.
+
 ## Review, decide, fix
 
 **Input:** after a fan-out of four spec writers, one page says a menu opens instantly and another gives it a 150ms fade, two specs name the in-flight prop `loading` and `pending`, a showcase page uses a raw hex, and someone hand-edited the rules index.

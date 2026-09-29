@@ -124,6 +124,13 @@ A system with overlays, toasts, loaders or toggles always makes motion decisions
 
 The app's own durations and easings are the source, clustered like any value. When the app has none, each new preset is a gate, with the default "instant for menus, a short fade for dialogs, none under reduced motion".
 
+Settle these with the presets, since every animated component depends on them:
+
+- **Speed.** Feedback on an interaction, such as a press, hover or toggle, has to feel immediate. Take the app's own fastest durations first, and when it has none, keep interaction presets short enough that the result appears as the finger lifts. Longer presets are for things the user waits on anyway, such as a sheet or a page change.
+- **Size.** Movement is proportional to the thing moving. A dialog enters from slightly smaller than its final size with a fade, never from zero. A pressed button shrinks a few percent, not by a fifth.
+- **Frequency.** An action people repeat all day and learn nothing new from, such as opening a context menu, adding or removing a list item or hovering a plain button, gets no animation, or animates out only.
+- **Visibility.** Loops pause when off screen or in a hidden tab (`trap/loop-offscreen`), and a theme switch changes colors without transitions (`trap/theme-transition`).
+
 ## What never becomes a token
 
 Tokens are for decisions someone might change across the whole app. These stay plain values:

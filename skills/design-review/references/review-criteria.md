@@ -30,7 +30,7 @@ Cite these by number and name, such as "7. The screen shows what is happening."
 
 **6. The user knows where they are.** They can see which step, list item, or section they are on, and how to go back.
 
-**7. The screen shows what is happening.** After an action, the user sees a response near where they acted. Loading, saving, success, and failure each look different.
+**7. The screen shows what is happening.** After an action, the user sees a response near where they acted. Loading, saving, success, and failure each look different. Feedback sits at its trigger: a copy shows a brief inline check on the button, not a notification, and a form error marks the field itself. An optimistic update shows the change at once and, when the request fails, puts it back and says so where it happened.
 
 **8. Mistakes are hard to make and easy to fix.** Destructive actions ask for confirmation or offer undo. Errors say what went wrong and how to fix it, next to the cause, and keep what the user already entered. A field shows the value that will be sent. Lost or mismatched input is a finding here, never a product question.
 
@@ -58,6 +58,8 @@ Mark each shown or not shown. A case not shown is a question for the designer, n
 - No permission, or a read-only role
 - Offline or a lost connection
 - Success or confirmation after the main action
+- An empty state that says what goes here and offers the first action, not a blank area
+- On a touch device: no hover state flashes or sticks on tap, focusing an input doesn't zoom the page, and no field opens the keyboard before the user asked
 
 ## What not to report
 
