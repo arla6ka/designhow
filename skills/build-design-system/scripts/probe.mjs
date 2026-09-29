@@ -225,6 +225,8 @@ export const PROBE_SRC = `(() => {
 
 
 // probe.mjs --grow: grow one dimension of a target until its layout breaks (rule-method.md, Limits by measurement).
+// Count mode detects the list's axis. A vertical list breaks on height, not wrap. --item falls back to the whole
+// document, so items in a pop-up rendered outside the target (a portal) grow once --click has opened it.
 // Evaluated in the page as a function of { dimension, target, item, textTarget, sample, max, step, watch }.
 export const GROW_SRC = `(o) => {
   const target = document.querySelector(o.target);
@@ -232,11 +234,28 @@ export const GROW_SRC = `(o) => {
   const r = (el) => el.getBoundingClientRect();
   const distinct = (vals) => { const out = []; for (const v of vals.sort((a, b) => a - b)) if (!out.length || v - out[out.length - 1] > 2) out.push(v); return out.length; };
   const clipped = (e) => { const s = getComputedStyle(e); return e.scrollWidth > e.clientWidth + 1 && (s.textOverflow === "ellipsis" || /hidden|clip/.test(s.overflowX) || /hidden|clip/.test(s.overflow)); };
-  let items = null, el = null, start, step, max;
+  let items = null, el = null, start, step, max, axis = null, box = null, portal = false;
+  const notes = [];
   if (o.dimension === "count") {
-    items = () => o.item ? [...target.querySelectorAll(o.item)] : [...target.children];
-    if (!items().length) return { error: "item" };
-    start = items().length; step = 1; max = o.max || 20;
+    // --item is looked for inside the target first, then anywhere in the document, so items in a pop-up
+    // rendered outside the target (a portal) still grow once --click has opened it.
+    items = () => { if (!o.item) return [...target.children]; const inside = [...target.querySelectorAll(o.item)]; return inside.length ? inside : [...document.querySelectorAll(o.item)]; };
+    const first = items();
+    if (!first.length) return { error: "item" };
+    portal = !target.contains(first[0]);
+    if (portal) notes.push("items found outside the target, in the document (a pop-up rendered elsewhere)");
+    start = first.length; step = 1; max = o.max || 20;
+    // The list axis. Vertical when every item sits on its own row in one column, or, with one item, when the
+    // list lays items out top to bottom. A vertical list never wraps, so its break is height: the nearest
+    // clipping or scrolling box starts to scroll, or the list passes the viewport's bottom.
+    const list = first.at(-1).parentElement;
+    const lefts = first.map((i) => r(i).left), tops = first.map((i) => r(i).top);
+    if (first.length > 1) axis = distinct(lefts.slice()) === 1 && distinct(tops.slice()) === first.length ? "vertical" : "horizontal";
+    else { const ls = getComputedStyle(list), is = getComputedStyle(first[0]); axis = /flex/.test(ls.display) ? (/column/.test(ls.flexDirection) ? "vertical" : "horizontal") : /grid/.test(ls.display) ? (/column/.test(ls.gridAutoFlow) ? "horizontal" : "vertical") : /^inline/.test(is.display) ? "horizontal" : "vertical"; }
+    if (axis === "vertical") {
+      for (let e = list; e && e !== document.body && e !== document.documentElement; e = e.parentElement) if (/auto|scroll|hidden|clip/.test(getComputedStyle(e).overflowY)) { box = e; break; }
+      notes.push("vertical list: each item is its own row, so wrap does not apply. The break is height overflow" + (box ? " in its scrolling box" : "") + " or the viewport's bottom");
+    }
   } else {
     el = o.textTarget ? target.querySelector(o.textTarget) : target;
     if (!el) return { error: "text-target" };
@@ -249,6 +268,8 @@ export const GROW_SRC = `(o) => {
     return distinct(tops);
   };
   const wrapNow = () => (el ? lines(el) : distinct(items().map((i) => r(i).top)));
+  // How far down the grown content reaches: the scrolling box when there is one, else the last item, else the target.
+  const bottomNow = () => (axis === "vertical" ? (box ? r(box).bottom : r(items().at(-1)).bottom) : r(target).bottom);
   const truncNow = () => { for (const e of el ? [el] : [target, ...items()]) if (clipped(e)) return "scrollWidth " + e.scrollWidth + " > clientWidth " + e.clientWidth + " on " + (e === target ? "the target" : el ? "the text" : "an item") + ", " + (getComputedStyle(e).textOverflow === "ellipsis" ? "text-overflow ellipsis" : "overflow " + getComputedStyle(e).overflowX); return null; };
   // The three overflow tests, each as [key, measurement] when it holds. A test that already held at the start is
   // left out later, so the others still report.
@@ -258,11 +279,11 @@ export const GROW_SRC = `(o) => {
     const p = target.parentElement;
     if (p) { const ps = getComputedStyle(p), edge = r(p).right - parseFloat(ps.paddingRight) - parseFloat(ps.borderRightWidth); if (r(target).right > edge + 1) out.push(["edge", "right edge " + Math.round(r(target).right) + " > parent content edge " + Math.round(edge)]); }
     if (document.documentElement.scrollWidth > innerWidth) out.push(["page", "document scrollWidth " + document.documentElement.scrollWidth + " > innerWidth " + innerWidth]);
+    if (box && box.scrollHeight > box.clientHeight + 1) out.push(["height", "item " + items().length + " needs scroll: scrollHeight " + box.scrollHeight + " > clientHeight " + box.clientHeight + " on the list's scrolling box"]);
     return out;
   };
   const watch = o.watch ? document.querySelector(o.watch) : target.nextElementSibling;
-  const base = { wrap: wrapNow(), trunc: !!truncNow(), over: overNow().map(([k]) => k), fold: r(target).bottom > innerHeight, watch: watch ? r(watch) : null };
-  const notes = [];
+  const base = { wrap: wrapNow(), trunc: !!truncNow(), over: overNow().map(([k]) => k), fold: bottomNow() > innerHeight, watch: watch ? r(watch) : null };
   if (base.trunc) notes.push("already truncated at the start");
   for (const [k, m] of overNow()) notes.push("already overflowing at the start: " + m + ". Only the other overflow tests count");
   if (base.fold) notes.push("already below the fold at the start");
@@ -275,15 +296,15 @@ export const GROW_SRC = `(o) => {
     else { const t = lastText(); let add = ""; for (let i = 0; i < step; i++) add += sample[k++ % sample.length]; t.textContent += add; }
     void document.body.offsetHeight;
     const hit = (kind, m) => { if (m && !found.has(kind)) found.set(kind, { kind, at, measurement: m }); };
-    const wn = wrapNow(); if (wn > base.wrap) hit("wrap", (el ? "lines " : "rows ") + base.wrap + " -> " + wn);
+    const wn = wrapNow(); if (axis !== "vertical" && wn > base.wrap) hit("wrap", (el ? "lines " : "rows ") + base.wrap + " -> " + wn);
     if (!base.trunc) hit("truncate", truncNow());
     hit("overflow", (overNow().find(([k2]) => !base.over.includes(k2)) || [])[1]);
-    if (!base.fold && r(target).bottom > innerHeight) hit("below-fold", "bottom " + Math.round(r(target).bottom) + " > innerHeight " + innerHeight);
+    if (!base.fold && bottomNow() > innerHeight) hit("below-fold", "bottom " + Math.round(bottomNow()) + " > innerHeight " + innerHeight);
     if (watch && base.watch) { const b = r(watch), dx = Math.round(b.left - base.watch.left), dy = Math.round(b.top - base.watch.top); if (Math.abs(dx) > 1 || Math.abs(dy) > 1) hit("shift", "watched element moved " + dx + "px across, " + dy + "px down"); }
   }
   const ORDER = ["wrap", "truncate", "overflow", "below-fold", "shift"];
   const breaks = [...found.values()].sort((a, b) => a.at - b.at || ORDER.indexOf(a.kind) - ORDER.indexOf(b.kind));
-  return { start, step, max, breaks, limit: breaks.length ? breaks[0].at - step : null, unbroken: !breaks.length, notes };
+  return { start, step, max, axis, portal, breaks, limit: breaks.length ? breaks[0].at - step : null, unbroken: !breaks.length, notes };
 }`;
 
 // One grow run on a loaded page. Returns the JSON record, or { error } when the target or item is missing.
@@ -410,15 +431,22 @@ reduced motion on.
 --grow measures a limit (references/rule-method.md, Limits by measurement). At each
 width it grows the target one step at a time and records the first value where
 each break happens:
-  wrap        text mode: the text's line count rises. count mode: the items
-              fall onto more rows
+  wrap        text mode: the text's line count rises. count mode on a
+              horizontal list: the items fall onto more rows
   truncate    the text or an item clips with an ellipsis, or overflow hidden or clip
   overflow    the target scrolls sideways, passes its parent's content edge, or
-              the page scrolls sideways
-  below-fold  the target's bottom passes the viewport's
+              the page scrolls sideways. On a vertical list, also the first item
+              that needs scroll in the list's nearest scrolling or clipping box
+  below-fold  the grown content's bottom passes the viewport's: the target's, or
+              on a vertical list its scrolling box's, else its last item's
   shift       --watch (default the target's next sibling) moves by more than 1px
   --dimension count   clone the last --item (default the target's last child) up
-                      to --max items in all (default 20)
+                      to --max items in all (default 20). The list's axis is
+                      detected: a vertical list, one item per row, reports no
+                      wrap, since every item is already its own row
+  --item <css>        looked for inside the target first, then anywhere in the
+                      document, so options in a pop-up rendered outside the
+                      target grow once --click has opened it
   --dimension text    append --sample (default the current text) to --text-target
                       (default the target), --step characters at a time (default
                       1), up to --max characters (default 200)
@@ -454,11 +482,11 @@ if (process.argv[1] && (await import("node:path")).resolve(process.argv[1]) === 
       if (!existsSync(join(dir, c, "case.json"))) continue;
       const spec = JSON.parse(readFileSync(join(dir, c, "case.json"), "utf8"));
       if (spec.mode === "grow") {
-        // A grow case: page.html, and the first break it must report.
+        // A grow case: page.html, an optional click that opens the target, and the first break it must report.
         const ctx = await launched.browser.newContext({ viewport: { width: spec.width || 390, height: spec.height || 900 } });
         const page = await ctx.newPage();
         let g = null, err = "";
-        try { await page.goto(pathToFileURL(join(dir, c, "page.html")).href, { waitUntil: "load" }); g = await growOnPage(page, { dimension: spec.dimension, target: spec.target, item: spec.item, textTarget: spec.textTarget, sample: spec.sample, max: spec.max, step: spec.step, watch: spec.watch }); } catch (e) { err = String(e.message).split("\n")[0]; }
+        try { await page.goto(pathToFileURL(join(dir, c, "page.html")).href, { waitUntil: "load" }); if (spec.click) await page.locator(spec.click).first().click({ timeout: 5000 }); g = await growOnPage(page, { dimension: spec.dimension, target: spec.target, item: spec.item, textTarget: spec.textTarget, sample: spec.sample, max: spec.max, step: spec.step, watch: spec.watch }); } catch (e) { err = String(e.message).split("\n")[0]; }
         await ctx.close();
         const first = g && !g.error && g.breaks[0];
         const good = !!first && first.kind === spec.expect.kind && first.at === spec.expect.at;
@@ -512,7 +540,7 @@ if (process.argv[1] && (await import("node:path")).resolve(process.argv[1]) === 
       } catch (e) { console.error(`probe: ${route} at ${w}: ${String(e.message).split("\n")[0]}`); await launched.browser.close(); process.exit(2); }
       await ctx.close();
       if (g.error) { console.error(`grow: no element matches ${g.error === "target" ? target : g.error === "item" ? val("--item") || "a child of the target" : val("--text-target")} on ${route} at ${w}`); await launched.browser.close(); process.exit(2); }
-      const rec = { route, width: w, height, target, dimension: dim, start: g.start, step: g.step, max: g.max, breaks: g.breaks, limit: g.limit, unbroken: g.unbroken };
+      const rec = { route, width: w, height, target, dimension: dim, ...(g.axis ? { axis: g.axis, portal: g.portal } : {}), start: g.start, step: g.step, max: g.max, breaks: g.breaks, limit: g.limit, unbroken: g.unbroken };
       mkdirSync(out, { recursive: true });
       writeFileSync(join(out, `grow-${dim}-${w}.json`), JSON.stringify(rec, null, 2) + "\n");
       console.log(growLine(dim, w, g));

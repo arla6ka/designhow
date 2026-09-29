@@ -9,6 +9,7 @@ Contents
 - What counts as a component
 - How drift is measured
 - Changing a component
+- Seed
 - Distribution
 - Docs
 - Checks
@@ -42,7 +43,7 @@ Never mark a stock primitive deprecated because a product wrapper exists. Deprec
 
 ## How drift is measured
 
-Per file in the ui folder, record one row in the repo's `scripts/ui-drift.tsv` (columns `file`, `status`, `sha256`, `note`) with the status `stock`, `customized` or `forked`, then run `node scripts/check-system.mjs --hash-stock`, which hashes every row. The check exempts a stock file only while its hash matches, and checks the hash of customized and forked files too, so a quiet edit to any listed file fails `rule/stock-edit`. After a reviewed edit, `--rehash <file> --note "<what changed and why>"` records the new hash and the note in the same commit. For each `customized` row, save upstream's copy with `node scripts/check-system.mjs --save-stock <file> <item>.json`, where the JSON comes from `npx shadcn@latest view <item>`. The check then exempts upstream's own literals on unchanged lines and scans only the team's lines (`checks.md`).
+Per file in the ui folder, record one row in the repo's `scripts/ui-drift.tsv` (columns `file`, `status`, `sha256`, `note`) with the status `stock`, `customized` or `forked`, then run `node scripts/check-system.mjs --hash-stock`, which hashes every row. The check exempts a stock file only while its hash matches, and checks the hash of customized and forked files too, so a quiet edit to any listed file fails `rule/stock-edit`. After a reviewed edit, `--rehash <file> --note "<what changed and why>"` records the new hash and the note in the same commit. For each `customized` row, save upstream's copy with `node scripts/check-system.mjs --save-stock <file> <item>.json`, where the JSON comes from `npx shadcn@latest view <item>`. The check then exempts upstream's own literals on unchanged lines, such as a style's `rounded-[min(var(--radius-md),10px)]` or `text-[0.8rem]` in `button.tsx`, and scans only the team's lines (`checks.md`).
 
 ```sh
 npx shadcn@latest add <item> --dry-run          # what would change, without writing
@@ -63,7 +64,17 @@ In order of preference: use an existing variant, use a semantic token, add a CSS
 - An update to a `stock` file may overwrite it. An update to a `customized` file is a hand merge from `add --diff`.
 - `--overwrite` destroys local changes. It is a gate every time, and the gate lists the files and their drift status.
 - After adding any third-party item, read every file it wrote, fix imports to the project's aliases, and swap icons to `iconLibrary`.
-- "use client": on the Next App Router, a hand-written component or wrapper with an event handler, state or an effect needs `"use client"` as its first line. Stock files already carry it where needed. Adding an `onClick` guard to a shared Button without it made every Server Component page that renders a Button answer 500, and `tsc` passed. Attach a handler only where the component is already a client component, request every route after the edit, and require 200.
+- On the Next.js App Router, for example, a hand-written component or wrapper with an event handler, state or an effect needs `"use client"` as its first line. Stock files already carry it where needed. A handler added to a shared Button without it breaks every server-rendered page that renders the Button, and `tsc` still passes. Attach a handler only where the component is already a client component, then request every route and require 200 (`browser.md`, After an edit).
+
+## Seed
+
+The commands behind seed mode's steps (`modes.md`, Seed) when shadcn is the foundation, on Next.js:
+
+1. `shadcn init -t next` will not scaffold into a folder that already has a `package.json`, and `create-next-app` refuses one with a README or dot folders. Run `npx create-next-app@latest <tmp>/app --ts --tailwind --app --eslint --use-npm --yes` in a temp folder outside the repo, move its files in (`node_modules` excluded, the repo's README, `.git` and agent folders kept, `package.json` merged by hand), then `npm install`, `npx shadcn@latest init -d` and `npx shadcn@latest info --json`.
+2. `init -d` writes the neutral base gray and has no base-color flag. Switch with `npx shadcn@latest migrate base-color --to <name>`. `migrate --list` names the bases the installed version offers. The brand hex goes into `--primary`, in the file's format (OKLCH on current shadcn).
+3. Dark mode that follows the OS: a `prefers-color-scheme: dark` block, or a theme provider that sets `.dark` from the OS setting, such as next-themes with `attribute="class"` and `defaultTheme="system"`.
+4. Status roles are `--success` and `--warning` pairs, from the preset's chart or destructive hues where one fits. Stock variants with alpha fills, such as a destructive Badge, are measured like any pair.
+5. The pilot usually needs Button, Input and Field, Table or a list, Badge, Empty, Skeleton and an error Alert. A coverage gap's Meanwhile can name the stock item to add, such as `npx shadcn@latest add dialog`, with destructive confirms on AlertDialog.
 
 ## Distribution
 
@@ -85,7 +96,13 @@ Stock variants can fail contrast on their own, usually through alpha fills such 
 
 Pages and specs in `system-structure.md` cover what the team owns: customized primitives, team components and product rules, such as "`Button` has `tone`, not `variant`". For a stock primitive with no team rules, the page is short. The Description links shadcn's docs for the item, the spec's Foundation table has one "Stock" row, and States, Keyboard and ARIA still get filled for this app, since the check needs them.
 
+The Foundation row of any spec names the registry item and the `style` and `base` from `shadcn info`, then lists only the real differences `shadcn add <item> --diff` shows.
+
+When a doc names where a component renders (`component-docs`, Description), read the top of the file on the App Router, for example: `"use client"`, `import "server-only"`, or neither on a server component. Follow its imports for hooks that force a client boundary. In a doc's Tokens table, a utility built from a declared role name (`bg-muted`, `text-muted-foreground`) is token use, and a palette utility (`bg-blue-600`, `text-gray-500`) is palette use.
+
 ## Checks
+
+Single-element composition is how shadcn fixes `trap/link-wraps-button`: `Button asChild` around the Link on Radix, `render` on Base UI, or `buttonVariants()` on the Link. `check-system.mjs` passes all three.
 
 shadcn's composition rules are cheap, mechanical findings. Turn the ones that apply into lint in the enforcement phase. Each gets the `trap/` ID from `traps.md` when one matches, or a `rule/` ID with the app's evidence:
 
@@ -95,6 +112,8 @@ shadcn's composition rules are cheap, mechanical findings. Turn the ones that ap
 - an overlay with no title part
 - items outside their group part
 - Tailwind palette classes such as `text-gray-500`
+
+On Next.js 16, for example, run `next typegen` before `tsc` in the check command, or a clean clone fails on missing route types (`checks.md`, "The check has to run").
 
 ## Shared files
 

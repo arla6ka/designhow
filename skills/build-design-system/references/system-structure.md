@@ -1,6 +1,6 @@
 # System structure
 
-> For the team setting this up: the structure below is modeled on Vercel's Geist. Drop pages your app has no use for and rename the URL root if `/system` is taken. Keep four things: one page per component, the component page sections in the order given here, a generated Markdown twin for every page, and one index an agent reads first. `scripts/gen-docs.mjs` generates the twins, the rules page, the index and `llms.txt` from `docs/system/`, so the docs cost one command and are never cut. An HTML docs site with live examples is an optional follow-up.
+> For the team setting this up: the structure below is modeled on Geist. Drop pages your app has no use for and rename the URL root if `/system` is taken. Keep one page per component, the component page sections in the order given here, a generated Markdown twin for every page, and one index an agent reads first. `scripts/gen-docs.mjs` generates the twins, the rules page, the index and `llms.txt` from `docs/system/`, so the docs cost one command and are never cut. An HTML docs site with live examples is an optional follow-up.
 
 Contents
 
@@ -22,7 +22,7 @@ Contents
 
 ## The model to study
 
-Geist, Vercel's design system, is the reference shape. Study it when you have internet access, and build from this file when you do not. Nothing here needs a network call.
+Geist, Vercel's design system, is the reference shape. Study it when you have internet access. This file alone is enough when you do not.
 
 - Introduction: https://vercel.com/geist/introduction
 - A foundation page: https://vercel.com/geist/colors, https://vercel.com/geist/typography, https://vercel.com/geist/materials, https://vercel.com/geist/grid
@@ -31,15 +31,15 @@ Geist, Vercel's design system, is the reference shape. Study it when you have in
 What to take from it, in our words:
 
 - Three kinds of page sit under one root. Foundations hold the decisions every component reads. Assets hold files people copy as they are. Components get one page each, all at the same depth.
-- A foundation page is organized by role, not by value. The color page groups its steps by what they are for (component fills, borders, text), and names the variable for each.
-- A component page leads with rendered examples and the code beside them, then works through sizes, variants and states one heading at a time, and ends with rules for when and how to use it, accessibility included.
-- Every page has a Markdown twin at the same URL plus `.md`, and the site answers `Accept: text/markdown` with it.
+- A foundation page is organized by role, not by value. The color page groups its steps by use (fills, borders, text) and names the variable for each.
+- A component page leads with rendered examples and their code, works through sizes, variants and states one heading at a time, and ends with usage rules, accessibility included.
+- Every page has a Markdown twin at the same URL plus `.md`.
 
-What not to take: Geist's values, names, component list or brand. The inventory decides which pages exist. A page for a component the app does not use is a page an agent will copy from. Geist also leaves props tables out of its pages. Keep them, because an agent reading a twin needs the API in one place.
+What not to take: Geist's values, names, component list or brand. The inventory decides which pages exist, because an agent will copy from a page for a component the app does not use. Geist leaves props tables out. Keep them, because an agent reading a twin needs the API in one place.
 
 ## Routes and files
 
-One URL root, flat slugs. The default root is `/system`. Keep component slugs lowercase and hyphenated, equal to the registry id. Foundation and brand slugs are reserved, so a component can never be named `colors`.
+One URL root, default `/system`, with flat slugs. Component slugs are lowercase, hyphenated and equal to the registry id. Foundation and brand slugs are reserved, so no component is named `colors`.
 
 ```
 /system                     overview
@@ -59,9 +59,9 @@ One URL root, flat slugs. The default root is `/system`. Keep component slugs lo
 /llms.txt
 ```
 
-Every HTML route has a twin: `/system.md`, `/system/colors.md`, `/system/button.md`, and so on.
+Every HTML route has a twin: `/system.md`, `/system/colors.md`, and so on.
 
-In the repo, keep the page content next to the thing it documents and generate the rest. The default layout works on any stack that serves a `public/` or static folder:
+In the repo, keep the page content next to the thing it documents and generate the rest. The default layout works on any stack that serves a static folder. Paths and extensions below are one example; use the app's own:
 
 ```
 tokens/                          token source (DTCG JSON), see token-architecture.md
@@ -79,21 +79,21 @@ public/system/<slug>.md          generated twins           (scripts/gen-docs.mjs
 public/system/rules.md           generated rules page
 public/system/index.md, index.html   generated overview and one plain HTML page of every twin
 public/llms.txt                  generated
-registry.json                    on shadcn, the registry's own file, with these fields under each item's meta
-app/system/...                   optional HTML docs site with live examples
+registry.json                    or the foundation's own registry file, with these fields added (base reference)
+<routes>/system/...              optional HTML docs site with live examples
 ```
 
-`node scripts/gen-docs.mjs --help` lists its flags (`--src`, `--out`, `--llms`, `--base`, `--name`). A write run saves the flags it was given to `scripts/gen-docs.config.json`, so `--check` in the check command needs no flags and generates the same output. `--check` writes nothing and exits 1 when any output differs from a fresh run, which is how the check catches a hand-edited or stale twin, or a Props table the types no longer match. The rules page ends with the check's blind spots from `check-system.mjs --list-blind-spots`.
+`node scripts/gen-docs.mjs --help` lists its flags. A write run saves its flags to `scripts/gen-docs.config.json`, so `--check` needs none and generates the same output. `--check` writes nothing and exits 1 when any output differs from a fresh run, which catches a hand-edited or stale twin, or a Props table the types no longer match. The rules page ends with the check's blind spots from `check-system.mjs --list-blind-spots`.
 
-Other stacks keep the same split: one prose file per component, examples as real files, and pages plus twins generated from those files and the token source. The examples folder is `examplesDir` in `scripts/gen-docs.config.json`, default `docs/system/examples`, and an example takes the component's own file extension (`.tsx`, `.vue`, `.svelte`).
+Every stack keeps the same split: one prose file per component, examples as real files, and pages plus twins generated from those files and the token source. The examples folder is `examplesDir` in `scripts/gen-docs.config.json`, default `docs/system/examples`, and an example takes the component's own file extension (`.tsx`, `.vue`, `.svelte`).
 
 Serving twins at `<page>.md` takes one of three forms, whichever the framework supports:
 
-- Static files, the generator's default. Next serves `public/system/button.md` at `/system/button.md` as `text/markdown`. This needs no routing and works on every stack.
-- One route handler for all twins, such as `/system-md/[slug]`, with a rewrite from `/system/:slug.md` to it.
-- A middleware or proxy that rewrites `/system/:slug.md` and requests with `Accept: text/markdown`. On Next 16 this file is `proxy.ts`.
+- Static files, the generator's default. The static folder serves `system/button.md` at `/system/button.md`. This needs no routing and works on every stack.
+- One route handler for all twins, with a rewrite from `/system/:slug.md` to it.
+- A middleware or proxy that rewrites `/system/:slug.md` and requests with `Accept: text/markdown`.
 
-A folder named `[slug].md` is not a valid dynamic segment in Next's App Router, and similar file-name tricks fail on other routers. Check the twin URL with `curl -sI` before writing the docs check.
+File-name tricks, such as a dynamic route folder whose name ends in `.md`, fail on many routers. Check the twin URL with `curl -sI` before writing the docs check.
 
 ## Overview page
 
@@ -128,9 +128,9 @@ What each foundation adds:
 | Layout | space scale (inset and gap), grid columns, breakpoints, container widths | the scale as bars, one page shell at each breakpoint | target sizes and reflow at 320 px |
 | Motion | durations and easings | each transition, with a reduced-motion toggle | behavior under `prefers-reduced-motion` |
 
-Contrast values come from a script run against the token source in each theme. Do not type them in.
+Contrast values come from a script run in each theme, never typed in.
 
-Done when every token in the category appears in the table with a role, every role has a specimen, and the accessibility numbers were produced by a command recorded on the page.
+Done when every token in the category has a table row and a role, every role has a specimen, and the accessibility numbers came from a command recorded on the page.
 
 ## Writing page
 
@@ -151,7 +151,7 @@ Assets are files, so this page is a list with rules. Sections, in order:
 
 1. `## Logo`. Each file with its repo path, format (SVG first, PNG where needed), and the background it is for. Clear space and minimum size if the team has them.
 2. `## Typeface`. Loaded families and weights, license status, and the fallback stack. An unknown license is a gate.
-3. `## Icons`. The icon set the app already uses, its import path, the sizes the Typography page allows, and the stroke rule. Give icons their own `/system/icons` page when there are more than about 30, with a searchable grid generated from the icon folder. Do not add an icon library.
+3. `## Icons`. The icon set the app already uses, its import path, the sizes the Typography page allows, and the stroke rule. Give icons their own `/system/icons` page with a generated searchable grid once a list stops being scannable, default about 30. Do not add an icon library.
 4. `## Names`. Product and feature names as the product spells them.
 
 Done when every file listed exists at its path and every rule names who confirmed it, or is a gate.
@@ -161,10 +161,10 @@ Done when every file listed exists at its path and every rule names who confirme
 This is the skeleton every component page and its twin follow. `component-docs` writes the prose in the same sections and order, so the page never reshuffles an entry. Use these H2s, in this order. Do not add, drop or rename any. An empty section says `NOT SUPPLIED` or `Not applicable` with a one-line reason.
 
 1. `## Description`. One sentence on what the component is for. Under it, a plain line with the import statement, the source path and the registry status. If the component has named parts (`DialogTitle`, or `Dialog.Title` where the library uses dotted parts), list them here.
-2. `## Examples`. The default example first, then one example rebuilt from each real use in the product, each labeled with the screen it came from. Each example is a live render of the real component with its exact source under it. A `### Example files` table lists every example file, per the spec template: one per variant value and per state with a visual or behavior difference, one composition inside a real parent, and one matrix when two axes interact. Each file is complete and runnable, imports the component from the product import path, and lives at `<examples dir>/<component>/<name>.<ext>`.
+2. `## Examples`. The default example first, then one example rebuilt from each real use in the product, each labeled with the screen it came from. Each is a live render of the real component with its exact source under it. The `### Example files` table lists every example file, per `spec-template.md`.
 3. `## Variants`. One subsection per variant axis (size, tone, shape). Each shows every value side by side in one live example. When two axes interact, add one matrix example, the way Geist compares every type at every size.
 4. `## States`. One live example per state a reader can trigger: loading, disabled, invalid, open, and so on. Each says what the user can do in that state. When states overlap, say which wins.
-5. `## Props`. A table generated from the component's types by `scripts/props-table.mjs`, which `gen-docs.mjs` runs for every component page whose registry entry names a source file: name, type, default, and a one-line purpose taken from the prop's JSDoc. Props from React's DOM types or a library are summarized in one "Also accepts" line. The spec's Props section holds notes only. A hand-written table there is replaced in the twin. It uses the repo's `typescript` when it resolves and a regex over the props type literal when it does not, so keep `typescript` installed wherever the check runs.
+5. `## Props`. A table generated from the component's types by `scripts/props-table.mjs`, which `gen-docs.mjs` runs for every component page whose registry entry names a source file: name, type, default, and a one-line purpose from the prop's doc comment. Props inherited from the DOM or a library are summarized in one "Also accepts" line. The spec's Props section holds notes only, and a hand-written table there is replaced in the twin. The script uses the repo's `typescript` when it resolves and a regex over the props type when it does not, so keep `typescript` installed wherever the check runs.
 6. `## Usage`. Rules for choosing and using the component, in six H3s in this order: `### When to use`, `### When not to use` (each line names the alternative), `### Behavior`, `### Limits`, `### Content`, `### Best practices`. Every rule line has the shape and a ground from `references/rule-method.md`.
 7. `## Accessibility`. The native element or behavior primitive it rests on, the keyboard path (keys, effect, where focus goes after), the accessible name in every variant, and contrast ratios measured in each theme. Mark anything not verified `NEEDS REVIEW`.
 8. `## Tokens`. The semantic tokens the component reads, taken from its styles, each linked to its foundation page.
@@ -182,21 +182,11 @@ Where the older `component-docs` headings land, for teams moving existing entrie
 | Writing | Usage: Content |
 | Do and don't | Usage: Best practices, each pair rewritten as a rule |
 
-Examples import from the same path product code uses. A copy of the component inside the docs folder is a defect, because it drifts on the first change. Keep each example as a real file and render both the component and its source text from that file, so every code block on the page compiles.
+Examples import from the same path product code uses. A copy of the component inside the docs folder is a defect, because it drifts on the first change. Render both the component and its source text from the one example file, so every code block on the page compiles.
 
-The docs site's own styles never reach inside an example. A selector such as `.docs h2` also styles the `h2` a Card example renders, so the page shows the component wrong. Scope chrome styles to the chrome: give prose blocks their own class and style `.docs-prose h2`, or use `@scope (.docs) to (.example)`, and wrap every live example in an `.example` container the chrome selectors never enter. The docs check below proves it.
+The docs site's own styles never reach inside an example. A selector such as `.docs h2` also styles the `h2` an example renders, so the page shows the component wrong. Scope chrome styles to the chrome, such as `.docs-prose h2` or `@scope (.docs) to (.example)`, and wrap every live example in a container the chrome selectors never enter. The docs check below proves it.
 
-Done, for one component page in an HTML docs site:
-
-- All nine sections present, in order, each filled or marked with a reason.
-- The spec behind it passes `scripts/check-spec.mjs`.
-- Every variant value and every triggerable state has a live example, in every theme the app ships, and one composition example shows it inside a real parent.
-- Every rule line has an ID, the rule shape, a ground and a check, and a `rule-tests` row with verdict `ship` or `rewritten`.
-- The Props table matches the component's types: `gen-docs.mjs --check` fails when a prop changes and the twin was not regenerated.
-- Every example file compiles and imports from the product import path.
-- Accessibility has a measured keyboard walk and measured contrast, or `NEEDS REVIEW`.
-- The twin loads, has the same H2s in the same order, and matches a fresh generation.
-- The registry entry points at the page, the twin and the source file.
+Done, for one component page in an HTML docs site: the spec passes `check-spec.mjs`, and every variant value and triggerable state has a live example in every theme. Every rule has a `rule-tests` row with verdict `ship` or `rewritten`. Accessibility has a measured keyboard walk and measured contrast, or `NEEDS REVIEW`. The twin matches a fresh generation, and the registry entry points at the page, the twin and the source file.
 
 ## Pattern pages
 
@@ -217,21 +207,21 @@ Two short pages every system gets, both listed in `llms.txt`.
 
 `/system/rules` is generated by `gen-docs.mjs` from the specs, the foundation pages, `check-system.mjs --list-rules` and `copy-check.mjs --list-rules`. One row per `trap/` and `rule/` ID: the ID, the one-line rule, the page that answers it, the kinds of ground it rests on, and the script that enforces it, else the rule's own `Check:` clause, else "review". It is the list of things this app's UI must not do, in one place an agent can read before writing code.
 
-`/system/coverage-gaps` is written by hand from the gates. Each row names an area with no decision yet, such as tables or chart colors, the gate that owns it, and a "Meanwhile" concrete enough that two agents building the same screen get the same result: the page width, the components to use, the state order, and a screen to copy. "Stop and ask" is not a meanwhile, and neither is "don't build it". When the gap is a missing component, the Meanwhile says how to add it: the foundation's CLI (`npx shadcn@latest add dialog`) or the base reference's pattern, a registry entry, and a spec from the template. In one run a next-screen agent refused to build a dialog because the row forbade it.
+`/system/coverage-gaps` is written by hand from the gates. Each row names an area with no decision yet, such as tables or chart colors, the gate that owns it, and a "Meanwhile" concrete enough that two agents building the same screen get the same result: the page width, the components to use, the state order, and a screen to copy. "Stop and ask" is not a meanwhile, and neither is "don't build it", because it blocks the next screen. When the gap is a missing component, the Meanwhile says how to add it: the foundation's own add command or the base reference's pattern, a registry entry, and a spec from the template.
 
 ```markdown
 | Area | Gate | Meanwhile |
 |---|---|---|
-| Tables and record lists | G-07 | Page width max-w-3xl, as /settings. A `divide-y rounded-lg border` list of rows, amount right-aligned with `tabular-nums`. Loading: 5 Skeleton rows at the row height. Empty: Empty with one primary action. Error: Alert above the list with a Retry button |
-| Forms | G-08 | One Field per control: label above, help under it, error text under that, tied with `aria-describedby`. Validate on submit, then live per field. After a failed submit, focus moves to the first invalid field and the values stay. A repeating group (several emails) is one Field per row with a Remove button on each, and an "Add another" Button under the last row that moves focus into the new row. Copy /settings/profile |
-| Dialogs and confirms | G-09 | No Dialog in the system yet. Add it with `npx shadcn@latest add dialog`, register it in `registry.json`, write `docs/system/dialog.md` from the spec template, and use it for the confirm. Destructive confirms use AlertDialog, added the same way |
+| Tables and record lists | G-07 | Page width as /settings. A divided list of rows, amounts right-aligned with tabular figures. Loading: 5 Skeleton rows at the row height. Empty: Empty with one primary action. Error: Alert above the list with a Retry button |
+| Forms | G-08 | One Field per control: label above, help under it, error text under that, tied with `aria-describedby`. Validate on submit, then live per field. After a failed submit, focus moves to the first invalid field and the values stay. Copy /settings/profile |
+| Dialogs and confirms | G-09 | No Dialog in the system yet. Add it with the foundation's add command, register it, write `docs/system/dialog.md` from the spec template, and use it for the confirm |
 ```
 
 An agent that finds its task in this list follows the row's Meanwhile and names the gap in its final message.
 
 ## Markdown twins
 
-Every page has a twin at the same path with `.md` appended. The twin is what agents read.
+Every page has a twin at the same path with `.md` appended. Agents read the twin.
 
 - Generate the twin from the same source as the page. Never write it by hand.
 - Keep the page's H2s and H3s, in the same order.
@@ -241,7 +231,7 @@ Every page has a twin at the same path with `.md` appended. The twin is what age
 - Leave out navigation, theme toggles and anything that only works in a browser.
 - Serve it with `Content-Type: text/markdown`. Where the framework allows it, also return the twin when a request sends `Accept: text/markdown` to the page URL, and add `<link rel="alternate" type="text/markdown">` to the page head.
 
-A twin that goes stale is worse than no twin, because agents trust it. `gen-docs.mjs --check` is part of the check and fails when a committed twin differs from a fresh one.
+A stale twin is worse than none, because agents trust it. `gen-docs.mjs --check` fails when a committed twin differs from a fresh one.
 
 ## llms.txt
 
@@ -264,7 +254,7 @@ Serve `/llms.txt` at the site root, or at the docs root if the app is not a docs
 - [Registry](/system/registry.json): machine-readable component list
 ```
 
-Each line gets a short note saying when to open the page. `gen-docs.mjs` takes it from the first sentence under `## Description`, so a new spec shows up without a hand edit.
+Each line's note, saying when to open the page, comes from the first sentence under `## Description`, so a new spec shows up with no hand edit.
 
 ## Registry
 
@@ -291,13 +281,13 @@ Each line gets a short note saying when to open the page. `gen-docs.mjs` takes i
 }
 ```
 
-`status` is `ready`, `ready-with-gaps` or `blocked`, the same grades as the handoff report. `replaces` feeds the migration map and the deprecated-import check. `variants` and `states` tell the docs check which examples must exist.
+`status` is `ready`, `ready-with-gaps` or `blocked`, the handoff grades. `replaces` feeds the migration map and the deprecated-import check. `variants` and `states` tell the docs check which examples must exist.
 
-On shadcn, there is no second file. The system ships as a namespaced shadcn registry, whose `registry.json` has `name`, `homepage` and `items`. Each item's `name` is the `id` above, and the other fields above go under the item's `meta`, with the twin's URL also in its `docs` field. `base-shadcn.md` has the rest. Any other existing registry format gets the same fields added, never a parallel file.
+When the foundation has its own registry format, the same fields go into it, never into a parallel file (the base reference says where).
 
 ## Load conditions in AGENTS.md
 
-Agents skip available skills and docs often, so a one-line pointer is not enough. Write a short block into AGENTS.md or the project's agent instructions in phase 3, right after the tokens land, and never cut it. It names the work that triggers it, what to read, and what to run. Keep the rules themselves in the docs.
+Agents often skip available skills and docs, so a one-line pointer is not enough. Write a short block into AGENTS.md or the project's agent instructions in phase 3, right after the tokens land, and never cut it. It names the work that triggers it, what to read, and what to run. The rules themselves stay in the docs.
 
 ```markdown
 ## UI work
@@ -305,15 +295,15 @@ Agents skip available skills and docs often, so a one-line pointer is not enough
 Before you add or change a component, a screen, a style, a token, or copy in the UI:
 1. Read public/llms.txt, then public/system/rules.md and the twin in public/system/ of each component you touch.
 2. If the task is in public/system/coverage-gaps.md, follow that row's Meanwhile and name the gap in your final message.
-3. Use a registry component and the tokens in app/globals.css. If none fits, open a gate before writing one.
+3. Use a registry component and the tokens in styles/globals.css. If none fits, open a gate before writing one.
 Before you finish: run `npm run check`, and capture the changed screens at 390 and 1280.
 ```
 
-Name real paths and the real check command. Before the docs exist, the block names the token file and the check, and phase 7 adds the docs lines. Delete a line when the repo has no such thing.
+Name real paths, the real check command and the Frame's viewports. Before the docs exist, the block names the token file and the check, and phase 7 adds the docs lines. Delete a line when the repo has no such thing.
 
 ## Checks for the docs
 
-Add these to the phase 5 check in `checks.md`. The first three run on every system. The rest apply once an HTML docs site exists.
+Add these to the phase 5 check. The first three run on every system. The rest apply once an HTML docs site exists.
 
 - `node scripts/gen-docs.mjs --check`: every twin, the rules page, the index and `llms.txt` equal a fresh generation, and no orphaned twin is left.
 - `node scripts/check-spec.mjs docs/system`: every spec answers the template, with the nine H2s in order, its rules in shape, and its example files present.
@@ -321,8 +311,7 @@ Add these to the phase 5 check in `checks.md`. The first three run on every syst
 - Every registry entry has a source file that exists and a spec in `docs/system/`.
 - Every value in the entry's `variants` and every `states` item has an example file, and every example file compiles against current exports.
 - Every page route renders, and every link in `llms.txt` loads.
-- Props tables match the component types. `gen-docs.mjs --check` covers this, because the twin's table comes from the types.
-- Docs chrome does not reach into examples. `node scripts/check-docs-leak.mjs --pairs scripts/docs-leak.json` renders each example alone and on its docs page, compares the computed styles of every element inside it, and fails on any difference. It uses Playwright or agent-browser and prints SKIP when neither exists.
+- Docs chrome does not reach into examples. `node scripts/check-docs-leak.mjs --pairs scripts/docs-leak.json` renders each example alone and on its docs page, compares the computed styles of every element inside it, and fails on any difference. It needs a browser (`browser.md`) and prints SKIP when none exists.
 
 ## Done, page by page
 
@@ -337,4 +326,4 @@ Add these to the phase 5 check in `checks.md`. The first three run on every syst
 | Rules and coverage gaps | `rules.md` is fresh, every coverage gap names what to do meanwhile |
 | Twins and `llms.txt` | `gen-docs.mjs --check` exits 0, every `llms.txt` link loads |
 | AGENTS.md | The load-conditions block names real paths and the real check command |
-| HTML docs site, optional | The eight points under Component pages hold, and `check-docs-leak.mjs` exits 0 |
+| HTML docs site, optional | The Done line under Component pages holds, and `check-docs-leak.mjs` exits 0 |

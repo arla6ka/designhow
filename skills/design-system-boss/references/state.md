@@ -1,6 +1,6 @@
 # State
 
-One file, `.design-system/boss/state.md`, written only by the boss. It is how a person reads the run without the transcript, and how a fresh agent picks it up after a crash. The sibling skills keep their own records. The state file links to them and does not copy them.
+One file, `.design-system/boss/state.md`, written only by the boss. A person reads the run from it without the transcript, and a fresh agent picks it up from it after a crash. The siblings keep their own records, which the state file links and never copies.
 
 ## Contents
 
@@ -25,10 +25,10 @@ One file, `.design-system/boss/state.md`, written only by the boss. It is how a 
   returns/<step>.md        each step's status line and file list
 .design-system/close.md    every count the report quotes, written at close, the same file the build writes
 .design-system/pr.md       the PR body, on a minimal footprint only, untracked
-.design-system/run.md      the build's record: the boss writes the skeleton at step 2, then the build's coordinator is its only writer
+.design-system/run.md      the build's record. The boss writes the skeleton, then the build's coordinator is its only writer
 .design-system/tmp/        scratch for every agent, gitignored, deleted at close
 .design-system/review/
-  <surface>-{before,after}-{390,1280}.png   captures for every changed surface, gitignored
+  <surface>-{before,after}-<width>.png   captures for every changed surface, gitignored
   *.probe.json             the probe beside each capture, tracked
   surfaces.tsv             surface, route and states, the montage's input, tracked
   traces.tsv               one row per changed surface, tracked
@@ -37,9 +37,9 @@ One file, `.design-system/boss/state.md`, written only by the boss. It is how a 
   index.html               one montage index, before beside after, tracked
 ```
 
-Sibling records live where the siblings put them: `.design-system/run.md` for the build and `.migration/<run>/` for a migration. The run commits its records, `review/` included. `.gitignore` lists only `.design-system/review/**/*.png` and `.design-system/tmp/`, so the captures stay out of commits and the traces, reports and montage page stay in. On a minimal footprint all of `.design-system/` and `.migration/` stays untracked, listed in `.git/info/exclude`. It is only a record. The check, check-spec, the docs generator and the docs live in the repo's `scripts/` and `docs/`, so the repo works once these folders are gone.
+Sibling records live where the siblings put them, `.design-system/run.md` for the build and `.migration/<run>/` for a migration. The run commits its records, `review/` included. `.gitignore` lists only `.design-system/review/**/*.png` and `.design-system/tmp/`, so captures stay out of commits and the traces, reports and montage page stay in. On a minimal footprint all of `.design-system/` and `.migration/` stays untracked, listed in `.git/info/exclude`. The check, check-spec, the docs generator and the docs live in the repo's `scripts/` and `docs/`, so the repo works once these folders are gone.
 
-When the route runs the build, the boss writes `.design-system/run.md` at step 2, before any brief names it, from `build-design-system/references/run-record.md`: the File shape headings, the Frame with the run branch, budget and clearance, the standing orders (the boss's list, with the build's lines added under it), and the gates known so far. Phases, Ledger and Handoff stay empty. From the first build brief on, the build's coordinator seat owns the file.
+When the route runs the build, the boss writes the `.design-system/run.md` skeleton before any brief names it, from `build-design-system/references/run-record.md`. It holds the File shape headings, the Frame with the run branch, budget and clearance, the standing orders (the boss's list with the build's lines under it), and the gates known so far. Phases, Ledger and Handoff stay empty. From the first build brief on, the build's coordinator seat owns the file.
 
 ## The state file
 
@@ -100,19 +100,19 @@ Next action: save step 2's status line to returns/migrate-audit.md and check pla
 
 Step states are `not started`, `in progress`, `done`, `done with gaps`, `stopped: <condition>`, `failed: <check>`, `skipped: <reason>` and `not started: budget`.
 
-Gate IDs are `G-NN` everywhere, the form the montage reads. The From column names the record and the sibling's own ID, so a person can find the original row. When two records use the same ID, the later one gets the next free `G-NN` here, and its From cell keeps the original.
+Gate IDs are `G-NN`, the form the montage reads. The From column names the record and the sibling's own ID. When two records use the same ID, the later one gets the next free `G-NN` here, and its From cell keeps the original.
 
 ## Rules
 
-- One writer. Step agents never edit `state.md`. They report, and the boss records.
-- Write as it happens. A decision gets its row when it is made.
+- One writer. Step agents report, and the boss records.
+- A decision gets its row when it is made.
 - Every row points at a file. A row with no evidence path is a claim.
 - Steps, Budget and Resume update in place. Decisions and Gates only grow.
-- The Resume line always names the single next action, so a crash at any point leaves a way back in.
+- The Resume line names the single next action, so a crash at any point leaves a way back in.
 
 ## Live workers
 
-Empty at a normal close, since the boss waits for every worker. If the host forces a handback while workers run, fill it before anything else, one row per worker, so the next agent knows what may still be writing.
+Empty at a normal close, since the boss waits for every worker. If the host forces a handback while workers run, fill it first, one row per worker, so the next agent knows what may still be writing.
 
 ```markdown
 ## Live workers
@@ -121,21 +121,21 @@ Empty at a normal close, since the boss waits for every worker. If the host forc
 | build: Dialog | briefs/build-dialog.1.md | src/ui/Dialog.*, docs/system/dialog.md | keyboard walk on /customers | 11:42 |
 ```
 
-A fresh agent checks each row's scope with `git status` before trusting any file in it.
+A fresh agent checks each row's scope with `git status` before trusting a file in it.
 
 ## Resuming
 
 A fresh agent with this skill and the repo does this, in order:
 
-1. Read `state.md`: the Ask, the Route, the Standing orders, then the Steps table.
-2. Take the first step not marked done, skipped or stopped. Open its record path.
+1. Read the Ask, the Route, the Standing orders, then the Steps table.
+2. Take the first step not marked done, skipped or stopped, and open its record path.
 3. If that sibling record exists, the sibling resumes from it by its own rules. Brief a new step agent with the same brief file and a note that a record exists, or hold the seat again per `delegation.md`, "Who writes product code".
-4. Check the facts that drift: that the run branch exists and is checked out, the branch heads a step reported, and whether `git status` still matches the last saved one outside the run's scopes. Record any difference as a decision before going on.
+4. Check the facts that drift: the run branch exists and is checked out, its head matches what the last step reported, and `git status` outside the run's scopes matches the last save. Record any difference as a decision first.
 5. Leave finished steps alone. Recheck only the one claim the next step builds on.
 
 ## The close file
 
-`.design-system/close.md` is the one file the report takes its counts from, for the boss and the build alike. Under the boss, the boss writes it at close and takes in the build's close rows and a migration's `.migration/<run>/close.md`, which stays the migration's own record, after `triage/after/` and the clean-clone check, and changes no count in the report without changing it here first. One row per count, each with its unit and the file or command it came from.
+`.design-system/close.md` is the one file the report takes its counts from. The boss writes it at close, after `triage/after/` and the clean-clone check, and takes in the build's close rows and the migration's `.migration/<run>/close.md`, which stays the migration's own record. No count in the report changes without changing here first. One row per count, each with its unit and source file or command.
 
 ```markdown
 # Close: ds/2026-03-12-full at 4be21c0
@@ -150,21 +150,21 @@ A fresh agent with this skill and the repo does this, in order:
 | gates applied | gates | | 8 | state.md#gates |
 
 ## Still raw
-- app/billing/page.tsx: 9 lines, the invoice status colors (gate G-06)
+- src/billing/InvoiceList.tsx: 9 lines, the invoice status colors (gate G-06)
 - components/Chart.tsx: 3 lines, chart series colors, follow-up
 ```
 
-When `montage.mjs` exits 0 with warnings on open gates, the close file gets a `## Montage warnings` list, one line per warning with its gate id, copied from the montage output. The montage row's After cell reads `0, N warnings on open gates`. An exit 1 means a change nobody explained, and the run is not done.
+When `montage.mjs` exits 0 with warnings on open gates, the close file gets a `## Montage warnings` list, one line per warning with its gate id, copied from the montage output, and the montage row reads `0, N warnings on open gates`. An exit 1 means a change nobody explained, and the run is not done.
 
-"Still raw" comes from `triage/after/raw-colors.txt`, grouped by file, with the reason each file stayed. An empty list says `none`. The report names these files instead of saying every screen is done.
+"Still raw" comes from `triage/after/raw-colors.txt`, grouped by file, with the reason each stayed. An empty list says `none`.
 
 ## The handoff report
 
-Written into the Report section from `close.md`. The final chat message is these four parts verbatim, with the headings dropped, in about 200 words at most. Every count comes from `close.md`, never from memory, and each names its unit. It links only tracked files, such as `close.md`, `review/index.html` and `review/traces.tsv`, never a PNG or anything in `tmp/`. On a minimal footprint, where nothing under `.design-system/` is tracked, it names `index.html` as a local file. No route names, no skill names the person did not use, no process narration and no skill friction.
+Written into the Report section from `close.md`. The final chat message is its four parts verbatim, headings dropped, in about 200 words. Every count comes from `close.md`, never from memory, with its unit. It links only tracked files, such as `close.md`, `review/index.html` and `review/traces.tsv`, never a PNG or anything in `tmp/`. On a minimal footprint, where nothing under `.design-system/` is tracked, it names `index.html` as a local file. No route names, no skill names the person did not use, no process narration and no skill friction.
 
-- **What changed** opens with one plain sentence that answers the ask. It names what is still raw and where, from `close.md`, never "every screen". Then it says which screens changed and which didn't, and why: "7 of 8 screens changed; /help looks the same because it already matched", or "No screen looks different yet: this run built the system and a plan, and moving screens needs your go-ahead." With no live reader, the Frame goes here too.
-- **Gates** lists at most 3 that the run branch applied and that change what a screen shows or does. The slots go first to gates that bear on the person's complaint, such as the color moves on a hardcoded-colors ask, then to the rest by how many screens they touch.
-- **Next** is one plain-language prompt that clears every gate at once, usually a merge with named reversals. When surfaces wait on clearance, one sentence follows the merge: `To move the other N screens too, reply "Go, <budget>".` It never asks the person to do a step the run could have done, like re-pinning a plan or rerunning a check. It carries no process dispute, such as which close file or verifier to trust. That goes in the state file. On a minimal footprint, Next opens the PR with `.design-system/pr.md` as its body, after a rebase when the base carries commits upstream doesn't have, per `references/routes.md` (Minimal footprint close).
+- **What changed** opens with one plain sentence that answers the ask, and names what is still raw and where, never "every screen". Then which screens changed and which didn't, and why, such as "7 of 8 screens changed; /help looks the same because it already matched", or "No screen looks different yet: this run built the system and a plan, and moving screens needs your go-ahead." With no live reader, the Frame goes here too.
+- **Gates** lists up to 3 applied gates that change what a screen shows or does, so the person sees the ones they may want to reverse. Gates that bear on the complaint go first, such as the color moves on a hardcoded-colors ask, then the rest by how many screens they touch.
+- **Next** is one plain-language prompt that clears every gate at once, usually a merge with named reversals. When surfaces wait on clearance, one sentence follows the merge: `To move the other N screens too, reply "Go, <budget>".` It never asks the person to do a step the run could have done, like re-pinning a plan or rerunning a check, and carries no process dispute, which goes in the state file. On a minimal footprint, Next opens the PR with `.design-system/pr.md` as its body, after a rebase when the base carries commits upstream doesn't have, per `references/routes.md` (Minimal footprint close).
 
 ```markdown
 ## Report
@@ -189,4 +189,4 @@ G-01: 14 body grays merged into text.default. Default: merge.
 "Merge ds/2026-03-12-full, but keep the blue Sign in button (reverse G-04)."
 ```
 
-On a read-only route the checks part reads `Checks: n/a (read-only route)`, What changed says no screen changed because the ask was to look, and Next is the smallest writing ask that follows.
+On a read-only route, Checks reads `n/a (read-only route)`, What changed says no screen changed because the ask was to look, and Next is the smallest writing ask that follows.

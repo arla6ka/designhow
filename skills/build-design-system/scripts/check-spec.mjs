@@ -11,7 +11,11 @@
 // "-" reads one spec from stdin, for an entry that exists only as text (component-docs under a coordinator).
 // spec/props-drift compares the spec with the component at HEAD, through scripts/props-table.mjs: every Variants
 // axis must be a prop, every listed value of a string-union prop must still exist, and every "- `prop`" note under
-// Props must name a prop. --no-props skips it. Run it at close, so a spec that went stale during the run fails.
+// Props must name a prop. A component that forwards a native element's attributes also accepts those names
+// (type, disabled, readOnly, inputMode, on* handlers and the rest). --no-props skips it. Run it at close, so a
+// spec that went stale during the run fails.
+// A rule the four tests sent to a gate is one line in its section, on any page kind:
+// - Gated: `rule/<id>` (G-NN). <the question>   (references/spec-template.md, Gated rules)
 // Freshness, skipped by --no-fresh:
 // spec/call-sites  "Real uses, <n> call sites" under Examples (or "<n> call sites" in the Description) must equal the <Name tags (Name from the H1) in .tsx and .jsx
 //                  files under the check's include folders (scripts/check-system.config.json, else app, src,
@@ -40,6 +44,8 @@ const CHECKED_BY = /^(test|lint|screenshot|a11y scan|snapshot|by hand)(\s*(,|and
 const SKIP = /^(not applicable|not supplied|needs review)\b/i;
 const DEF_RE = /^[-*] `(rule\/[^`]+)`: (.+)$/;
 const CITE_RE = /^[-*] Follows `(rule\/[a-z0-9-]+)`\.?$/;
+// A rule the four tests sent to a gate (references/spec-template.md, Gated rules): - Gated: `rule/<id>` (G-NN). <question>
+const GATED_RE = /^[-*] Gated: `(rule\/[a-z0-9]+(?:-[a-z0-9]+)*)` \((G-[\w-]+)\)\.? \S/;
 const ID_RE = /^rule\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const HELP = `check-spec.mjs: fail a component spec that leaves a question open
@@ -50,6 +56,14 @@ Usage: node scripts/check-spec.mjs [options] <file-or-folder or ->...
 Folders are searched for component specs (*.md with a "## States" heading) and
 foundation pages (colors, typography, writing and the other foundation slugs).
 "-" reads one spec from stdin.
+
+spec/props-drift checks Variants axes and Props notes against the component's
+props at HEAD. When the component forwards a native element's attributes, native
+names such as type, disabled, readOnly, inputMode and on* handlers count as props.
+
+A rule that went to a gate stays in its section as one line, on component and
+foundation pages alike:
+  - Gated: \`rule/<id>\` (G-NN). <the question in plain words>
 
 Options
   --root <dir>       repo root. Default: the git root of the first file or folder,
@@ -101,15 +115,31 @@ if (!args.length) { console.error(USAGE_LINE); process.exit(2); }
 let propsTables = null;
 if (!noProps) try { ({ propsTables } = await import(join(dirname(fileURLToPath(import.meta.url)), "props-table.mjs"))); } catch { console.log("note: scripts/props-table.mjs is missing, so spec/props-drift is skipped"); }
 // Props from props-table's markdown: own props with their types, plus the names in "Also accepts: ... (a, b)".
+// native is true when the component forwards a native element's attributes (props-table's "native element
+// attributes" line, or an HTMLAttributes / ComponentProps<"tag"> type it did not expand). Then a native attribute
+// name counts as a prop, minus any name an Omit<..., "a" | "b"> on that line removes.
+const NATIVE_TYPE = /native element attributes|HTMLAttributes\b|HTMLProps\b|SVGProps\b|IntrinsicElements\b|ComponentProps(?:WithoutRef|WithRef)?<\s*["'`][a-z]/;
+const NATIVE_ATTRS = new Set(("id className style title hidden lang dir tabIndex role slot draggable spellCheck translate " +
+  "autoFocus autoCapitalize autoCorrect contentEditable enterKeyHint inputMode accessKey children ref key " +
+  "type name value defaultValue checked defaultChecked disabled readOnly required placeholder autoComplete " +
+  "min max step minLength maxLength pattern multiple accept capture size cols rows wrap list form formAction " +
+  "formMethod formNoValidate formTarget formEncType href target rel download hrefLang referrerPolicy src srcSet " +
+  "sizes alt width height loading decoding crossOrigin htmlFor open label selected span colSpan rowSpan headers scope " +
+  "start reversed dateTime cite action method noValidate encType acceptCharset").split(" "));
+const nativeAttr = (n) => NATIVE_ATTRS.has(n) || /^on[A-Z]\w*$/.test(n);
 function propsOf(md) {
-  const own = new Map(), also = new Set();
+  const own = new Map(), also = new Set(), omitted = new Set();
+  let native = false;
   for (const l of md.split("\n")) {
     const m = /^\|\s*`([\w$]+)\??`\s*\|\s*`?((?:[^|\\]|\\.)*?)`?\s*\|/.exec(l);
     if (m && m[1] !== "Prop") own.set(m[1], m[2].replace(/\\\|/g, "|"));
     const a = /^Also accepts:(.*)$/.exec(l);
-    if (a) for (const g of a[1].matchAll(/\(([^)]*)\)/g)) for (const n of g[1].split(",")) if (/^\s*[\w$]+\s*$/.test(n)) also.add(n.trim());
+    if (!a) continue;
+    for (const g of a[1].matchAll(/\(([^)]*)\)/g)) for (const n of g[1].split(",")) if (/^\s*[\w$]+\s*$/.test(n)) also.add(n.trim());
+    if (NATIVE_TYPE.test(a[1])) native = true;
+    for (const o of a[1].matchAll(/Omit<[^,]+,([^>]*)>/g)) for (const q of o[1].matchAll(/["'`]([\w$]+)["'`]/g)) omitted.add(q[1]);
   }
-  return { own, also };
+  return { own, also, native: (n) => native && nativeAttr(n) && !omitted.has(n) };
 }
 
 // ---------- repo settings: examples folder, registry, coverage gaps, vague words ----------
@@ -214,9 +244,9 @@ function usageSections(lines) {
   });
   return out;
 }
-// Parse one rule section into definitions, citations, Not applicable lines and other items.
+// Parse one rule section into definitions, citations, gated rules, Not applicable lines and other items.
 function parseRuleSection(sec) {
-  const defs = [], cites = [], na = [], review = [], other = [];
+  const defs = [], cites = [], gated = [], badGated = [], na = [], review = [], other = [];
   let cur = null, inDont = false;
   for (const { t, line } of sec.lines) {
     const def = DEF_RE.exec(t);
@@ -227,12 +257,13 @@ function parseRuleSection(sec) {
     cur = null; inDont = false;
     const c = CITE_RE.exec(t);
     if (c) { cites.push({ id: c[1], line }); continue; }
+    if (/^[-*] Gated:/i.test(t)) { const g = GATED_RE.exec(t); if (g) gated.push({ id: g[1], gate: g[2], line }); else badGated.push({ line, t: t.trim() }); continue; }
     if (/^([-*]\s+)?Not applicable:\s*\S/i.test(t)) { na.push(line); continue; }
     if (/^([-*]\s+)?NEEDS REVIEW\b/.test(t)) { review.push({ line, t: t.trim() }); continue; }
     if (/^[-*] /.test(t)) other.push({ line, t: t.trim() });
   }
   for (const d of defs) d.text = d.parts.join(" ");
-  return { defs, cites, na, review, other };
+  return { defs, cites, gated, badGated, na, review, other };
 }
 // Every definition on a page, by kind.
 function pageDefs(text, kind) {
@@ -388,6 +419,8 @@ for (const file of files) {
     // spec/dont-instead
     if (/(?<![\p{L}])(don['\u2019]t|do not|never|avoid)(?![\p{L}])/iu.test(p.action) && !/\binstead\b/i.test(p.action)) fail(d.line, "spec/dont-instead", `${d.id} says what not to do. Say what to do instead`);
   }
+  // A Gated line has one format on every page kind.
+  for (const p of parsed.values()) for (const g of p.badGated) fail(g.line, "spec/rule-shape", `'${g.t.slice(0, 60)}' is not a gated rule line (- Gated: \`rule/<id>\` (G-NN). <question>)`);
   // spec/rule-cite
   for (const p of parsed.values()) for (const c of p.cites) if (!defIndex.has(c.id)) fail(c.line, "spec/rule-cite", `cites ${c.id}, which no page defines`);
 
@@ -440,10 +473,10 @@ for (const file of files) {
     if (!s) continue;
     if (name === "When to use" || name === "When not to use") { if (!s.lines.some((x) => /^[-*] \S/.test(x.t))) fail(s.line, "spec/usage-empty", `${name} is empty`); continue; }
     const p = parsed.get(name);
-    const ok = p.defs.length || p.na.length || (name !== "Limits" && p.cites.length);
+    const ok = p.defs.length || p.na.length || p.gated.length || (name !== "Limits" && p.cites.length);
     if (!ok) fail(s.line, "spec/usage-empty", `${name} is empty`);
   }
-  // Component rule sections hold rule lines, citations and Not applicable lines only.
+  // Component rule sections hold rule lines, citations, gated rules and Not applicable lines only.
   for (const p of parsed.values()) for (const o of p.other) fail(o.line, "spec/rule-shape", `'${o.t.slice(0, 60)}' is not a rule line (- \`rule/${slug}-<words>\`: When ...) or a citation (- Follows \`rule/<id>\`.)`);
   // spec/alternative
   const wnt = bySec.get("When not to use");
@@ -614,8 +647,8 @@ for (const file of files) {
     else {
       const md = propsTables(root, [src[1]]).tables.get(src[1]);
       if (md) {
-        const { own, also } = propsOf(md);
-        const known = (n) => own.has(n) || also.has(n);
+        const { own, also, native } = propsOf(md);
+        const known = (n) => own.has(n) || also.has(n) || native(n);
         const byLower = new Map([...own.keys()].map((k) => [k.toLowerCase(), k]));
         const vars = body("Variants");
         if (vars) {
@@ -625,7 +658,7 @@ for (const file of files) {
             const h = /^### (.+?)\s*$/.exec(l);
             if (h) {
               const name = h[1].replace(/`/g, "").trim();
-              axis = byLower.get(name.toLowerCase()) || (also.has(name) ? name : null);
+              axis = byLower.get(name.toLowerCase()) || (also.has(name) || native(name) ? name : null);
               if (!axis && !SKIP.test(name)) fail(line, "spec/props-drift", `Variants axis '${name}' is not a prop of ${src[1]} at HEAD. Props: ${[...own.keys()].join(", ") || "none"}`);
               return;
             }
@@ -715,9 +748,9 @@ console.log(`${files.length} spec(s) checked, ${failures} failure(s)`);
 process.exit(failures ? 1 : 0);
 
 // ---------- self-test ----------
-// Each fixtures/check-spec/<case>/ holds case.json ({ "rule", "count", "args", "fresh" }) and fail/ and pass/ folders,
-// each a mini repo. Files ending in .fixture are read under their inner name. The run checks docs/system with
-// --no-props, and --no-fresh unless fresh is true, plus the case's args. fail/ must give exactly count findings of the rule and none of any other,
+// Each fixtures/check-spec/<case>/ holds case.json ({ "rule", "count", "args", "fresh", "props" }) and fail/ and pass/
+// folders, each a mini repo. Files ending in .fixture are read under their inner name. The run checks docs/system with
+// --no-props unless props is true, and --no-fresh unless fresh is true, plus the case's args. fail/ must give exactly count findings of the rule and none of any other,
 // and pass/ none at all.
 function selfTest(dirArg) {
   const here = dirname(fileURLToPath(import.meta.url));
@@ -735,7 +768,7 @@ function selfTest(dirArg) {
       cpSync(src, tmp, { recursive: true });
       const unfix = (d) => { for (const e of readdirSync(d)) { const p = join(d, e); if (statSync(p).isDirectory()) unfix(p); else if (e.endsWith(".fixture")) renameSync(p, p.slice(0, -8)); } };
       unfix(tmp);
-      const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), "--root", tmp, ...(spec.fresh ? [] : ["--no-fresh"]), "--no-props", ...(spec.args || []), spec.target || "docs/system"], { cwd: tmp, encoding: "utf8" });
+      const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), "--root", tmp, ...(spec.fresh ? [] : ["--no-fresh"]), ...(spec.props ? [] : ["--no-props"]), ...(spec.args || []), spec.target || "docs/system"], { cwd: tmp, encoding: "utf8" });
       rmSync(tmp, { recursive: true, force: true });
       const found = (r.stdout || "").split("\n").map((l) => /^\S+:\d+ (spec\/[\w-]+) (.*)$/.exec(l)).filter(Boolean);
       const mine = found.filter((m) => m[1] === spec.rule).length;

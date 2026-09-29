@@ -42,8 +42,8 @@ Options
                        is required
   --save-stock <f> <upstream>
                        save upstream's copy of a customized ui file as
-                       <stockDir>/<f>.stock. <upstream> is a plain file or the
-                       item JSON from \`npx shadcn@latest view <item>\`. Findings
+                       <stockDir>/<f>.stock. <upstream> is a plain file or a
+                       registry item JSON, such as \`npx shadcn@latest view <item>\`. Findings
                        on lines identical to a stock line are upstream's, not drift
   --left               after the scan, print what the allowlist still holds, by
                        file and rule. The close counts come from this output
@@ -735,7 +735,7 @@ const DARK = /\.dark\b|\[data-(?:theme|mode|color-scheme)=["']?dark|prefers-colo
 const LIGHT_ROOT = /^(?::root|html|:host|\.light|\[data-(?:theme|mode)=["']?light["']?\])(?:\s*,\s*(?::root|html|:host|\.light|\[data-(?:theme|mode)=["']?light["']?\]))*$/;
 const COLOR_VALUE = new RegExp(`^(?:#[0-9a-f]{3,8}|(?:rgba?|hsla?|oklch|oklab|lab|lch|hwb|color-mix|color)\\(.*|${NAMED.join("|")})$`, "i");
 
-// CSS files a stylesheet imports from node_modules (tailwindcss, tw-animate-css, shadcn/tailwind.css), for definitions only.
+// CSS files a stylesheet imports from node_modules (such as tailwindcss or a component library's CSS), for definitions only.
 function importedCss(root, spec, from) {
   const cands = [];
   if (/^(\.|\/)/.test(spec)) cands.push(join(dirname(from), spec));

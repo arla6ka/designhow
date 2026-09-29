@@ -45,13 +45,13 @@ Options
   --root <dir>         the app's repo root, where Playwright is looked for first.
                        Default: the git root of --out (or --surfaces), else of the
                        current folder. Run from anywhere with absolute paths
-  --widths 390,1280    viewport widths
+  --widths 390,1280    viewport widths: the narrowest and widest the app supports
   --height 900         viewport height. 320 at --widths 390 measures overlays
                        that run past a short screen (trap/overlay-no-max-height)
   --themes light,dark  first one is the default theme. Default: light
   --theme-via <how>    media (prefers-color-scheme, default), class (toggles .dark on
                        <html>), or storage:<key> (sets localStorage <key> before load,
-                       as next-themes does). media is what a dark OS does, so it
+                       as a theme library does). media is what a dark OS does, so it
                        proves the theme reaches users. class proves the tokens only
   --states <file.mjs>  Playwright only. A module whose default export maps a state
                        name, or surface.state, to async (page) => {} that reaches it:
@@ -67,7 +67,8 @@ Options
 
 It requests every route before capturing and exits 1 if any answers other than 200
 (or its expected status), after capturing the rest. Clocks are fixed, Math.random is seeded, lazy images load
-eagerly, and it waits for fonts and for React to attach handlers before a capture.
+eagerly, and it waits for fonts and, on a React app, for handlers to attach before
+a capture.
 Exit 2 on bad input or no browser.`;
 
 const argv = process.argv.slice(2);

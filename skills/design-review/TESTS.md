@@ -1,52 +1,40 @@
 # Tests: design review
 
-Run these by hand against one or two screens from your own product. For each case, run the same task on the same screens with the same prompt twice, once with the skill switched off and once with it on, and compare the two reports.
+Run these by hand against one or two screens from your own product. For each case, run the same task on the same screens with the same prompt, once with the skill off and once with it on, and compare the reports.
 
 ## Setup under test
 
-Two runs are comparable only when their setups match, so fill this in every time.
+Two runs compare only when their setups match, so fill this in every time.
 
 - Skill and references in use: `SKILL.md`, `references/sources.md`, and the default criteria file or your own
 - Project instructions: loaded or not, and which file (CLAUDE.md / AGENTS.md)
 - Tools connected: browser tool, component workbench, or none
 - Model name and version
 
-Several cases use an invite dialog with known defects, built for the purpose. Its Cancel and Send invite buttons are both `type="submit"`, Cancel comes first, the role select remounts on error, and the form POSTs to `/api/invite`.
+Several cases use an invite dialog built with known defects. Its Cancel and Send invite buttons are both `type="submit"`, Cancel comes first, the role select remounts on error, and the form POSTs to `/api/invite`.
 
-Write each prompt the way a colleague would, such as "check this screen before I ship." Keep words like "test", "eval" or "rubric" out of it, since a model that knows it is being checked behaves differently. Judge from the report and the transcript (what it opened, what it captured), not from the model's account of its own work.
+Write each prompt the way a colleague would, such as "check this screen before I ship." Keep "test", "eval" and "rubric" out of it, since a model that knows it is being checked behaves differently. Judge from the report and the transcript (what it opened, what it captured), not the model's account of its work.
 
 ## Which cases apply
 
-| Case | Runs here | Reason |
-|---|---|---|
-| Normal | Yes | Every setup needs it |
-| Vague request | Yes | Most real asks name no screen, no purpose and no criteria |
-| Missing required input | Yes | An unreadable purpose must stop the run, and a prose description should not pass for the design |
-| Conflicting sources | Yes | Two versions of a screen, or a screenshot and a live URL, can arrive together |
-| Tool failure | Yes | URL and Storybook inputs depend on a browser tool that may be missing or blocked |
-| Ambiguous judgment | Yes | The skill critiques and ranks, which is where taste slips in |
-| Called by a coordinator | If you run build-design-system or migrate-design-system | The caller reads a status line and cannot answer a question mid-run |
-| Report as text under a coordinator | If you run build-design-system or migrate-design-system | Some hosts refuse a report file written inside a subagent, and the review is lost |
-| Scope with no diff | Yes | A whole-app ask with no branch must pick screens and say which |
-| Browser evidence | agent-browser or Playwright installed | Findings must point at refs and measured values, not descriptions |
-| Component specs | Repos with specs | A spec's states extend the edge-case list |
-| Review record names every gap | Yes | A reader must see every skipped check and every n/a |
-| Ship line | Yes | The caller reads the verdict from one line |
-| Direct run reply | Yes | A person reads the first line of the reply and stops |
-| Fixed means measured again | Follow-up passes | A fix claimed in code proves nothing until it is measured |
-| Interaction on a local build | Live builds | A probe must never send a real request |
-| Dialog and form probes | Flows with a dialog or form | Lost input hides behind screens that look fine |
-| Lost or mismatched input | Flows with a form | Shown versus sent is a finding, never a product question |
-| Chained findings and a full Next | Yes | One finding's recovery path can land in another |
-| Adds-only accessibility fixes are ranked | Yes | Adds-only fixes are findings, and the rest go to a person |
+Every case runs on every setup except these:
+
+| Case | Runs when |
+|---|---|
+| Called by a coordinator, Report as text under a coordinator | You run build-design-system or migrate-design-system |
+| Browser evidence | A browser tool is installed |
+| Component specs | The repo has specs |
+| Fixed means measured again | A follow-up pass |
+| Interaction on a local build | A live build |
+| Dialog and form probes, Lost or mismatched input | The flow has a dialog or form |
 
 ## Done means
 
-The readiness list under Output in `SKILL.md`. Needs a person: accessibility changes that remove, rename or restructure semantics, product decisions, and anything the criteria do not cover. An accessibility fix that only adds semantics is a ranked finding.
+The readiness list under Output in `SKILL.md`.
 
 ## Baseline
 
-Run with the skill switched off first. Send the same screens and the prompt "Review this design."
+Run with the skill off first, with the same screens and the prompt "Review this design."
 
 | Case | Without the skill | With the skill |
 |---|---|---|
@@ -55,13 +43,13 @@ Run with the skill switched off first. Send the same screens and the prompt "Rev
 | Ambiguous judgment | | |
 | Dialog and form probes | | |
 
-Look for criteria made up on the spot, opinions written as problems, one issue listed per screen, a confident accessibility ruling, and findings with no location. You cannot tell whether the skill helps until the first column is filled.
+Look for criteria made up on the spot, opinions written as problems, one issue listed per screen, a confident accessibility ruling, and findings with no location. The skill's value is unknown until the first column is filled.
 
 ## Normal case
 
 **Input:** three screenshots of one flow at 1280 px, a one-line purpose, and the default criteria. Plant the same unclear button label on two screens.
 
-**Expect:** a review record naming the images, 1280 px, today's date, the default criteria file, and the purpose marked given. Findings grouped by severity, each with a criterion, a screen plus region, and evidence naming the capture. The label issue appears once with a count of 2. An edge-case list with shown or not shown for each. A summary that matches the findings.
+**Expect:** a review record naming the images, 1280 px, today's date, the default criteria file, and the purpose marked given. Findings grouped by severity, each with a criterion, a screen plus region, and evidence naming the capture. The label issue appears once with a count of 2. Every edge case is marked, and the summary matches the findings.
 
 **Fails if:** a finding lacks a criterion or location, the label issue appears twice, or the report claims anything about mobile widths.
 
@@ -69,7 +57,7 @@ Look for criteria made up on the spot, opinions written as problems, one issue l
 
 **Input:** repo access, a browser tool, a feature branch that changes one settings route, and the prompt "check this screen before I ship". No purpose, no criteria, no URL.
 
-**Expect:** it finds the changed route from the diff, opens it on the dev server at 390 and 1280 px, writes an assumed purpose at the top of the record, uses the default criteria, and finishes the review.
+**Expect:** it finds the changed route from the diff, opens it on the dev server at the default widths, writes an assumed purpose at the top of the record, uses the default criteria, and finishes the review.
 
 **Fails if:** it asks for a file path, a URL or a purpose before looking, reviews routes the branch did not touch, or states the purpose without marking it assumed.
 
@@ -81,7 +69,7 @@ Look for criteria made up on the spot, opinions written as problems, one issue l
 
 **Expect:** it stops, gives a one-line guess at what the screen does, and asks for the real purpose.
 
-**Fails if:** it reviews anyway. Read the output for the purpose it assumed.
+**Fails if:** it reviews anyway on a purpose it assumed.
 
 **Second version:** supply the purpose, then swap the images for a written account of them. It should ask for images or a link.
 
@@ -143,19 +131,19 @@ Look for criteria made up on the spot, opinions written as problems, one issue l
 
 **Fails if:** it reviews every route, picks routes without saying so, or stops to ask which screens.
 
-**Next.js version:** an App Router repo with `app/page.tsx`, `app/_patterns/page.tsx`, `app/(shop)/cart/page.tsx` and `app/(shop)/_components/Row.tsx`, and a nav linking `/cart`. The scope includes `/` and `/cart`. A finding that names `/_patterns`, or a route list that includes `/(shop)`, fails.
+**Router conventions version:** a repo whose router ignores a private folder and drops a grouping folder from the URL, with a nav linking a page inside the group. For example, with a router that ignores `_`-prefixed folders and drops parenthesized folders from the URL: `app/page.tsx`, `app/_patterns/page.tsx`, `app/(shop)/cart/page.tsx`, `app/(shop)/_components/Row.tsx`, and a nav linking `/cart`. The scope includes `/` and `/cart`. A finding that names the private folder, or a route list that includes the grouping folder, fails.
 
 **Named scope version:** a coordinator names the layouts flow while the branch has a diff elsewhere. It reviews the layouts flow only.
 
 ## Browser evidence
 
-**Input:** repo access, agent-browser installed, a settings route whose icon-only delete button is 20 by 20 px, and "review the settings page".
+**Input:** repo access, a browser tool, a settings route whose icon-only delete button is 20 by 20 px, and "review the settings page".
 
-**Expect:** the record names agent-browser, the widths and the accessibility scan. The target-size finding cites the button by role and name with its `@eN` ref, and gives the size from `get box`. Captures use absolute paths under `.design-review/<date>-<flow>/`, the session is named after the flow, and a file listing follows each capture.
+**Expect:** the record names the tool, the widths and the accessibility scan. The target-size finding cites the button by role and name with its `@eN` ref, and gives the measured box. Captures use absolute paths under `.design-review/<date>-<flow>/`, the session is named after the flow, and a file listing follows each capture.
 
 **Fails if:** the size is estimated from a screenshot, an automated scan result is ranked as Blocking on its own, a capture path starts with `.`, or a session is named plain `review`.
 
-**Playwright version:** remove agent-browser. It captures with Playwright, and the axe step still runs at 390 and 1280. A record with no scan, or "low contrast" without a measured value, fails. With neither tool, it asks for screenshots.
+**Fallback tool version:** remove the preferred tool so the next one in `browser.md` (Pick the tool) runs. The scan still runs at every width. A record with no scan, or "low contrast" without a measured value, fails. With no browser tool at all, it asks for screenshots.
 
 ## Component specs
 
@@ -187,13 +175,13 @@ Look for criteria made up on the spot, opinions written as problems, one issue l
 
 **Input:** "check the settings page before I ship it, and tell me if we're using colors consistently", run directly on a branch with a diff.
 
-**Expect:** the first line is one plain sentence that answers both halves, such as "Nearly. One tab bug blocks shipping, and cards use two grays for the same text." It carries no criterion numbers, severities or skill names. The ship line comes second. The reply lists the accessibility scan and any spec check with their exit codes, gives at most 3 items for a person with defaults, and ends with one `Next:` prompt. The report is saved at `.design-review/<date>-<flow>.md` with captures beside it, and nothing lands in the repo root.
+**Expect:** the first line is one plain sentence that answers both halves, such as "Nearly. One tab bug blocks shipping, and cards use two grays for the same text," with no criterion numbers, severities or skill names. The ship line comes second. The reply lists the accessibility scan and any spec check with their exit codes, gives at most 3 items for a person with defaults, and ends with one `Next:` prompt. The report is saved at `.design-review/<date>-<flow>.md` with captures beside it, and nothing lands in the repo root.
 
 **Fails if:** the first line is the ship line alone, a count, a status or the Review record, the answer is buried below the findings, the reply narrates the review, or the report exists only in chat.
 
 ## Fixed means measured again
 
-**Input:** a follow-up pass where the earlier finding was "the Send button widens from 97 to 114px while loading" and the code now claims a fixed width.
+**Input:** a follow-up pass where the earlier finding was "the Send button widens from 96 to 120px while pending" and the code now claims a fixed width.
 
 **Expect:** the finding is marked fixed only with the width measured again in this session, both numbers given. Without a new measurement it reads "not rechecked".
 
@@ -213,7 +201,7 @@ Look for criteria made up on the spot, opinions written as problems, one issue l
 
 **Input:** the invite dialog on a local build.
 
-**Expect:** a measured result for each probe. Focus after the close button, after Escape and after a successful submit, each read from `document.activeElement` (the invite dialog gives BODY for all three). The Tab loop. Enter in Email with valid input. Cancel with valid input (0 requests). Submit while pending, with the button box measured idle and pending and a check for a second request. Failure then retry.
+**Expect:** a measured result for each probe. Focus after the close button, after Escape and after a successful submit, each read from `document.activeElement` (the invite dialog gives BODY for all three). The Tab loop. Enter in Email with valid input. Cancel with valid input (0 requests). Submit while pending, with the button box measured idle and pending, where focus sits, and a check for a second request. Failure then retry.
 
 **Fails if:** any probe is missing without a reason, focus return is marked "not checked" while the closed state was reached, or Enter in the first field is never pressed.
 
@@ -247,4 +235,4 @@ Look for criteria made up on the spot, opinions written as problems, one issue l
 
 **Mixed version:** a nav of links styled as tabs, where the selected one loses its visible selected state, and making it a real `tablist` would change every item's role. Expect two entries. The lost visible state is a finding with its own severity, and the role change is one line under For a person to decide with no severity. Sending the whole thing to a person, or ranking the role change, fails.
 
-Change one thing between runs. Otherwise the next result cannot tell you which edit mattered.
+Change one thing between runs, or the next result cannot tell you which edit mattered.

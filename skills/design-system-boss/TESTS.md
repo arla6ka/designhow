@@ -1,29 +1,31 @@
 # Tests: design system boss
 
-Run these by hand. Give an agent the same repo and prompt twice, once with the boss switched off and the five siblings installed, and once with the boss on, and compare. Most cases stop after triage, the Frame message or the first step, so they are quick. The full-route cases take hours. Nothing here runs automatically.
+Run these by hand. Give an agent the same repo and prompt twice, once with the boss off and the five siblings installed, once with the boss on, and compare. Most cases stop after triage, the Frame or the first step. The full-route cases take hours.
 
 ## Setup under test
 
-A result only means something next to the setup that produced it. Record this before every run.
+A result only means something next to the setup that produced it. Record before every run:
 
-- `SKILL.md`, the five files in `references/`, and `scripts/triage.sh`, unedited or with your changes named
-- Sibling skills installed, and their versions or commits. Name any that were missing
-- Project instructions: AGENTS.md or CLAUDE.md loaded or not
+- This skill's files, unedited or with your changes named
+- Sibling skills installed, with versions or commits, and any missing
+- Whether AGENTS.md or CLAUDE.md loaded
 - Host: subagents, nesting, worktrees, browser and shell, each yes or no
-- Repo and commit, and whether `git status` was clean at the start
+- Repo, commit, and whether `git status` was clean
 - Model for the boss, and for step agents if different
 
-Keep these practice repos in git so every run starts from the same commit. **Bare** has about 15 routes, no token file, 400 or so raw colors and three button implementations. **Drifting** has a DTCG token source, 45% adoption, two input families and a `src/ui` layer with thin states. **Settled** has tokens, `components/ui`, a registry and 90% adoption, with no docs pages. **Fresh shadcn** is `npx shadcn@latest init -d` plus `add --all`, one route and nothing else. **Weak shadcn** is Fresh shadcn with 12 routes, a legacy `Modal` and `PrimaryButton` in `components/custom`, palette classes and `text-[#666]` in product code, and no specs. **Library** has MUI with a theme, 10 routes and two `Button` wrappers. **Upstream** is an open-source app of about 50 routes the person does not own.
+Keep practice repos in git so every run starts from the same commit. Shape them to your own stack. The cases assume these:
+
+- **Bare** has about 15 routes, no token file, a few hundred raw colors and three button implementations.
+- **Drifting** has a DTCG token source, adoption under half, two input families and a `src/ui` layer with thin states.
+- **Settled** has tokens, a shared component folder, a registry and high adoption, with no docs pages.
+- **Fresh shadcn** is a new shadcn project with every stock component added, one route and nothing else.
+- **Weak shadcn** is Fresh shadcn with a dozen routes, a legacy `Modal` and `PrimaryButton` in `components/custom`, palette classes and raw hex values in product code, and no specs.
+- **Library** uses a package component library with a theme object, about 10 routes and two `Button` wrappers.
+- **Upstream** is an open-source app the person does not own.
 
 ## Which cases apply
 
-Every case applies to every setup, except these.
-
-| Case | Applies |
-|---|---|
-| Host shapes | The host shape each part names |
-| Live workers | Hosts with background or nested agents |
-| PR footprint | Repos the person does not own |
+Every case applies to every setup, except Host shapes (the host each part names), Live workers (hosts with background or nested agents) and PR footprint (repos the person does not own).
 
 ## Done means
 
@@ -33,7 +35,7 @@ Every case applies to every setup, except these.
 - At most one question went out before the first step, with its default applied.
 - The report's numbers are rows in `close.md` and match the files they cite.
 - `git status` changed only inside the scopes the steps were given.
-- Left to a person: merging the run branch, reversing gates, clearance on a non-adoption ask, and deploying.
+- A person is left merging, reversing gates, clearance on a non-adoption ask, and deploying.
 
 ## Baseline
 
@@ -43,19 +45,15 @@ Run with the boss switched off and the five siblings installed, on Bare, with th
 Our UI is a mess. Launch subagents to break down all the screens and fix it.
 ```
 
-| Case | Without the boss | With the boss |
-|---|---|---|
-| Fix-it ask | | |
-| Vague build ask | | |
-| Pre-ship review | | |
+Then run Fix-it ask, Vague build ask and Pre-ship review both ways and compare.
 
-Watch for a skill picked from the prompt's wording without looking at the repo, several questions before any work, a migration started with no budget, two skills writing the same files at once, a coordinator that edits components itself, a new palette, a summary that claims success without a count, and no record a second session could resume from.
+Watch for a skill picked from the prompt's wording without looking at the repo, several questions before any work, a migration with no budget, two skills writing the same files at once, a coordinator editing components itself, a new palette, a success claim without a count, and no record a second session could resume from.
 
 ## Vague build ask
 
 **Input:** Bare, and "Launch subagents to break down all screens in the app, we need to build a design system."
 
-**Expect:** triage runs first and the state is `none`. Intent is build. The Frame gives the numbers, the Build route, the budget, and at most one question with a default. `build-design-system` runs as one step, with its per-screen inventory fanned out to read-only workers. `migrate-design-system` runs in audit mode only. The report's Next is a merge, plus the Go line for the screens the audit planned.
+**Expect:** triage runs first, the state is `none` and the intent build. The Frame gives the numbers, the Build route, the budget, and at most one question with a default. `build-design-system` runs as one step, its per-screen inventory fanned out to read-only workers, and `migrate-design-system` runs in audit mode only. Next is a merge plus the Go line.
 
 **Fails if:** the boss asks for paths, the migration edits anything, or the report states a number no file holds.
 
@@ -63,7 +61,7 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Input:** Drifting, and "Our UI is a mess, fix it." with a budget of 8 hours. Then the same repo with "Our UI is a mess, clean it up".
 
-**Expect:** state `drifting`, route Full. "Fix it" aimed at a mess is clearance, so the state file names the ask as the source and 8 hours as the budget. Build, migrate audit, decided defaults, then `migrate-design-system` on the other screens and `design-review` on the final captures. "Clean it up" gives no clearance, so the route ends after the decided defaults, at the plan, and Next carries the Go line.
+**Expect:** state `drifting`, route Full. "Fix it" on a mess is clearance, so the state file names the ask as source and 8 hours as budget. Build, migrate audit, decided defaults, then `migrate-design-system` on the other screens and `design-review` on the final captures. "Clean it up" gives no clearance, so the route ends at the plan after the decided defaults, and Next carries the Go line.
 
 **Fails if:** the fix-it run ends at the plan, migration edits start before `plan.md` exists, or the build and the migration write at the same time.
 
@@ -71,9 +69,9 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Input:** Drifting, and "we have hardcoded colors everywhere", once with a token set that covers most values and once with one so thin that `token-mapping` reports gaps over its threshold. Then Weak shadcn with "we're on shadcn but everything drifted, people hardcode colors everywhere, clean it up and make it consistent".
 
-**Expect:** `token-mapping` runs first. With the covering set the route goes on to migrate audit, and with the thin set to the build, each passing the report by path in a decision row. On Weak shadcn the route is Values, then Harden (since `harden_dirs` names `components/ui` and there are no specs), then Full with "make it consistent" as clearance. The first writing step's GOAL is the value-identical swaps, and the Frame names their count.
+**Expect:** `token-mapping` runs first. The covering set goes on to migrate audit and the thin set to the build, each passing the report by path in a decision row. On Weak shadcn the route is Values, then Harden (`harden_dirs` names `components/ui` and there are no specs), then Full with "make it consistent" as clearance. The first writing step's GOAL is the identical-value swaps, and the Frame names their count.
 
-**Fails if:** the next skill is chosen before the mapping report exists, the report is summarized into the brief, the weak app gets Build and a second component layer, or the run ends with the hardcoded colors on screen and no count of them.
+**Fails if:** the next skill is chosen before the mapping report exists, the report is summarized into the brief, the weak app gets Build and a second component layer, or the run ends with hardcoded colors on screen and no count.
 
 ## One component
 
@@ -87,7 +85,7 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Input:** Settled, and "check the invite flow before I ship." Then Upstream on `main` with no branch diff, and "check the playground before I ship it, and tell me if we're using colors consistently."
 
-**Expect:** route Review. `design-review` on the flow and `token-mapping` on its files, side by side. With no flow named, `design-review` runs on about 5 top routes, stated as the default, and `token-mapping` answers with Consistency by role. Triage reports `palette_pct` apart from `adoption_pct`. The boss waits for every step, and `git status` after matches before outside `.design-system/boss/`. The report's check line reads "n/a (read-only route)".
+**Expect:** route Review, with `design-review` on the flow and `token-mapping` on its files side by side. With no flow named, `design-review` runs on the top routes, stated as the default, and `token-mapping` answers with Consistency by role. Triage reports `palette_pct` apart from `adoption_pct`. The boss waits for every step, `git status` matches before outside `.design-system/boss/`, and the check line reads "n/a (read-only route)".
 
 **Fails if:** anything in the repo changes, review findings are "fixed", the boss hands back with steps running, or palette classes count as raw in one skill and as token use in the other.
 
@@ -103,21 +101,21 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Input:** Settled, and "migrate everything to our design system", with no budget. Then "half the screens ignore our components" and "nobody follows it". Then "our components have no rules, make them solid".
 
-**Expect:** the adoption asks are clearance within the session budget. The audit runs, then `migrate-design-system` edits on the run branch, one surface per commit, each with before and after captures, and the state file's Question line reads none. The last ask is not adoption, so the route lands the decided defaults, ends at the plan, and Next is a merge plus the Go line.
+**Expect:** the adoption asks are clearance within the session budget. The audit runs, then `migrate-design-system` edits on the run branch, one surface per commit with captures, and the Question line reads none. The last ask is not adoption, so the route lands the decided defaults, ends at the plan, and Next is a merge plus the Go line.
 
 **Fails if:** an adoption ask ends at the plan, the non-adoption ask edits a surface beyond identical swaps and decided defaults, or a budget beyond the session is invented.
 
 ## Ask against state
 
-**Input:** one prompt per repo. Bare with "migrate the app onto our design system". Weak shadcn with "migrate every screen onto our components" and with "make it look like one thing". Drifting with "our screens are missing loading and error states". Weak shadcn with "set up a proper design system so the team stops drifting", then again with `harden_dirs` none. Bare with "every page looks like a different product".
+**Input:** Bare with "migrate the app onto our design system". Weak shadcn with "migrate every screen onto our components" and with "make it look like one thing". Drifting with "our screens are missing loading and error states". Weak shadcn with "set up a proper design system so the team stops drifting", then again with `harden_dirs` none. Bare with "every page looks like a different product".
 
-**Expect:** Bare migrate goes to Build, and the one question offers to stop at the audit. A weak system hardens first, then Full from clearance, and the Frame says why in one line. "Missing states" matches its intent row and routes to Harden. The build ask on a drifting layer routes to Harden, and to Build with no `harden_dirs`. The visual ask is intent full and counts as clearance. Each routing picks one table row.
+**Expect:** Bare migrate goes to Build, and the one question offers to stop at the audit. A weak system hardens first, then Full from clearance, with the Frame saying why in one line. "Missing states" routes to Harden. The build ask on a drifting layer routes to Harden, and to Build with no `harden_dirs`. The visual ask is intent full and counts as clearance. Each routing picks one table row.
 
 **Fails if:** migrate runs before a system exists, a weak system is migrated before it is hardened, intent is matched by meaning with no row, the state file cites two rows, or a second component layer appears beside `components/ui`.
 
 ## Unrelated work
 
-**Input:** Bare, with an uncommitted edit to `app/globals.css` and an unmerged branch `feature/billing`.
+**Input:** Bare, with an uncommitted edit to the global stylesheet and an unmerged branch `feature/billing`.
 
 **Expect:** triage records both. Before the build writes, the boss stops and asks, because the build's scope includes global CSS. Nothing is stashed, reset or cleaned. `feature/billing` is untouched at close.
 
@@ -135,7 +133,7 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Input:** stop the boss during the Full route's migrate audit. Start a fresh agent with the skill and the repo only.
 
-**Expect:** it reads `state.md`, finds the audit in progress, opens `.migration/<run>/`, and resumes through the sibling's own resume rules. The build is not rerun.
+**Expect:** it reads `state.md`, finds the audit in progress, opens `.migration/<run>/`, and resumes by the sibling's own rules. The build is not rerun.
 
 **Fails if:** triage reruns as a new decision, the build runs again, or anything from the old conversation is needed.
 
@@ -143,7 +141,12 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Input:** Bare and "every page looks like a different product. make it look like one thing", on four hosts: flat (agents cannot start agents), no subagents, no shell for the coordinator, and a nested repo the host cannot give worktrees for.
 
-**Expect:** flat: one decision row per seat, and the boss follows "Flat host: the build and migrate seats" in `coordinator-path.md`, opening only its Open column. Workers write the first family and the token source, and `git log` shows no product-code commit the boss authored. No subagents: the same route in sequence, with `state.md` updated before and after each step. No shell: workers run triage, `git status`, the dev server, checks and pixdiffs, and return full output with exit codes. No worktrees: a decision row picks sequence or disjoint file lists, and each return's `git status --porcelain` stays inside its list.
+**Expect:**
+
+- Flat. One decision row per seat, and the boss follows "Flat host: the build and migrate seats", opening only its Open column. Workers write the first family and the token source, and `git log` shows no product-code commit by the boss.
+- No subagents. The same route in sequence, with `state.md` updated before and after each step.
+- No shell. Workers run triage, `git status`, the dev server, checks and pixdiffs, and return full output with exit codes.
+- No worktrees. A decision row picks sequence or disjoint file lists, and each return's `git status --porcelain` stays inside its list.
 
 **Fails if:** the boss writes product code on a host that can spawn, a seat has no decision row, the route changes because the host is smaller, a check claim has no exit code, or two writers share a path.
 
@@ -151,7 +154,7 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Input:** Drifting with `token-mapping` removed, and "we have hardcoded colors everywhere."
 
-**Expect:** the Values route stops at step 1 with the missing skill named and the install command in the report. Triage output is still delivered.
+**Expect:** the Values route stops at step 1, and the report names the missing skill and its install command. Triage output is still delivered.
 
 **Fails if:** the boss does the mapping itself, or picks another route to avoid the gap without a decision row.
 
@@ -173,9 +176,9 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 ## Triage signals
 
-**Input:** `triage.sh` on each practice repo with `.agents/skills/` and `.claude/skills/` folders added and uncommitted, output outside the repo. Then on a repo after a finished run. Then on Weak shadcn with one route moved off `components/custom/Button`.
+**Input:** `triage.sh` on each practice repo with uncommitted skill folders added and output outside the repo. Then on a repo after a finished run. Then on Weak shadcn with one route moved off `components/custom/Button`.
 
-**Expect:** `shared_ui_dirs` finds the layer by name, barrel and imports, never a folder under `app/`. Adoption leaves out the layer and the token source. `git_uncommitted` ignores skill folders. The run's own scaffolding (twins, `scripts/`, fixtures, `.design-system/`, `.migration/`, any folder with a `SKILL.md`) adds nothing to any count, and `scaffold_files_skipped` says how much was left out. `stray_dirs` names `components/custom`, and its raw lines count as product code before and after the move. `raw_family_copies` counts native elements that copy a component's classes, never the component's own file. Private `app/**/_*` folders are not routes. A raw color inside an arbitrary value counts. Two runs give the same signals, and the repo stays clean.
+**Expect:** `shared_ui_dirs` finds the layer by name, barrel and imports, never a folder inside the route tree. Adoption leaves out the layer and the token source. `git_uncommitted` ignores skill folders. The run's own scaffolding adds nothing to any count, and `scaffold_files_skipped` says how much was left out. `stray_dirs` names `components/custom`, whose raw lines count as product code before and after the move. `raw_family_copies` counts native elements that copy a component's classes, never the component's own file. Private route folders are not routes. A raw color inside an arbitrary value counts. Two runs give the same signals, and the repo stays clean.
 
 **Fails if:** the system's own `var()` uses count as adoption, a stray counts as the layer, an after-number rises from the run's own output, or a product file is dropped.
 
@@ -183,23 +186,23 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Input:** an empty repo with a README naming a brand color, run once through the boss with "set up a design system" and once calling `build-design-system` directly. Then Library and "our UI is a mess, fix it."
 
-**Expect:** both empty-repo runs do the build's seed mode with the same inputs, `foundation` reads `none (default: shadcn)`, and the brand color is a gate. On Library, `foundation` is `library:@mui/material`, the one question asks whether the team keeps MUI with "keep it and wrap it" as the default, and the theme is the token source.
+**Expect:** both empty-repo runs do the build's seed mode with the same inputs, `foundation` reads `none (default: shadcn)`, and the brand color is a gate. On Library, `foundation` is `library:<package>`, the one question asks whether the team keeps the library with "keep it and wrap it" as the default, and the theme is the token source.
 
-**Fails if:** the two entries produce different steps, a palette is invented, a DTCG source appears beside the MUI theme, or product code imports a new library.
+**Fails if:** the two entries produce different steps, a palette is invented, a DTCG source appears beside the library theme, or product code imports a new library.
 
 ## Live workers
 
 **Input:** any writing route. Force a handback while two build workers run. Then a nested host where a migrate step agent hands back before its workers return.
 
-**Expect:** before handing back, `state.md` has a Live workers section with each worker's brief, scope and task. On a normal close the boss waits and the section is empty. The shared dev server stays up until the last worker returns, and a worker that finds it down returns `Status: blocked: server down`. A step whose own workers still run is not `done` until each one returns or its brief reruns.
+**Expect:** before handing back, `state.md` has a Live workers section with each worker's brief, scope and task. On a normal close the boss waits and the section is empty. The shared dev server stays up until the last worker returns, and a worker that finds it down returns `Status: blocked: server down`. A step with live workers is not `done` until each returns or its brief reruns.
 
-**Fails if:** the boss hands back with no Live workers rows, stops the dev server while a worker is live, a worker starts a second `next dev` in the same checkout, or a step is verified while a worker is live.
+**Fails if:** the boss hands back with no Live workers rows, stops the dev server while a worker is live, a worker starts a second dev server in the same checkout, or a step is verified while a worker is live.
 
 ## Run branch
 
 **Input:** Bare, "our UI is a mess, fix it", pre-cleared with "Go, 3h", with 3 or more migrate workers in flight. Then Weak shadcn with "set up a proper design system so the team stops drifting" and no clearance.
 
-**Expect:** the run creates `ds/<yyyy-mm-dd>-full` from HEAD before its first write and records the starting branch. Identical-value swaps land on every route with a 0% pixdiff saved. After the build's check, decided defaults land on every screen they reach, one surface per commit with captures and a montage row, and each gate reads `applied on <branch>` with its commit. Before clearance one writing step runs at a time. After it, parallel writers share no path. Only the coordinator shrinks the allowlist, in its own commit after each landing. Without clearance, nothing else moves.
+**Expect:** the run creates `ds/<yyyy-mm-dd>-full` from HEAD before its first write and records the starting branch. Identical-value swaps land on every route with a 0% pixdiff saved. After the build's check, decided defaults land on every screen they reach, one surface per commit with captures and a montage row, and each gate reads `applied on <branch>` with its commit. Before clearance one writing step runs at a time, and after it parallel writers share no path. Only the coordinator shrinks the allowlist, in its own commit. Without clearance, nothing else moves.
 
 **Fails if:** the starting branch gains a commit, a visible change has no gate or decision, a surface lacks captures, a worker commit touches an allowlist, Next asks for anything but a merge, or the run merges.
 
@@ -207,15 +210,15 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Input:** any writing route with a step whose report runs past 50 lines. Count the files the coordinator opens before its first brief.
 
-**Expect:** `returns/<step>.md` holds the status line and file list only. The full report sits in the sibling's record, or in the file the boss saved text-only output to, such as `.design-system/review/<surface>-review.md`. No brief's RETURN path points into `.design-system/boss/`. The coordinator opens `references/coordinator-path.md` first, then only the file and section each step names.
+**Expect:** `returns/<step>.md` holds the status line and file list only. The full report sits in the sibling's record, or where the boss saved text-only output. No brief's RETURN path points into `.design-system/boss/`. The coordinator opens `references/coordinator-path.md` first, then only the file and section each step names.
 
 **Fails if:** a whole report is pasted into `returns/`, a verdict rests on a status line with no file checked, a worker writes inside `.design-system/boss/`, or the coordinator reads every reference and sibling skill before briefing.
 
 ## Repo works after the run
 
-**Input:** any writing route, run to the end. Clone HEAD into a temp folder with no `.design-system/` and no skill folders, install, and run the check (`next typegen` first on Next 16).
+**Input:** any writing route, run to the end. Clone HEAD into a temp folder with no `.design-system/` and no skill folders, install, run the repo's typecheck prerequisites, and run the check.
 
-**Expect:** the check, check-spec and docs generator run from `scripts/` and exit 0. Twins, `llms.txt`, the index and the AGENTS.md block exist even on a short budget. `.gitignore` holds only `.design-system/review/**/*.png` and `.design-system/tmp/`. Scratch lands in `tmp/` and close deletes it. `triage/git-after.txt` shows no untracked path that is neither committed nor named in a decision row.
+**Expect:** the check, check-spec and docs generator run from `scripts/` and exit 0. Twins, `llms.txt`, the index and the AGENTS.md block exist even on a short budget. `.gitignore` adds only `.design-system/review/**/*.png` and `.design-system/tmp/`. Scratch lands in `tmp/` and close deletes it. `triage/git-after.txt` shows no untracked path that is neither committed nor named in a decision row.
 
 **Fails if:** a check path points into `.design-system/` or a skill folder, generated docs were cut, a PNG is committed, or an untracked path goes unexplained.
 
@@ -223,7 +226,7 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Input:** Upstream, and "make the buttons and headings across the demos consistent. I want to send this upstream as a PR, so keep it tight". The branch sits on a commit upstream does not have.
 
-**Expect:** the route is `Named families, minimal footprint`, with no Harden step. The edit list is in the state file, one decision row per family, each file with an importer count, starting from `triage/raw-families.tsv`. Nothing is vendored, `.gitignore` is untouched, `.design-system/` is in `.git/info/exclude`, and no audit plan is required. One commit per family. The check line names the repo's own lint, typecheck and build. `.design-system/pr.md` exists, untracked, with per-family changes, before and after numbers and every deliberate visual change. A decision row names the upstream tip, and Next starts with the rebase onto it.
+**Expect:** the route is `Named families, minimal footprint`, with no Harden step. The edit list starts from `triage/raw-families.tsv` and sits in the state file, one decision row per family, each file with an importer count. Nothing is vendored, `.gitignore` is untouched, `.design-system/` is in `.git/info/exclude`, and no audit plan is required. One commit per family. The check line names the repo's own lint, typecheck and build. `.design-system/pr.md` exists, untracked, with per-family changes, numbers and every deliberate visual change. A decision row names the upstream tip, and Next starts with the rebase onto it.
 
 **Fails if:** the route names Harden, a spec or check script lands in the diff, a family the ask did not name changes, a hunk sits in an export nothing imports, `pr.md` is missing or committed, or Next opens the PR from the branch as it is.
 
@@ -231,14 +234,14 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Input:** Bare with no budget given, and "our UI is a mess, fix it", on a 2-hour session where the build runs to its cap.
 
-**Expect:** the Budget section takes the host's session, else 2 hours, and gives each phase its cap from `routes.md` as a clock time. The migrate audit runs beside the build. At 70% no new writing step starts, except decided defaults, whose 15% is reserved up front. Close keeps its 15%.
+**Expect:** the Budget section takes the host's session, else 2 hours, and gives each phase its cap from `routes.md` as a clock time. The migrate audit runs beside the build. Past the writing cutoff no new writing step starts, except decided defaults, whose share is reserved up front. Close keeps its share.
 
-**Fails if:** the build runs to the end and `plan.md` never exists, decided defaults are cut for the 70% rule or taken from close, or a step is sized from a formula.
+**Fails if:** the build runs to the end and `plan.md` never exists, decided defaults are cut for the cutoff or taken from close, or a step is sized from a formula.
 
 ## Final message
 
 **Input:** the Fix-it ask run to the end, once with a person reading and once as a scheduled run with nobody answering. The run applies 10 gates, 3 of them color moves, and leaves some raw values.
 
-**Expect:** the final message is the Report section's four parts verbatim, about 200 words at most. Its first line answers the ask, then which screens changed and which did not, and why. Then each check command with its exit code, at most 3 gates the branch applied, chosen from the named complaint (here the color moves), and one Next prompt that clears every gate at once, such as `Merge ds/<date>-full, but keep the blue Sign in button (reverse G-04).` Every count is a row in `close.md` with its unit, and the Still raw files are named. With nobody reading, the Frame goes into What changed.
+**Expect:** the final message is the Report section verbatim, in about 200 words. Its first line answers the ask, then which screens changed and which did not, and why. Then each check with its exit code, up to 3 applied gates chosen from the named complaint (here the color moves), and one Next prompt that clears every gate at once, such as `Merge ds/<date>-full, but keep the blue Sign in button (reverse G-04).` Every count is a row in `close.md` with its unit, and the Still raw files are named. With nobody reading, the Frame goes into What changed.
 
 **Fails if:** the message names a route or an unused skill, narrates the process, points at `state.md` for Next, asks for a step the run could do, says "every screen" while Still raw lists a file, links a PNG or anything in `tmp/`, gives a gate slot to an unrelated gate, or the check is red.

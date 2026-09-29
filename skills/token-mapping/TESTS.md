@@ -1,10 +1,10 @@
 # Tests: token mapping
 
-Run these by hand on one real screen or file from your own product. For each case, run the same task in the same repo with the same prompt twice, once with the skill switched off and once with it on, and compare the two reports.
+Run these by hand on one real screen or file from your own product. For each case, run the same task in the same repo with the same prompt, once with the skill off and once with it on, and compare the reports.
 
 ## Setup under test
 
-A result only means something next to the setup that produced it.
+A result means something only next to its setup.
 
 - `SKILL.md`, with `references/mapping-rules.md` and `references/sources.md` beside it
 - CLAUDE.md or AGENTS.md: say which one was loaded, or none
@@ -17,33 +17,27 @@ Word each prompt as a colleague would. Leave out "test", "eval" and "rubric", be
 
 ## Which cases apply
 
-| Case | Runs here | Reason |
-|---|---|---|
-| Normal | Yes | Every setup gets this one |
-| Vague request | File access only | Most real asks name a screen and nothing else |
-| Missing required input | Yes | Without a token list the run must stop and still hand back groundwork |
-| Conflicting sources | Yes | Tokens often live in more than one file, such as a JSON source and a hand-edited CSS file, and they drift |
-| Tool failure | Tool path only | Skip it when the list is pasted, since no tool can fail |
-| Ambiguous judgement | Yes | The skill classifies, and quietly settling an ambiguous row is the failure that matters most |
-| Called by a coordinator | If you run build-design-system or migrate-design-system | The caller needs a finished report and a status line, not a question |
-| shadcn names | shadcn apps | shadcn's variable pairs are the list, and renaming one breaks every copied component |
-| Tailwind v4 palette | Tailwind v4 apps | Palette utilities read as tokens but carry no purpose |
-| Palette var() | Tailwind v4 apps | A palette variable is not a role token |
-| Palette-only list | Palette-only lists | With no purposes, consistency by role is the answer, and Exact rows would bury it |
-| Gap threshold | If a coordinator calls it | Many gaps make the report not actionable, never a stop |
-| One candidate out of tolerance | Yes | The closest token must be named without being claimed |
-| The answer comes first | Direct runs | People read the first sentence and stop |
-| Units named | Yes | Occurrences and lines differ, and triage counts lines |
-| Private folders | Next.js apps | Private folders are not product code |
-| Scaffolding stays out of the values | Repos after a build run | The system's own files are not product values |
+Every case runs on every setup except these:
+
+| Case | Runs when |
+|---|---|
+| Vague request | The skill has file access |
+| Tool failure | The list is read by a tool, not pasted |
+| Called by a coordinator, Gap threshold | You run a coordinator skill |
+| Library variable names | The app's component library ships surface and foreground variable pairs |
+| Framework palette, Palette var() | The app's styling framework ships a default palette |
+| Palette-only list | The list has palette names only |
+| The answer comes first | Direct runs |
+| Private folders | The router ignores some folders |
+| Scaffolding stays out of the values | A build run has left its files in the repo |
 
 ## Done means
 
-The readiness list under Output in `SKILL.md`. Left to a person: new tokens for gaps, and answers to ambiguous rows.
+The readiness list under Output in `SKILL.md`.
 
 ## Baseline
 
-Try each task with the skill switched off first. Give the model the same values and token list, and say "Map these values to our tokens." Then run it with the skill on and compare.
+Run with the skill off first, with the same values and token list and the prompt "Map these values to our tokens."
 
 | Case | Without the skill | With the skill |
 |---|---|---|
@@ -52,7 +46,7 @@ Try each task with the skill switched off first. Give the model the same values 
 | Ambiguous judgement | | |
 | Missing required input | | |
 
-Watch for a token picked because its number matched, an ambiguous row settled without comment, a primitive chosen over a semantic token, a name missing from the list, and a made-up name attached to a gap.
+Watch for a token picked by number, an ambiguous row settled silently, a primitive chosen over a semantic token, and a made-up name on a gap.
 
 ## Normal case
 
@@ -88,7 +82,7 @@ Watch for a token picked because its number matched, an ambiguous row settled wi
 
 **Expect, without the rule:** it reports both values, does not choose, and marks the affected rows unresolved.
 
-**Fails if:** it mixes values from both sources, or settles the conflict without saying so. Matching results across the two runs mean the rule is not what drives the behavior.
+**Fails if:** it mixes values from both sources or settles the conflict silently. Matching results across the two runs mean the rule does not drive the behavior.
 
 ## Tool failure
 
@@ -116,19 +110,19 @@ Tool path only.
 
 **Fails if:** it stops to ask, or the status line is missing.
 
-## shadcn names
+## Library variable names
 
-**Input:** a shadcn app, and "are we using our tokens on the billing page?" The page uses `text-muted-foreground` on 12 lines, `text-gray-500` on 9 and `#737373` on 2.
+**Input:** an app whose component library declares `--muted` and `--muted-foreground` in light and dark, and "are we using our tokens on the billing page?" The page uses a `text-muted-foreground` class on 12 lines, `text-gray-500` on 9 and `#737373` on 2.
 
-**Expect:** the list is the `:root` and `.dark` pairs in the file `components.json` names. The 12 theme utilities are skipped as token uses. The palette class and hex rows map to `muted-foreground` by purpose, in each mode, with the difference stated. No row proposes a new name for a shadcn variable.
+**Expect:** the list is the library's light and dark pairs, found where the matching `base-*.md` says. The 12 role classes are skipped as token uses. The palette and hex rows map to `muted-foreground` by purpose, in each mode, with the difference stated. No row proposes a new name for a library variable.
 
 **Fails if:** `text-muted-foreground` is counted as a raw value, or the report suggests renaming `muted` to a role-first name.
 
-## Tailwind v4 palette
+## Framework palette
 
-**Input:** a Tailwind v4 app whose project CSS declares `--color-muted-foreground` and nothing else. Product code uses `text-muted-foreground` on 10 lines, `text-muted-foreground/60` on 3, `text-gray-500` on 20, `bg-blue-600` on 5, and a logo with 4 gradient stops.
+**Input:** an app whose styling framework ships a default palette, and whose project CSS declares `--color-muted-foreground` and nothing else. Product code uses `text-muted-foreground` on 10 lines, `text-muted-foreground/60` on 3, `text-gray-500` on 20, `bg-blue-600` on 5, and a logo with 4 gradient stops.
 
-**Expect:** the list is the one declared name, not Tailwind's default palette. The 10 lines are skipped as token uses. The 3 alpha uses count as token + alpha with no row. The 25 palette uses get rows, counted as palette apart from raw. Colors compare in OKLCH by ΔE OK. `text-gray-500` lands semantic against `muted-foreground` within ΔE OK 2, or a gap naming it as closest with the ΔE stated, and `bg-blue-600` with no candidate is a gap. The logo stops are graphic, listed once under Source.
+**Expect:** the list is the one declared name, not the framework's default palette. The 10 lines are skipped as token uses. The 3 alpha uses count as token + alpha with no row. The 25 palette uses get rows, counted as palette apart from raw. Colors compare in OKLCH by ΔE OK. `text-gray-500` lands semantic against `muted-foreground` within ΔE OK 2, or a gap naming it as closest with the ΔE stated, and `bg-blue-600` with no candidate is a gap. The logo stops are graphic, listed once under Source.
 
 **Fails if:** an `oklch()` value with zero candidates is marked ambiguous, `bg-blue-600` is treated as a token use or as raw hex, or the logo stops count toward the gap threshold.
 
@@ -140,7 +134,7 @@ Tool path only.
 
 **Fails if:** the report answers "consistent" with value matches alone, or a cluster gets a proposed token name.
 
-**Large palette version:** a Tailwind v4 app whose `@theme` holds only `--color-gray-50` to `--color-gray-950`, with 250 palette uses. Consistency by role comes right after the Summary, with distinct values and counts per role. The mapping table lists only non-Exact rows, and the summary still gives the Exact count. One Exact row per palette use fails.
+**Large palette version:** an app whose declared theme holds only `--color-gray-50` to `--color-gray-950`, with 250 palette uses. Consistency by role comes right after the Summary, with distinct values and counts per role. The mapping table lists only non-Exact rows, and the summary still gives the Exact count. One Exact row per palette use fails.
 
 ## Gap threshold
 
@@ -170,7 +164,7 @@ Tool path only.
 
 ## Palette var()
 
-**Input:** a stylesheet with `color: var(--color-gray-500)` on 6 lines, where the project declares the gray scale in `@theme` and no role tokens.
+**Input:** a stylesheet with `color: var(--color-gray-500)` on 6 lines, where the project declares the gray scale and no role tokens.
 
 **Expect:** 6 palette rows, counted with palette, not skipped as token uses.
 
@@ -186,7 +180,7 @@ Tool path only.
 
 ## Private folders
 
-**Input:** a Next.js app with `app/_patterns/page.tsx` using `text-gray-400`, and `app/(shop)/cart/page.tsx` using `text-gray-500`.
+**Input:** an app whose router ignores `_`-prefixed folders and drops parenthesized folders from the URL, with `app/_patterns/page.tsx` using `text-gray-400` and `app/(shop)/cart/page.tsx` using `text-gray-500`.
 
 **Expect:** `app/_patterns` is left out and listed once under Source. The `(shop)` route group stays in.
 

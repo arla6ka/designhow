@@ -21,119 +21,115 @@ A surface is migrated when a verifier has checked the running app at a named com
 
 ## Baselines
 
-A baseline is the record of how each surface looked and behaved before any migration commit. Capture it once, during the Baselines phase, from the commit the shared layer will start on.
+A baseline records how each surface looked and behaved before any migration commit. Capture it once, during the Baselines phase, from the commit the shared layer will start on.
 
-For each surface, capture every state in its `states` column at every viewport and theme in `frame.md`. Each capture is a screenshot plus a `.probe.json` beside it with the page's roles, names, states and contrast. File names follow `capture.mjs --help`.
+For each surface, capture every state in its `states` column at every width and theme in `frame.md`: a screenshot plus a `.probe.json` with the page's roles, names, states and contrast.
 
 Make captures repeatable:
 
-- Capture in the environment CI uses, the same container image, browser build, and fonts. Screenshots from a laptop and from CI differ in anti-aliasing and font rendering, and those differences look like regressions.
-- Use fixture data and a fixed user. Freeze the clock. Let animations finish and never pause them (`build-design-system/references/browser.md`). Wait for fonts to load and for a named element to appear, never for a fixed delay.
-- Mask regions that change on their own, such as avatars from a CDN, relative times, and charts with random data. List every mask in `baselines/masks.md` with its reason, because a mask can hide a real regression.
-- Capture everything twice. The pixel difference between the two runs is the noise floor. Record it in `baselines/noise.txt`. If it is above zero, find the cause before going further, because a non-zero floor usually means a timing problem that will cause false failures later.
+- Capture in the environment CI uses, with the same image, browser build and fonts. Laptop and CI screenshots differ in font rendering, which looks like a regression.
+- Use fixture data, a fixed user and a frozen clock. Wait for fonts and a named element, never a fixed delay, and let animations finish rather than pausing them.
+- Take a no-change control capture and diff it against the first. Regions that change with no code change are noise: dev overlays, random or seeded data, animation, clocks and relative times. Mask them, or capture a production build with fixed data, before calling any diff real. `build-design-system/references/browser.md` has the commands.
+- List every mask in `baselines/masks.md` with its reason, because a mask can hide a real regression. Record the control diff in `baselines/noise.txt` as the noise floor. A floor above zero after masking usually means a timing problem, so find the cause before going further.
 
-A state that cannot be reached without a real payment, a destructive action, or production data is marked `not captured` with the reason. Never build a fake state to fill the grid. Surfaces with uncaptured states can still migrate, but the report lists those states as unverified.
+A state that needs a real payment, a destructive action or production data is marked `not captured` with the reason, never faked. The surface can still migrate, and the report lists that state as unverified.
 
-Capture with `node <skills>/build-design-system/scripts/capture.mjs --kind before --out .design-system/review --surfaces .design-system/review/surfaces.tsv --widths 390,1280`, which writes a `.probe.json` beside each capture with the numbers the rendered checklist and behavior delta compare. Workers and verifiers use the same command. Finish with `baselines/MANIFEST.sha256`, made by `shasum -a 256` over every before capture. When workers run in parallel, each uses its own browser session and dev server port, per `build-design-system/references/browser.md`.
+Capture with `capture.mjs --kind before` over `.design-system/review/surfaces.tsv` (`browser.md` has the full command), the same command workers and verifiers use. Finish with `baselines/MANIFEST.sha256`, from `shasum -a 256` over every before capture.
 
 ### Trap measurements
 
-Measure every trap's before state in the Baselines pass, before any edit, and save the numbers. Once a surface is edited, its before state is gone. The traps are the ones `build-design-system/references/traps.md` lists for the components each surface uses, such as a loading button's box, focus after a dialog closes, or a select's value after an error. Measure each one per "Evidence for a review" in `build-design-system/references/browser.md`, which has the loading-state recipe, and write one row per trap to `baselines/traps.tsv`:
+Measure every trap's before state in the Baselines pass, because an edited surface has lost it. The traps are the ones `build-design-system/references/traps.md` lists for the components each surface uses. Measure each per "Evidence for a review" in `build-design-system/references/browser.md`, which has the loading-state recipe, and write one row per trap to `baselines/traps.tsv`:
 
 ```
 surface	state	trap	element	before	unit	command
-team-invite	loading	loading-layout-shift	button[type=submit]	96x36 idle, 243x36 loading	px	eval getBoundingClientRect() idle, then with the request held
-team-invite	close	focus-return	dialog trigger	body	element	press Escape, then eval document.activeElement
+team-invite	loading	trap/loading-layout-shift	button[type=submit]	96x36 idle, 96x36 loading	px	measure the box idle, then with the request held
+team-invite	close	trap/overlay-focus-return	dialog trigger	body	element	press Escape, then read document.activeElement
 ```
 
-A worker's report and the verifier's verdict give the after number beside this row. A trap nobody measured before the edit is reported as `before not measured`, never guessed. If a before state was missed, measure it from a second worktree at the base commit, with a copy-on-write clone of `node_modules` (`cp -cR` on macOS), since Turbopack refuses a symlinked `node_modules` that points outside the worktree.
+Reports and verdicts give the after number beside this row. A trap nobody measured before the edit is `before not measured`, never guessed. If a before state was missed, measure it from a second worktree at the base commit, with its own dependency install, and log that in `decisions.tsv`.
 
-If there is no baseline for a surface, that surface does not get briefed.
+A surface with no baseline does not get briefed.
 
 ## Parity modes
 
-Pick one in `frame.md`. It decides what counts as an acceptable visual difference.
+Set in `frame.md`, it decides which visual differences are acceptable.
 
-**exact.** The system reproduces the legacy look, and the migration only changes the code underneath. Any pixel difference above the noise floor fails.
+**exact.** The system reproduces the legacy look, and the migration only changes the code underneath. Any pixel difference above the noise floor fails. Use it for a refactor onto a system built to match the current look.
 
-**mapped.** The system changes how things look, on purpose. A difference passes only if a row in the surface's mapping file explains it. An example is text color moving from `#333` to `--color-text-default`, which renders `#1f2328`. Everything else must hold. Elements stay in the same order, nothing appears or disappears, text does not wrap or clip differently unless a mapped type change explains it, and the accessibility tree matches, apart from changes that only add semantics, each with a decision row.
-
-Most migrations are `mapped`. Use `exact` for a refactor onto a system built to match the current look.
+**mapped.** The system changes how things look, on purpose. A difference passes only if a row in the surface's mapping file explains it, such as text color moving from `#333` to `--color-text-default`, which renders `#1f2328`. Everything else holds. Elements keep their order, nothing appears or disappears, text does not wrap or clip differently unless a mapped type change explains it, and the accessibility tree matches apart from adds-only changes with a decision row. Most migrations are `mapped`.
 
 ## Visual diff rules
 
-- Compare each after-capture to its baseline at the same state, viewport, and theme.
+- Compare each after-capture to its baseline at the same state, width and theme.
 - In `exact` mode, fail on any difference above the noise floor.
-- In `mapped` mode, the verifier lists each changed region with its bounding box and the mapping row that explains it. A region with no explaining row is `unexplained`. One unexplained region fails the surface, or sends it to a gate if the change might be intended.
+- In `mapped` mode, list each changed region with its bounding box and the mapping row that explains it. A region with no explaining row is `unexplained`. One unexplained region fails the surface, or sends it to a gate if the change might be intended.
 - Layout shifts count. If a mapped spacing change moves an element, the mapping row must name that spacing value.
 - Never raise the threshold, add a mask, or widen the noise floor during the run without a closed gate. Those are baseline edits by another name.
 
 ## Rendered checklist
 
-A mapped diff can explain a region and still hide a regression inside it. The verifier runs each check below at 390 and 1280, compares against the baseline's `.probe.json`, and writes the numbers in the verdict. Any fail blocks `verified` unless a mapping row names that exact change, except the nav and column check, which always gates.
+A mapped diff can explain a region and still hide a regression inside it. The verifier runs each check at both widths against the baseline's `.probe.json` and writes the numbers in the verdict. Any fail blocks `verified` unless a mapping row names that exact change, except the nav and column check, which always gates.
 
-- **Link cue after a class swap.** For every `a[href]` in the main content, record computed `color` and `text-decoration-line`. A link whose color now equals the body text color with no underline has lost its cue.
-- **Text overflow and word breaks at 390.** Count elements where `scrollWidth > clientWidth`, and record the line count (height over line-height) of every text element. A new overflow, or a line count that grew, fails. So does any new `overflow-wrap: anywhere` or `word-break: break-all` in the diff.
-- **Page container width at 390.** Record `document.documentElement.scrollWidth` and the main container's `getBoundingClientRect().width`. Any growth fails, even when the page already overflowed.
-- **Nav links and table columns at 390.** Record every nav link and table column header, and whether each is visible and inside the viewport. One that is newly hidden, clipped or off screen is a behavior loss. It fails and becomes a gate, even when a mapping row names it, and is never changed silently.
-- **Contrast on recolored text.** For every text element whose computed color or background changed, record the contrast ratio before and after. Below 4.5:1 (3:1 for large text) fails. A drop that still passes goes in the behavior delta.
+- **Link cue.** For every `a[href]` in the main content, record computed `color` and `text-decoration-line`. A link now colored like body text with no underline has lost its cue.
+- **Text overflow and word breaks at the narrow width.** Count elements where `scrollWidth > clientWidth`, and record the line count of every text element. A new overflow, or a line count that grew, fails. So does any new `overflow-wrap: anywhere` or `word-break: break-all` in the diff.
+- **Container width at the narrow width.** Record `document.documentElement.scrollWidth` and the main container's width. Any growth fails, even on a page that already overflowed.
+- **Nav links and table columns at the narrow width.** Record whether each nav link and table column header is visible and inside the viewport. One newly hidden, clipped or off screen is a behavior loss. It fails and becomes a gate, even when a mapping row names it.
+- **Contrast on recolored text.** For every text element whose color or background changed, record the contrast before and after. Below the team's target fails. The default is WCAG AA, 4.5:1 for body text and 3:1 for large text. A drop that still passes goes in the behavior delta.
 
 ## Accessibility snapshot
 
-The after-snapshot must match the baseline snapshot, with the same roles, accessible names, states, and order. `montage.mjs --diff` lists every changed control, role, state and heading level from the two `.probe.json` files, and the verifier sorts each one.
+The after-snapshot must match the baseline, with the same roles, accessible names, states and order. `montage.mjs --diff` lists every changed control, role, state and heading level from the two `.probe.json` files, and the verifier sorts each one by `build-design-system/references/traps.md` (Adds-only accessibility changes).
 
-Accessibility-tree changes sort by `build-design-system/references/traps.md` (Adds-only accessibility changes).
-
-So a `div` with a click handler that becomes a `button` passes with its decision id in the verdict, and so does a success notice that gains `role="status"`. A heading level that moves from h3 to h2, a name that changes text, or a list that becomes a table is a gate. Focus order and keyboard paths are checked under behavior.
+A clickable `div` that becomes a `button`, or a notice that gains `role="status"`, passes with its decision id in the verdict. A heading level change, a renamed control or a list that becomes a table is a gate. Focus order and keyboard paths are checked under behavior.
 
 ## Behavior checks
 
-Behavior is checked against the KEEP lines in the brief, one check per line. Use the surface's existing tests where they cover a line. For lines they do not cover, drive the running app and record what you saw.
+Check behavior against the brief's KEEP lines, one check per line. Use the surface's existing tests where they cover a line. For the rest, drive the running app and record what you saw.
 
-- Requests. Count network calls for each action. One submit sends one request, and an invalid submit sends none.
-- Validation timing. Errors appear on the same event as before (blur, submit, or change).
-- Focus. Where focus goes after open, close, submit, error, and delete. Dialogs return focus to their opener.
-- Keyboard. Every action on the surface can be reached and done without a pointer.
-- Navigation. URLs, back button, and new-tab behavior on links.
-- Failure. Entered values survive a failed request. Retry works.
-- Loading. Pending states do not clear input or allow a double submit.
+- Requests. Count network calls per action. One submit sends one request, and an invalid submit sends none.
+- Validation timing. Errors appear on the same event as before (blur, submit or change).
+- Focus. Where focus goes after open, close, submit, error and delete. Dialogs return focus to their opener.
+- Keyboard. Every action on the surface works without a pointer.
+- Navigation. URLs, the back button, and new-tab behavior on links.
+- Failure. Entered values survive a failed request, and retry works.
+- Loading. Pending states do not clear input or allow a double submit. The action keeps its label, and pending text goes in a status region or beside the control (`traps.md`, `trap/loading-label-swap`). A control disabled while pending keeps focus, through a focusable disabled state or `aria-disabled`, and focus never drops to the page.
 
-Record each check as pass, fail, or not run with a reason. "Not run" is not a pass.
+Record each as pass, fail, or not run with a reason. "Not run" is not a pass.
 
 ## Behavior delta
 
-KEEP lines only cover what someone thought to write down. The delta catches side effects nobody listed. For every state in the surface's `states` column, compare the baseline `.probe.json` with the same probe at the commit: which controls exist, which are enabled or disabled, what text shows, which requests fire on the primary action, and the contrast of recolored text. Write each difference as one line with both values, such as `settings/default: Save enabled -> disabled until a field changes` or `signup/success: "Invite sent." 7.0:1 -> 4.56:1`. Write `none` only with the probe command beside it.
+The delta catches side effects no KEEP line lists. For every state in the surface's `states` column, compare the baseline `.probe.json` with the same probe at the commit: which controls exist, which are enabled, what text shows, which requests the primary action fires, and the contrast of recolored text. Write each difference as one line with both values, such as `settings/default: Save enabled -> disabled until a field changes` or `signup/success: "Invite sent." 7.0:1 -> 4.56:1`. Write `none` only with the probe command beside it.
 
-A difference that breaks a KEEP line fails the surface. Any other difference is disclosed, not failed: it goes in the verdict, the ledger's `delta` column, the surface's montage row, and the final message.
+A difference that breaks a KEEP line fails the surface. Any other difference is disclosed, not failed. It goes in the verdict, the ledger's `delta` column, the surface's montage row and the final message.
 
 ## Design review
 
-Run `design-review` on the after-captures with the system's own criteria, or the team's if they have them. Blocking findings fail the surface. Should-fix findings go in the verdict as notes. Anything the review hands to a person goes in the verdict as a question, and the coordinator turns it into a gate.
+Run `design-review` on the after-captures with the system's own criteria, or the team's. Blocking findings fail the surface. Should-fix findings go in the verdict as notes. Anything the review hands to a person goes in the verdict as a question, and the coordinator turns it into a gate.
 
 ## Anti-tamper rules
 
-Workers are under pressure to make checks pass. The cheapest way to pass a check is to change the check, so these rules are enforced by script, not by trust.
+The cheapest way to pass a check is to change it, so scripts enforce these rules.
 
-- `forbidden-paths.txt` in the run folder lists the globs no worker may touch. It must match standing order 2. The verifier runs `git diff --name-only <base>..<head>` against it before anything else. Any match fails the surface with verdict `failed`, and the report is flagged as a scope breach.
-- The verifier checks `shasum -a 256 -c baselines/MANIFEST.sha256` before comparing. A mismatch stops all verification and writes a stop line to the coordinator's inbox, because the reference is now untrusted.
-- Test files, snapshot files, harness config, and threshold settings are on the forbidden list. A test that should change because the contract changed goes through a gate.
+- `forbidden-paths.txt` in the run folder lists the globs no worker may touch, matching standing order 2. The verifier runs the scope check (`references/inventory.md`, The check commands) before anything else. Any match fails the surface with verdict `failed`, flagged as a scope breach.
+- The verifier runs `shasum -a 256 -c baselines/MANIFEST.sha256` before comparing. A mismatch stops all verification and writes a stop line to the coordinator's inbox, because the reference is now untrusted.
+- Test files, snapshots, harness config and threshold settings are on the forbidden list. A test that should change because the contract changed goes through a gate.
 - A worker who restructures markup only to dodge a diff, such as hiding an element or changing a role, fails even if the diff passes. The accessibility snapshot catches most of these.
 
 ## Verdict states
 
 | Verdict | Means | Counts toward done |
 |---|---|---|
-| `verified` | Visual, accessibility, behavior, and review all pass at this commit | Yes |
+| `verified` | Visual, accessibility, behavior and review all pass at this commit | Yes |
 | `needs-decision` | Checks ran, and a change needs a person's call | No. It opens a gate. |
 | `failed` | A check failed or scope was breached | No. It gets a fix attempt. |
 | `blocked` | The verifier could not run, such as a dead environment or a missing fixture | No. It is re-queued when the cause is fixed. |
-| `self-verified` | Every check above passed, run by the coordinator after the fresh-context re-read below, on a host without subagents | Yes, and the final report lists these surfaces separately |
-| `checks-only` | Build, types, lint and tests ran, with no rendered check, or no agent other than the writer checked it on a host that has subagents | No |
+| `self-verified` | Every check passed, run by the coordinator after the fresh-context re-read below, on a host without subagents | Yes, listed separately in the final report |
+| `checks-only` | Build, types, lint and tests ran with no rendered check, or only the writer checked it on a host that has subagents | No |
 | `reopened` | A later commit touched this surface's paths | No. It needs a new verdict at the final integration commit. |
 
-A verdict applies to one commit. A later commit that touches any path in the surface's `paths` column in `surfaces.tsv` reopens the row, whoever wrote it, shared fixes and review fixes included. The coordinator appends a `reopened` ledger row naming that commit.
+A verdict applies to one commit. A later commit that touches any of the surface's `paths` reopens it, whoever wrote it, and the coordinator appends a `reopened` ledger row naming that commit.
 
-A decision row never replaces the verifier. When budget is short, the surface stays `checks-only` and the report counts it as unverified. When budget remains at close, spend it on verifiers for every `checks-only`, `self-verified` and `reopened` surface before declaring done.
+A decision row never replaces the verifier. When budget is short, the surface stays `checks-only` and counts as unverified. When budget remains at close, spend it on verifiers for every `checks-only`, `self-verified` and `reopened` surface before declaring done.
 
 ## Verifier brief
 
@@ -148,8 +144,8 @@ INPUTS         the worker's brief and report, the diff, the mapping file,
                baselines for this surface, masks.md, noise.txt, parity mode
 RUN            1. forbidden-path check  2. manifest check  3. check out the commit and start the app
                4. capture.mjs --kind after into captures/  5. visual compare
-               6. rendered checklist: link cue, 390 overflow and word breaks, 390 container width,
-                  nav links and table columns at 390, contrast on recolored text
+               6. rendered checklist: link cue, overflow and word breaks, container width,
+                  nav links and table columns, contrast on recolored text
                7. accessibility compare, sorting adds-only from gates  8. KEEP checks and behavior delta
                9. design-review
 SERVER         your own dev server on port <base + verifier n>, stopped before you return
@@ -163,10 +159,10 @@ Stop at the first failure in steps 1 or 2. For steps 5 to 9, run all of them and
 
 ## Self-verification without subagents
 
-A host that cannot start a second agent still owes every surface a check by something other than the pass that wrote it. The coordinator may verify only after a fresh-context re-read, and only on such a host. Record `no subagents: self-verified` in `decisions.tsv` once. A host with subagents never uses this path.
+A host that cannot start a second agent still owes every surface a check by something other than the pass that wrote it. Only there may the coordinator verify, after a fresh-context re-read. Record `no subagents: self-verified` in `decisions.tsv` once. A host with subagents never uses this path.
 
-1. Finish every edit to the surface and commit it. Write the full sha in the verdict first.
-2. Start a new session or clear context if the host allows it. Otherwise, put nothing from memory into the verdict. Every line cites a file or a command run after step 1.
+1. Finish and commit every edit to the surface. Write the full sha in the verdict first.
+2. Start a new session or clear context if the host allows it. Otherwise every line of the verdict cites a file or a command run after step 1, nothing from memory.
 3. Reread from disk, cold: the brief's KEEP lines, the mapping file, the baseline captures and their `.probe.json` files, then `git diff <base>..<sha> -- <surface paths>` top to bottom.
 4. Run the verifier brief's steps 1 to 9 in order and write each result as you go.
 5. Write the verdict with `Verdict: self-verified` and `Verifier: coordinator, fresh-context re-read`.
@@ -180,30 +176,30 @@ Verdict: verified
 Verifier: model-b (worker was model-a)
 Mode: mapped. Noise floor 0.
 
-Scope check: pass (4 files, all under app/(product)/billing/invoices/)
+Scope check: pass (4 files, all under app/billing/invoices/)
 Manifest: pass
 
-| State | Viewport | Theme | Visual | Unexplained regions | Aria |
+| State | Width | Theme | Visual | Unexplained regions | Aria |
 |---|---|---|---|---|---|
-| list | 1280 | light | changed | 0 | adds only: table caption (D-07) |
-| list | 390 | dark | changed | 0 | adds only: table caption (D-07) |
-| error | 1280 | light | changed | 0 | match |
+| list | wide | light | changed | 0 | adds only: table caption (D-07) |
+| list | narrow | dark | changed | 0 | adds only: table caption (D-07) |
+| error | wide | light | changed | 0 | match |
 
 Explained changes: table header text color (mapping row 3), badge radius 4 to 6px (row 9).
-Rendered: 14 of 14 links keep a cue. At 390, 0 new overflows, 0 line counts grew, scrollWidth 390 to 390, main 358 to 358. Recolored text: 3 elements, lowest 4.9:1.
+Rendered: 14 of 14 links keep a cue. Narrow: 0 new overflows, 0 line counts grew, widths unchanged. Recolored text: lowest 4.9:1.
 
 Behavior: 6 of 6 KEEP lines pass. Evidence in captures/billing-invoices/5be1c0a93f21/behavior.md.
-Behavior delta: list/1280: "Paid" badge 7.1:1 -> 4.9:1. No control changed enabled state. Probe: the `.probe.json` files in .design-system/review/ and captures/billing-invoices/5be1c0a93f21/.
-Design review: 0 blocking, 1 should-fix (empty-state illustration crops at 390, note only).
+Behavior delta: list/wide: "Paid" badge 7.1:1 -> 4.9:1. Probe: the `.probe.json` files in captures/billing-invoices/5be1c0a93f21/.
+Design review: 0 blocking, 1 should-fix (note only).
 Questions for a person: none.
 ```
 
 ## Integration checks, runtime checks and the final sweep
 
-After each landing, run the cheap checks at the new run-branch commit, which are build, type check, lint, the inventory check, the system's own check, the forbidden-path check on the landed diff, and the runtime checks below. Run each from the repo's `scripts/` (`node scripts/migration-inventory.mjs --check`, `node scripts/check-system.mjs`, `node scripts/check-spec.mjs`), never from `.design-system/` or a skill folder, so the same commands pass on a clean clone. On Next 16, run `next typegen` before the type check. Record them as a `checks-only` row keyed by that commit. A failure stops landing until it is fixed.
+After each landing, run the cheap checks at the new run-branch commit: build, type check, lint, the inventory check, the system's own check, the forbidden-path check on the landed diff, and the runtime checks below. Run each from the repo's `scripts/` (`node scripts/migration-inventory.mjs --check`, `node scripts/check-system.mjs`, `node scripts/check-spec.mjs`), never from `.design-system/` or a skill folder, so the same commands pass on a clean clone. Run any code generation the type check depends on first. Record the result as a `checks-only` row keyed by that commit. A failure stops landing until it is fixed.
 
-Runtime checks. After any edit to a ui file or tokens, `node <skills>/build-design-system/scripts/capture.mjs --base <url> --status --surfaces .design-system/review/surfaces.tsv` must show 200 on every route. tsc misses server and client breaks. A handler passed into a Server Component type-checks and returns 500. After edits to `@theme` or global CSS, restart the dev server before any after-capture, because Turbopack can serve stale CSS, then grep the served CSS for one new utility.
+Runtime checks. After any edit to a UI file or tokens, `capture.mjs --status` must show 200 on every route, because a type check misses breaks that only show when a route renders. After an edit to global styles or tokens, restart the dev server before any after-capture and confirm the served CSS has one new rule, because dev servers can serve stale CSS. The commands and stack-specific cases are in `build-design-system/references/browser.md`.
 
-After each landing, capture the surface with `capture.mjs --kind after --out .design-system/review`, add its row to `.design-system/review/traces.tsv` (surface, commit, gate or decision ids, what changed and the behavior delta), and rerun `montage.mjs --diff`. A surface with a visible change and no trace row fails the montage and does not count as landed. A finding that waits on a gate, such as a contrast drop the system owner has to fix, is a warning once `.design-system/review/open-gates.tsv` has its row and the trace row names the gate. The montage exits 0 and lists it, and close.md copies the list.
+After each landing, capture the surface, add its `traces.tsv` row and rerun the montage, per `build-design-system/references/coordinator-path.md` (Surfaces on the run branch). A surface with a visible change and no trace row does not count as landed. A montage warning on an open gate goes into `close.md`.
 
-Surface verdicts are keyed to surface branches. Once many surfaces have landed together, one surface can break another through shared CSS or a layout change. So Close recaptures every surface at the final integration commit and runs the visual comparison, the rendered checklist and the accessibility comparison again. Only verdicts at that commit count toward done, and every `reopened` row needs one. For long runs, also sweep at every tenth landing, so a cross-surface break is found near the change that caused it.
+Once many surfaces have landed together, one can break another through shared CSS or a layout change. So Close recaptures every surface at the final integration commit and reruns the visual comparison, the rendered checklist and the accessibility comparison. Only verdicts at that commit count toward done, and every `reopened` row needs one. On long runs, also sweep every few landings (default every tenth), so a cross-surface break shows up near the change that caused it.
