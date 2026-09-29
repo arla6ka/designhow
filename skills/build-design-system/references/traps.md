@@ -109,13 +109,13 @@ Polish is consistency with the app's own decisions. The work is to find what tho
 
 ## Writing a derived rule
 
-Each rule the method produces goes where it applies: foundation rules under the foundation page's `## Usage`, component rules under the spec's `### Writing` or `### Do and don't`. The shape:
+Each rule the method produces goes where it applies: foundation rules under the foundation page's `## Usage`, component rules under the spec's Usage H3s (`spec-template.md`). Write it in the shape and with a ground from `rule-method.md`:
 
 ```markdown
-- `rule/heading-weight`: Section headings use weight 600. Evidence: 41 of 47 h2 elements on 12 routes, rendered/type.txt. Outliers: /billing, /reports (strays.tsv). Check: lint on `font-bold` in headings.
+- `rule/typography-heading-weight`: When text is a section heading, render it at weight 600 instead of 700, because 41 of 47 headings already do and two weights for one role read as two levels. Evidence: app 41/47 h2 elements on 12 routes, rendered/type.txt, outliers /billing and /reports on strays.tsv. Check: lint on `font-bold` in headings.
 ```
 
-A rule without evidence is a preference and does not ship. A rule a script can test gets a check with the same ID in the enforcement phase.
+A rule with no ground is cut. A rule a script can test gets a check with the same ID in the enforcement phase.
 
 ## Coverage gaps
 

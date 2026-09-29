@@ -2,7 +2,8 @@
 // gen-docs.mjs: specs and foundation pages in docs/system/*.md become Markdown twins,
 // a rules page, llms.txt and a plain HTML index. Node 18+, no dependencies.
 // Run `node scripts/gen-docs.mjs --help` for usage.
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { execSync, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -15,7 +16,8 @@ Reads every .md under --src (spec-template.md and files starting with _ are skip
 and writes, under --out:
   <slug>.md     a twin of each source, first line an HTML comment naming this script
   rules.md      every trap/ and rule/ ID the sources cite, with the page that answers
-                it and the check that enforces it (from check-system.mjs --list-rules)
+                it, its grounds, and the check that enforces it (check-system.mjs and
+                copy-check.mjs --list-rules, else the rule's Check: clause, else review)
   index.md      the overview: what to read first, every page with a one-line note
   index.html    one plain HTML page rendering the overview and every twin
 and --llms (llms.txt) linking every twin. Output is byte-stable: no dates.
@@ -25,8 +27,17 @@ types (scripts/props-table.mjs), found through the registry. The source file kee
 only notes under ## Props. A hand-written table there is replaced in the twin.
 Purpose text comes from JSDoc on the props type.
 
+A component page's twin embeds each file its "### Example files" table lists:
+default, composition and matrix rows at the end of Examples, axis=value rows
+under that axis in Variants, and state: rows in States before State precedence.
+Line 1 (the Caption: comment) is dropped.
+
+docs/alternative-oneway: when page A's When not to use line names component B
+and B has a page, B's Related must name A. --check fails on it; a write run
+prints it as a warning.
+
 Settings live in scripts/gen-docs.config.json (src, out, llms, base, name,
-registry, checkCommand). A write run with any of those flags saves them there, so
+registry, checkCommand, examplesDir). A write run with any of those flags saves them there, so
 a later --check with no flags generates the same output.
 
 Options
@@ -40,9 +51,12 @@ Options
   --name <text>       system name (default: package.json name)
   --registry <file>   registry for source paths (default: registry.json, if present)
   --check-command <c> the check command the overview names (default: npm run check)
+  --examples <dir>    example files folder (default: docs/system/examples)
   --config <file>     settings file (default: scripts/gen-docs.config.json)
   --no-props          leave Props sections as written
   --check             write nothing; exit 1 if any output differs from a fresh run
+  --self-test         run the fixtures in --fixtures <dir>, default fixtures/gen-docs/
+                      beside this script, and nothing else
   --help              this text
 
 Exit 0 on success, 1 on drift in --check mode, 2 on bad input.`;
@@ -50,6 +64,7 @@ Exit 0 on success, 1 on drift in --check mode, 2 on bad input.`;
 const argv = process.argv.slice(2);
 const val = (f, d) => { const i = argv.indexOf(f); return i >= 0 ? argv[i + 1] : d; };
 if (argv.includes("--help") || argv.includes("-h")) { console.log(HELP); process.exit(0); }
+if (argv.includes("--self-test")) process.exit(selfTest(val("--fixtures")) ? 0 : 1);
 // --root, else the git root of the first path argument, else of the current folder, else the current folder.
 function repoRoot(rootFlag, firstPath) {
   if (rootFlag) return resolve(rootFlag);
@@ -68,9 +83,9 @@ const checkOnly = argv.includes("--check");
 const cfgFile = resolve(root, val("--config", "scripts/gen-docs.config.json"));
 let saved = {};
 if (existsSync(cfgFile)) { try { saved = JSON.parse(readFileSync(cfgFile, "utf8")); } catch (e) { console.error(`gen-docs: cannot parse ${cfgFile}: ${e.message}`); process.exit(2); } }
-const KEYS = { src: "--src", out: "--out", llms: "--llms", base: "--base", name: "--name", registry: "--registry", checkCommand: "--check-command" };
+const KEYS = { src: "--src", out: "--out", llms: "--llms", base: "--base", name: "--name", registry: "--registry", checkCommand: "--check-command", examplesDir: "--examples" };
 // An absolute path inside the root is kept relative to it, so the saved settings work on any clone.
-const inside = (k, v) => (["src", "out", "llms", "registry"].includes(k) && v && isAbsolute(v) && !relative(root, v).startsWith("..") ? relative(root, v).split(sep).join("/") || "." : v);
+const inside = (k, v) => (["src", "out", "llms", "registry", "examplesDir"].includes(k) && v && isAbsolute(v) && !relative(root, v).startsWith("..") ? relative(root, v).split(sep).join("/") || "." : v);
 const given = Object.fromEntries(Object.entries(KEYS).filter(([, f]) => argv.includes(f)).map(([k, f]) => [k, inside(k, val(f))]));
 const setting = (k, d) => given[k] ?? saved[k] ?? d;
 if (checkOnly) for (const [k, v] of Object.entries(given)) if (saved[k] !== undefined && saved[k] !== v) console.log(`note: ${KEYS[k]} ${v} differs from ${posixRel(cfgFile)} (${saved[k]}). --check uses the flag.`);
@@ -82,7 +97,10 @@ const base = setting("base", "/system").replace(/\/$/, "");
 const posix = (p) => p.split(sep).join("/");
 const rel = (p) => posix(relative(root, p));
 const MARK = (src) => `<!-- generated by scripts/gen-docs.mjs from ${src}. Edit the source and rerun. -->`;
-const FOUNDATIONS = ["colors", "typography", "materials", "layout", "spacing", "radius", "elevation", "motion", "icons", "brand"];
+// Foundation page slugs. check-spec.mjs keeps the same list.
+const FOUNDATIONS = ["colors", "typography", "materials", "layout", "spacing", "radius", "elevation", "motion", "icons", "brand", "writing"];
+const examplesDir = setting("examplesDir", "docs/system/examples").replace(/^\.\//, "").replace(/\/+$/, "");
+const examplesAbs = resolve(root, examplesDir);
 
 if (!existsSync(srcDir)) { console.error(`gen-docs: no source folder at ${rel(srcDir)}`); process.exit(2); }
 let pkgName = "App";
@@ -95,8 +113,10 @@ if (!checkOnly && Object.keys(given).length && Object.entries(given).some(([k, v
   console.log(`saved ${Object.keys(given).map((k) => KEYS[k]).join(", ")} to ${posixRel(cfgFile)}, so --check generates the same output`);
 }
 
-// registry: id -> source path
+// registry: id -> source path, and every entry's id and names for the one-way alternative check
 const sources = new Map();
+const entries = [];
+const pascal = (id) => id.split(/[^A-Za-z0-9]+/).filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join("");
 const regPath = resolve(root, setting("registry", "registry.json"));
 if (existsSync(regPath)) {
   try {
@@ -105,6 +125,7 @@ if (existsSync(regPath)) {
       const id = String(it.id || it.name || "").toLowerCase();
       const s = it.source || it.meta?.source || (it.files || []).map((f) => (typeof f === "string" ? f : f.path))[0];
       if (id && s) sources.set(id, s);
+      if (id) entries.push({ id, names: [...new Set([id, it.name, it.meta?.name, it.title, pascal(id)].filter((n) => typeof n === "string" && n))] });
     }
   } catch (e) { console.error(`gen-docs: cannot parse ${rel(regPath)}: ${e.message}`); process.exit(2); }
 }
@@ -114,7 +135,7 @@ const pages = [];
 const walk = (d, prefix) => {
   for (const e of readdirSync(d).sort()) {
     const p = join(d, e);
-    if (statSync(p).isDirectory()) { if (!e.startsWith(".") && !e.startsWith("_")) walk(p, `${prefix}${e}/`); continue; }
+    if (statSync(p).isDirectory()) { if (!e.startsWith(".") && !e.startsWith("_") && !(d === srcDir && e === "rule-tests") && p !== examplesAbs) walk(p, `${prefix}${e}/`); continue; }
     if (!e.endsWith(".md") || e.startsWith("_") || e === "spec-template.md" || e === "README.md") continue;
     const slug = prefix + e.replace(/\.md$/, "");
     pages.push({ slug, file: p, text: readFileSync(p, "utf8").replace(/\r\n/g, "\n") });
@@ -178,6 +199,80 @@ function withProps(body, block) {
   return [...lines.slice(0, i + 1), "", block, ...(notes ? ["", notes] : []), "", ...lines.slice(j)].join("\n");
 }
 
+// ---------- examples in twins ----------
+// H2 and H3 positions in a page's lines, outside fences.
+function heads(lines) {
+  const out = [];
+  let fence = null;
+  lines.forEach((l, i) => {
+    const f = /^(`{3,}|~{3,})/.exec(l);
+    if (f) { if (!fence) fence = f[1]; else if (l.startsWith(fence)) fence = null; return; }
+    if (fence) return;
+    const m = /^(##|###) (.+?)\s*$/.exec(l);
+    if (m) out.push({ level: m[1].length, name: m[2].replace(/`/g, "").trim(), i });
+  });
+  return out;
+}
+const cellsOf = (l) => l.trim().replace(/^\||\|$/g, "").split(/(?<!\\)\|/).map((c) => c.trim());
+// The rows of a page's "### Example files" table: [{ path, covers, caption }] for rows whose File is a path.
+function exampleRows(text) {
+  const lines = text.split("\n"), hs = heads(lines);
+  const at = hs.findIndex((h) => h.level === 3 && h.name === "Example files");
+  if (at < 0) return [];
+  const rows = [];
+  for (let i = hs[at].i + 1; i < lines.length && !/^#{1,3} /.test(lines[i]); i++) if (/^\s*\|/.test(lines[i])) rows.push(cellsOf(lines[i]));
+  if (rows.length < 2) return [];
+  const col = (re) => rows[0].findIndex((h) => re.test(h));
+  const [cf, cc, cp] = [col(/^file$/i), col(/^covers$/i), col(/^caption$/i)];
+  if (cf < 0 || cc < 0) return [];
+  return rows.slice(2).map((r) => ({ path: (/^`([^`]+)`$/.exec(r[cf] || "") || [])[1], covers: (r[cc] || "").replace(/`/g, "").trim(), caption: cp >= 0 ? r[cp] || "" : "" })).filter((r) => r.path);
+}
+const LANG = { tsx: "tsx", jsx: "jsx", ts: "ts", js: "js", vue: "vue", svelte: "svelte", astro: "astro", html: "html" };
+function exampleBlock(path, caption) {
+  let src = readFileSync(join(root, path), "utf8").replace(/\r\n/g, "\n").split("\n");
+  if (/Caption:/.test(src[0])) src = src.slice(1);
+  const code = src.map((l) => l.replace(/\s+$/, "")).join("\n").replace(/\s+$/, "");
+  const longest = Math.max(2, ...[...code.matchAll(/^\s*(`{3,})/gm)].map((m) => m[1].length));
+  const fence = "`".repeat(longest + 1);
+  return `Example: ${caption} (\`${path}\`)\n\n${fence}${LANG[path.split(".").pop()] || ""}\n${code}\n${fence}`;
+}
+// Insert each listed example into the twin: default, composition and matrix at the end of Examples, axis=value under
+// that axis in Variants (else the end of Variants), state: in States before State precedence.
+function withExamples(body, p) {
+  const rows = exampleRows(stripComments(p.text));
+  if (!rows.length) return body;
+  const lines = body.split("\n"), hs = heads(lines);
+  const h2 = (name) => hs.findIndex((h) => h.level === 2 && h.name === name);
+  const endOf = (k) => { const next = hs.slice(k + 1).find((h) => h.level <= hs[k].level); let e = next ? next.i : lines.length; while (e > hs[k].i + 1 && !lines[e - 1].trim()) e--; return e; };
+  const spot = new Map(); // insertion index -> blocks
+  const put = (at, block) => { if (!spot.has(at)) spot.set(at, []); spot.get(at).push(block); };
+  const exK = h2("Examples");
+  for (const r of rows) {
+    if (!existsSync(join(root, r.path))) { console.log(`examples: ${r.path} listed in ${rel(p.file)} does not exist`); continue; }
+    let at = exK >= 0 ? endOf(exK) : null;
+    const axis = /^([A-Za-z][\w-]*)=/.exec(r.covers);
+    if (axis) {
+      const vK = h2("Variants");
+      if (vK >= 0) {
+        const vEnd = hs.findIndex((h, k) => k > vK && h.level === 2);
+        const aK = hs.findIndex((h, k) => k > vK && (vEnd < 0 || k < vEnd) && h.level === 3 && h.name.toLowerCase() === axis[1].toLowerCase());
+        at = endOf(aK >= 0 ? aK : vK);
+      }
+    } else if (r.covers.startsWith("state:")) {
+      const sK = h2("States");
+      if (sK >= 0) {
+        const pK = hs.findIndex((h, k) => k > sK && h.level === 3 && h.name === "State precedence" && !hs.slice(sK + 1, k).some((x) => x.level === 2));
+        if (pK >= 0) { let e = hs[pK].i; while (e > hs[sK].i + 1 && !lines[e - 1].trim()) e--; at = e; } else at = endOf(sK);
+      }
+    }
+    if (at === null) at = lines.length;
+    put(at, exampleBlock(r.path, r.caption));
+  }
+  for (const at of [...spot.keys()].sort((a, b) => b - a)) lines.splice(at, 0, ...spot.get(at).flatMap((b) => ["", b]));
+  return lines.join("\n");
+}
+function stripComments(t) { return t.replace(/^\s*<!--[\s\S]*?-->\s*\n/, ""); }
+
 // ---------- twins ----------
 const outputs = new Map(); // abs path -> content
 for (const p of pages) {
@@ -185,6 +280,7 @@ for (const p of pages) {
   if (!/^# /m.test(body.split("\n").find((l) => l.trim()) || "")) body = `# ${titleOf(p)}\n\n${body}`;
   const source = sources.get(p.slug.split("/").pop());
   if (propsFor.has(p.slug)) body = withProps(body, propsFor.get(p.slug));
+  if (/^## States\s*$/m.test(stripFences(p.text))) body = withExamples(body, p);
   if (source && !body.includes(source)) body = body.replace(/\s*$/, `\n\nSource: \`${source}\`\n`);
   p.twin = `${MARK(rel(p.file))}\n${body.replace(/\s*$/, "\n")}`;
   p.kind = kindOf(p);
@@ -194,40 +290,97 @@ for (const p of pages) {
 }
 
 // ---------- rules page ----------
+// A rule definition line and its continuation lines, joined with one space (rule-method.md, Rule shape).
+function definitions(text) {
+  const out = [];
+  let cur = null;
+  for (const l of stripFences(text).split("\n")) {
+    const m = /^\s*[-*]\s*`?((?:trap|rule)\/[a-z0-9-]+)`?\s*:\s*(.+)$/.exec(l);
+    if (m) { cur = { id: m[1], text: m[2].trim() }; out.push(cur); continue; }
+    if (cur && /^\s{2,}\S/.test(l) && !/^\s*Don't:/.test(l) && !/^\s*[-*] /.test(l)) { cur.text += " " + l.trim(); continue; }
+    cur = null;
+  }
+  return out;
+}
+const GROUND_KINDS = [["app", /^app \d+\/\d+ \S/], ["single use", /^single use \S+:\d+/], ["measured", /^measured .*\d/], ["principle", /^principle (wcag|platform|heuristic|input): \S/]];
+function groundsOf(text) {
+  const e = text.indexOf("Evidence: ");
+  if (e < 0) return "";
+  const c = text.indexOf("Check: ", e);
+  const gs = text.slice(e + 10, c < 0 ? undefined : c).trim().replace(/\.$/, "").split("; ").map((g) => g.trim());
+  return GROUND_KINDS.filter(([, re]) => gs.some((g) => re.test(g))).map(([k]) => k).join(", ");
+}
+const checkOf = (text) => { const c = text.indexOf("Check: ", Math.max(0, text.indexOf("Evidence: "))); return c < 0 ? "" : text.slice(c + 7).trim().replace(/\.$/, ""); };
 const hasRules = pages.some((p) => p.slug === "rules");
 if (!hasRules) {
-  const enforced = new Map();
+  const listRules = (script) => {
+    const m = new Map();
+    const f = join(dirname(fileURLToPath(import.meta.url)), script);
+    if (!existsSync(f)) return m;
+    const r = spawnSync(process.execPath, [f, "--list-rules"], { encoding: "utf8" });
+    for (const l of (r.stdout || "").split("\n")) { const [id, text] = l.split("\t"); if (id && text) m.set(id, text); }
+    return m;
+  };
+  const enforced = listRules("check-system.mjs");
+  const copyRules = listRules("copy-check.mjs");
   let blind = [];
   const cs = join(dirname(fileURLToPath(import.meta.url)), "check-system.mjs");
   if (existsSync(cs)) {
-    const r = spawnSync(process.execPath, [cs, "--list-rules"], { encoding: "utf8" });
-    for (const l of (r.stdout || "").split("\n")) { const [id, text] = l.split("\t"); if (id && text) enforced.set(id, text); }
     const b = spawnSync(process.execPath, [cs, "--list-blind-spots"], { encoding: "utf8" });
     if (b.status === 0) blind = (b.stdout || "").split("\n").filter(Boolean);
   }
   const cited = new Map();
+  const entry = (id) => { if (!cited.has(id)) cited.set(id, { pages: new Set(), text: "", ground: "", check: "" }); return cited.get(id); };
   for (const p of pages) {
-    for (const line of stripFences(p.text).split("\n")) {
-      for (const m of line.matchAll(/`?((?:trap|rule)\/[a-z0-9-]+)`?/g)) {
-        const id = m[1];
-        if (!cited.has(id)) cited.set(id, { pages: new Set(), text: "" });
-        const c = cited.get(id);
-        c.pages.add(p.slug);
-        const def = new RegExp("^\\s*[-*]\\s*`?" + id.replace("/", "\\/") + "`?\\s*:\\s*(.+)$").exec(line);
-        if (def && !c.text) c.text = plain(def[1]).split(/ Evidence:/)[0];
-      }
+    for (const line of stripFences(p.text).split("\n")) for (const m of line.matchAll(/`?((?:trap|rule)\/[a-z0-9-]+)`?/g)) entry(m[1]).pages.add(p.slug);
+    for (const d of definitions(p.text)) {
+      const c = entry(d.id);
+      if (c.text) continue;
+      c.text = plain(d.text.split(/ Evidence:/)[0]);
+      if (d.id.startsWith("rule/")) { c.ground = groundsOf(d.text); c.check = checkOf(d.text); }
     }
   }
-  for (const id of enforced.keys()) if (!cited.has(id)) cited.set(id, { pages: new Set(), text: "" });
+  for (const id of enforced.keys()) entry(id);
+  // copy-check runs once a writing page exists, so its rules join the page then.
+  if (pages.some((p) => p.slug.split("/").pop() === "writing")) for (const id of copyRules.keys()) entry(id);
   const rows = [...cited.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([id, c]) => {
-    const rule = c.text || (enforced.get(id) || "").split(". Fix:")[0] || "See the page";
+    const rule = c.text || (enforced.get(id) || copyRules.get(id) || "").split(". Fix:")[0] || "See the page";
     const where = [...c.pages].sort().map((s) => `[${s}](${base}/${s}.md)`).join(", ") || "none yet";
-    const check = enforced.has(id) ? "`scripts/check-system.mjs`" : "by hand";
-    return `| \`${id}\` | ${rule.replace(/\|/g, "\\|")} | ${where} | ${check} |`;
+    const check = enforced.has(id) ? "`scripts/check-system.mjs`" : copyRules.has(id) ? "`scripts/copy-check.mjs`" : c.check || "review";
+    return `| \`${id}\` | ${rule.replace(/\|/g, "\\|")} | ${where} | ${c.ground} | ${check.replace(/\|/g, "\\|")} |`;
   });
-  const md = `${MARK(rel(srcDir) + "/*.md and scripts/check-system.mjs --list-rules")}\n# Rules\n\nEverything this app's UI must not do, in one place. Read it before writing UI. A rule marked "by hand" has no script yet, so a reviewer checks it.\n\n| ID | Rule | Answered on | Enforced by |\n|---|---|---|---|\n${rows.join("\n")}\n${blind.length ? `\n## What the check can't see\n\nA reviewer or a browser covers these. Passing \`${checkCommand}\` says nothing about them.\n\n${blind.map((b) => `- ${b}.`).join("\n")}\n` : ""}`;
+  const md = `${MARK(rel(srcDir) + "/*.md, scripts/check-system.mjs --list-rules and scripts/copy-check.mjs --list-rules")}\n# Rules\n\nEverything this app's UI must not do, in one place. Read it before writing UI. A rule marked "review" has no script yet, so a reviewer checks it.\n\n| ID | Rule | Answered on | Ground | Enforced by |\n|---|---|---|---|---|\n${rows.join("\n")}\n${blind.length ? `\n## What the check can't see\n\nA reviewer or a browser covers these. Passing \`${checkCommand}\` says nothing about them.\n\n${blind.map((b) => `- ${b}.`).join("\n")}\n` : ""}`;
   outputs.set(join(outDir, "rules.md"), md);
   pages.push({ slug: "rules", title: "Rules", kind: "Rules", note: "every trap and rule ID, the page that answers it and the check that enforces it", twin: md, generated: true });
+}
+
+// ---------- one-way alternatives ----------
+// docs/alternative-oneway: page A's When not to use names registry component B (a name or id after "Use ", whole
+// word, case-insensitive), B has a page, and B's Related names A nowhere.
+const escRe = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const wordIn = (names, t) => names.some((n) => new RegExp(`(?<![\\w-])${escRe(n)}(?![\\w-])`, "i").test(t));
+const oneway = [];
+for (const a of pages.filter((p) => p.kind === "Components")) {
+  const aId = a.slug.split("/").pop();
+  const aNames = entries.find((e) => e.id === aId)?.names || [aId, a.title, pascal(aId)];
+  const lines = a.text.split("\n"), hs = heads(lines);
+  const u = hs.findIndex((h) => h.level === 2 && h.name === "Usage");
+  const w = hs.findIndex((h, k) => k > u && u >= 0 && h.level === 3 && h.name === "When not to use" && !hs.slice(u + 1, k).some((x) => x.level === 2));
+  if (w < 0) continue;
+  for (let i = hs[w].i + 1; i < lines.length && !/^#{1,3} /.test(lines[i]); i++) {
+    const t = lines[i].replace(/^[-*]\s+/, "");
+    if (!/^[-*] /.test(lines[i]) || t.indexOf("Use ") < 0) continue;
+    const rest = t.slice(t.indexOf("Use ") + 4);
+    for (const b of entries.filter((e) => e.id !== aId && wordIn(e.names, rest))) {
+      const bp = pages.find((p) => p.kind === "Components" && p.slug.split("/").pop() === b.id);
+      if (!bp) continue;
+      const bl = bp.text.split("\n"), bh = heads(bl);
+      const r = bh.findIndex((h) => h.level === 2 && h.name === "Related");
+      const related = [];
+      if (r >= 0) for (let k = bh[r].i + 1; k < bl.length && !/^## /.test(bl[k]); k++) if (/^\s*[-*] /.test(bl[k])) related.push(bl[k]);
+      if (!related.some((l) => wordIn(aNames, l))) oneway.push(`${rel(a.file)}:${i + 1} docs/alternative-oneway ${a.title} routes to ${bp.title}, but ${bp.title}'s Related does not name ${a.title}`);
+    }
+  }
 }
 
 // ---------- overview ----------
@@ -323,9 +476,50 @@ if (existsSync(outDir)) {
   scan(outDir);
   for (const p of orphans) { console.log(`orphan: ${rel(p)} (generated, source removed; delete it)`); drift++; }
 }
+for (const l of oneway) console.log(checkOnly ? l : `warning: ${l}`);
 if (checkOnly) {
-  console.log(`gen-docs --check: ${outputs.size} output(s), ${drift ? `${drift} out of date. Run node scripts/gen-docs.mjs` : "all fresh"}`);
-  process.exit(drift ? 1 : 0);
+  console.log(`gen-docs --check: ${outputs.size} output(s), ${drift ? `${drift} out of date. Run node scripts/gen-docs.mjs` : "all fresh"}${oneway.length ? `, ${oneway.length} one-way alternative(s)` : ""}`);
+  process.exit(drift || oneway.length ? 1 : 0);
 }
 console.log(`gen-docs: ${pages.filter((p) => !p.generated).length} source(s) -> ${outputs.size} file(s) in ${rel(outDir)} and ${rel(llmsPath)}${drift ? `. ${drift} orphan(s) listed above` : ""}`);
 process.exit(drift ? 1 : 0);
+
+// ---------- self-test ----------
+// Each fixtures/gen-docs/<case>/ holds case.json and fail/ and pass/ folders, each a mini repo whose .fixture files
+// are read under their inner name. case.json: { "rule", "match", "count", "failExit", "contains" }. The run writes
+// the docs, then runs --check. fail/ must print exactly count --check lines holding match and exit failExit
+// (default 1). pass/ must print none and exit 0. contains maps an output path to strings it must hold, in pass/.
+function selfTest(dirArg) {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const dir = dirArg ? resolve(dirArg) : join(here, "fixtures", "gen-docs");
+  if (!existsSync(dir)) { console.log(`self-test: FAIL, no fixtures at ${dir}`); return false; }
+  const me = fileURLToPath(import.meta.url);
+  let ok = true, n = 0;
+  for (const c of readdirSync(dir).sort()) {
+    const caseFile = join(dir, c, "case.json");
+    if (!existsSync(caseFile)) continue;
+    const spec = JSON.parse(readFileSync(caseFile, "utf8"));
+    for (const kind of ["fail", "pass"]) {
+      const src = join(dir, c, kind);
+      if (!existsSync(src)) { console.log(`self-test: ${c}/${kind} missing`); ok = false; continue; }
+      const tmp = mkdtempSync(join(tmpdir(), "gen-docs-"));
+      cpSync(src, tmp, { recursive: true });
+      const unfix = (d) => { for (const e of readdirSync(d)) { const p = join(d, e); if (statSync(p).isDirectory()) unfix(p); else if (e.endsWith(".fixture")) renameSync(p, p.slice(0, -8)); } };
+      unfix(tmp);
+      const w = spawnSync(process.execPath, [me, "--root", tmp], { cwd: tmp, encoding: "utf8" });
+      const r = spawnSync(process.execPath, [me, "--root", tmp, "--check"], { cwd: tmp, encoding: "utf8" });
+      const hits = (r.stdout || "").split("\n").filter((l) => l.includes(spec.match));
+      const missing = [];
+      if (kind === "pass") for (const [f, want] of Object.entries(spec.contains || {})) {
+        const text = existsSync(join(tmp, f)) ? readFileSync(join(tmp, f), "utf8") : "";
+        for (const x of want) if (!text.includes(x)) missing.push(`${f} lacks ${JSON.stringify(x)}`);
+      }
+      rmSync(tmp, { recursive: true, force: true });
+      const good = kind === "fail" ? hits.length === spec.count && r.status === (spec.failExit ?? 1) : !hits.length && r.status === 0 && !missing.length;
+      if (!good) ok = false; n++;
+      console.log(`self-test ${good ? "ok  " : "FAIL"} ${spec.rule} ${c}/${kind}: ${hits.length}/${kind === "fail" ? spec.count : 0}, exit ${r.status}${good ? "" : `  ${[...hits, ...missing, (r.stderr || w.stderr || "").trim()].filter(Boolean).join(" | ").slice(0, 600)}`}`);
+    }
+  }
+  console.log(`self-test: ${n} fixtures, ${ok ? "all as expected" : "FAILED"}`);
+  return ok;
+}

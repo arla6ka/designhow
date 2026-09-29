@@ -30,6 +30,8 @@ Every case applies to every setup, except these.
 | Seed mode | Empty repos and new apps |
 | Foundation owns its tokens | shadcn and package-library apps |
 | Measured traps, Captures and montage | Runs with a browser |
+| Limits by measurement | Runs with a browser |
+| Document everything | Apps with more families than the pilot touches |
 
 ## Done means
 
@@ -177,6 +179,46 @@ Watch for a token file written before any inventory, a palette borrowed from a p
 
 **Fails if:** a rule has no count behind it, a value arrives from another product's system, or border plus shadow becomes the rule because it is the majority.
 
+## Rules by the method
+
+**Input:** the normal repo after phase 4. A Select with 3 call sites, the longest list 9 options. A Tooltip with one call site. Plant one draft rule per defect in the Select spec: "Keep option lists short", "Use Select when appropriate", "Don't use placeholder text as a label", and a rule contradicting 3 of 3 call sites with only a principle behind it.
+
+**Expect:** every Behavior, Limits, Content and Best practices line has a `rule/select-<slug>` ID, a condition, an action with a number, literal or name, a reason, a ground from `references/rule-method.md` and a check. The first two drafts are rewritten with a number, the third names what to do instead, and the fourth becomes a gate with the principle as its default. The Tooltip's rules say single use and add a measurement or principle, or ship `NEEDS REVIEW`. `docs/system/rule-tests/select.tsv` has a row per rule with all four tests, and the report counts shipped, rewritten and gated rules. `check-spec.mjs` fails each planted draft under its rule ID.
+
+**Fails if:** a rule ships with no ground, a vague word survives, a don't has no instead, a rule overrules the app's majority with no gate, or a two-agent test is claimed with no subagent run in the transcript.
+
+## Limits by measurement
+
+**Input:** a segmented or tab-like control used on 2 screens with 3 options each, and the app's longest real label, at 390px.
+
+**Expect:** `probe.mjs --grow` runs on a real route or example, grows the count until the control overflows, wraps or pushes content below the first screen, and saves JSON under `.design-system/evidence/<component>/`. The Limits rule sets its number one step below the reported break, names the alternative past it, and cites the file. When a call site already exceeds the limit, the spec says whether the limit or the call site is wrong.
+
+**Fails if:** a limit has no measurement and no gate, the number equals the break instead of sitting below it, or a limit came from another product.
+
+## Example files
+
+**Input:** a Button with `variant` (3 values, one identical to default) and `size` (2 values), states loading and disabled, used inside a Dialog footer on one screen.
+
+**Expect:** the spec's `### Example files` lists `default`, each variant value and size with a visual difference, `state:loading`, `state:disabled`, one `matrix:variant,size` and `composition:Dialog`. The value identical to default has a `Not applicable` row with its reason. Every file sits at `<examples dir>/button/<name>.<ext>`, starts with a `Caption:` comment, imports from the registry's import path, default-exports one example and passes typecheck. The twin shows each file's source under its section.
+
+**Fails if:** a variant value or state is silently missing, a file copies the component instead of importing it, an example sends a request, or the composition uses a parent no call site has.
+
+## Writing foundation
+
+**Input:** an app whose delete flow reads "Remove project" on the button, "Delete this project?" as the confirm title, "Delete" on the confirm action and "Project deleted" in the toast. 14 of 17 buttons are sentence case. Two error toasts start with an apology.
+
+**Expect:** the writing page names each slot's sources, and `copy-check.mjs --extract` writes `docs/system/copy-inventory.tsv`. Slot rules carry counts from the inventory, with the 3 title-case buttons on the stray list. The delete flow is a declared verb chain, and `copy-check.mjs` fails it on "Remove" until the verb matches, or it is a gate. The apology word goes on the banned list only because the app's majority avoids it, with an Instead. Component specs cite `rule/writing-*` IDs under Content.
+
+**Fails if:** a slot rule has no count, a voice rule or banned word comes from outside the app with no principle and gate, the inventory is hand-written, or a confirmation belongs to no chain and no exempt row.
+
+## Document everything
+
+**Input:** a repo whose inventory has 14 families, a pilot that touches 4, and "document all our components".
+
+**Expect:** after the pilot's 4 families, the writing page lands first, then one spec worker per remaining family with the spec-worker brief and `references/rule-method.md`, ordered by call-site count. Each worker writes its members' specs, rule-tests and missing example files, and no component code. The coordinator reruns one two-agent test per report. At the docs cap, each unreached family is a handoff line with its members and counts. Without "all", "every", "full" or "complete" in the ask and with no budget left, specs stop at the pilot's families.
+
+**Fails if:** only the pilot's families get specs on the complete ask, one worker takes two families, a spec worker edits a component, or an unreached family goes unnamed.
+
 ## Measured traps
 
 **Input:** a pilot with a Send button that appends "…" while pending, a row of two buttons where one label wraps at 390, a panel whose fill equals the page, a nav that hides two links past its edge at 390, a dialog taller than a 390x320 screen, and an enter animation that runs under reduced motion.
@@ -203,9 +245,9 @@ Watch for a token file written before any inventory, a palette borrowed from a p
 
 ## Spec check proves itself
 
-**Input:** after phase 4, blank the Trigger cell of one state row, change a precedence line to "Loading and invalid: which one?", edit a line a committed spec cites, add a call site the spec's count misses, and add a prop with a JSDoc line to a component's props type.
+**Input:** after phase 4, blank the Trigger cell of one state row, change a precedence line to "Loading and invalid: which one?", edit a line a committed spec cites, add a call site the spec's count misses, and add a prop with a JSDoc line to a component's props type. Then drop `Check:` from one rule, add "as needed" to another, delete one example file, and delete one `rule-tests` row.
 
-**Expect:** `check-spec.mjs` exits 1 and names each line under `spec/states-empty`, `spec/precedence`, `spec/stale-cite` and `spec/call-sites`. `gen-docs.mjs --check` fails until gen-docs reruns, and the regenerated Props table carries the JSDoc text. Restoring the files gives exit 0. The check runs from the CI command.
+**Expect:** `check-spec.mjs` exits 1 and names each line under `spec/states-empty`, `spec/precedence`, `spec/stale-cite`, `spec/call-sites`, `spec/rule-shape`, `spec/vague-word`, `spec/examples` and `spec/rule-tests`. `gen-docs.mjs --check` fails until gen-docs reruns, and the regenerated Props table carries the JSDoc text. Restoring the files gives exit 0. The check runs from the CI command.
 
 **Fails if:** any edit passes, a Props table is hand-written, or `--check` needs the write run's flags.
 
@@ -229,7 +271,7 @@ Watch for a token file written before any inventory, a palette borrowed from a p
 
 **Input:** any practice repo, then the open-source repo with "open a PR upstream that makes the demos consistent". Clone the full-footprint run branch afterward without `node_modules`, `.next`, `.design-system/` and any skill folder, and run the check command from `package.json`.
 
-**Expect:** full footprint: four scripts, their config, the allowlist, the drift list and stock copies, no fixtures unless the run added a rule, and only `.design-system/review/**/*.png` and `.design-system/tmp/` in `.gitignore`. In the clone the check exits 0 (with `next typegen` before `tsc` on Next 16), and it holds `surfaces.tsv`, `traces.tsv`, the probe files, the review reports and `index.html` with relative paths, and no PNG. On the upstream ask, a footprint gate defaults to minimal: tokens, touched components and screen changes, nothing vendored, `.gitignore` untouched, and `.design-system/` in `.git/info/exclude`.
+**Expect:** full footprint: five scripts, their config, the allowlist, the drift list and stock copies, no fixtures unless the run added a rule, and only `.design-system/review/**/*.png` and `.design-system/tmp/` in `.gitignore`. In the clone the check exits 0 (with `next typegen` before `tsc` on Next 16), and it holds `surfaces.tsv`, `traces.tsv`, the probe files, the review reports and `index.html` with relative paths, and no PNG. On the upstream ask, a footprint gate defaults to minimal: tokens, touched components and screen changes, nothing vendored, `.gitignore` untouched, and `.design-system/` in `.git/info/exclude`.
 
 **Fails if:** the check needs a file only the run folder or a skill folder had, fixtures or capture scripts land in the repo, a PNG is committed, a linked record is missing from the clone, or the minimal run copies scripts or edits `.gitignore`.
 

@@ -19,7 +19,7 @@ It works on any web stack it can read and run, and its specs are framework-agnos
 3. The inventory commands in `references/inventory.md`, for your folders, file types and router.
 4. The canonical-pick order and accessibility floor in `references/component-contract.md`, to match your behavior library and test runner.
 5. The base reference for your foundation (`references/base-shadcn.md`, `base-library.md`, `base-raw.md`), with your registry namespace, theme file and wrapper folder.
-6. The worked spec in `references/spec-example-combobox.md`, with one of your own once it passes the check. Add your team's behavior traps to `references/traps.md`.
+6. The worked spec in `references/spec-example-combobox.md`, with one of your own once it passes the check. Add your team's behavior traps to `references/traps.md`. Add questions or principle kinds to `references/rule-method.md` when your product has a concern it misses, and keep the rule shape and the four tests.
 7. A precedence rule in AGENTS.md or CLAUDE.md for tokens that live in two places. Without one, each conflict becomes a gate.
 8. Tolerances in `token-mapping`'s rules file. This skill merges values inside them without asking.
 9. The rules in `references/checks.md` and `scripts/check-system.mjs`, for your lint setup and ui folder. Keep the drift-list hashes, the allowlist and a fixture pair per rule.

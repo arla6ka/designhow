@@ -30,7 +30,7 @@ When Storybook or another component workbench is running, open each story in a b
 
 ## Running product
 
-A browser can confirm a real use on a local dev server, a preview or a production URL. It is also the tool that settles States: which class list a tab has while two states hold, what the accessibility tree says, what happens on a nested route. Behavior observed here is sourced, so it goes in States, not Guessed at. Record the URL and the read time. To reach a screen that needs a sign-in, a form submission or changed data, stop there and treat that use as pasted.
+A browser can confirm a real use on a local dev server, a preview or a production URL. It is also the tool that settles States: which class list a tab has while two states hold, what the accessibility tree says, what happens on a nested route. Behavior observed here is sourced, so it goes in States, not Guessed at. It is also where Limits get their numbers: grow one dimension on a real instance until it wraps, truncates or overflows, with `build-design-system/scripts/probe.mjs --grow` when installed or the browser's computed sizes otherwise, and save the result under `.design-system/evidence/<component>/`. Record the URL and the read time. To reach a screen that needs a sign-in, a form submission or changed data, stop there and treat that use as pasted.
 
 ## Pasted material
 

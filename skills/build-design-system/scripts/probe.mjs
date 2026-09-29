@@ -223,6 +223,75 @@ export const PROBE_SRC = `(() => {
   return { url: location.pathname + location.search, width: innerWidth, height: innerHeight, controls, headings, texts, links, heightMismatch: rows, wrappedButtons, flatSurfaces, clipped, tallOverlays, reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches, motion };
 })()`;
 
+
+// probe.mjs --grow: grow one dimension of a target until its layout breaks (rule-method.md, Limits by measurement).
+// Evaluated in the page as a function of { dimension, target, item, textTarget, sample, max, step, watch }.
+export const GROW_SRC = `(o) => {
+  const target = document.querySelector(o.target);
+  if (!target) return { error: "target" };
+  const r = (el) => el.getBoundingClientRect();
+  const distinct = (vals) => { const out = []; for (const v of vals.sort((a, b) => a - b)) if (!out.length || v - out[out.length - 1] > 2) out.push(v); return out.length; };
+  const clipped = (e) => { const s = getComputedStyle(e); return e.scrollWidth > e.clientWidth + 1 && (s.textOverflow === "ellipsis" || /hidden|clip/.test(s.overflowX) || /hidden|clip/.test(s.overflow)); };
+  let items = null, el = null, start, step, max;
+  if (o.dimension === "count") {
+    items = () => o.item ? [...target.querySelectorAll(o.item)] : [...target.children];
+    if (!items().length) return { error: "item" };
+    start = items().length; step = 1; max = o.max || 20;
+  } else {
+    el = o.textTarget ? target.querySelector(o.textTarget) : target;
+    if (!el) return { error: "text-target" };
+    start = el.textContent.length; step = o.step || 1; max = o.max || 200;
+  }
+  const lines = (e) => {
+    const tops = [];
+    const w = document.createTreeWalker(e, NodeFilter.SHOW_TEXT);
+    for (let n = w.nextNode(); n; n = w.nextNode()) { if (!n.textContent.trim()) continue; const g = document.createRange(); g.selectNodeContents(n); for (const q of g.getClientRects()) if (q.width > 0 && q.height > 0) tops.push(q.top); }
+    return distinct(tops);
+  };
+  const wrapNow = () => (el ? lines(el) : distinct(items().map((i) => r(i).top)));
+  const truncNow = () => { for (const e of el ? [el] : [target, ...items()]) if (clipped(e)) return "scrollWidth " + e.scrollWidth + " > clientWidth " + e.clientWidth + " on " + (e === target ? "the target" : el ? "the text" : "an item") + ", " + (getComputedStyle(e).textOverflow === "ellipsis" ? "text-overflow ellipsis" : "overflow " + getComputedStyle(e).overflowX); return null; };
+  // The three overflow tests, each as [key, measurement] when it holds. A test that already held at the start is
+  // left out later, so the others still report.
+  const overNow = () => {
+    const out = [];
+    if (target.scrollWidth > target.clientWidth + 1) out.push(["scroll", "scrollWidth " + target.scrollWidth + " > clientWidth " + target.clientWidth]);
+    const p = target.parentElement;
+    if (p) { const ps = getComputedStyle(p), edge = r(p).right - parseFloat(ps.paddingRight) - parseFloat(ps.borderRightWidth); if (r(target).right > edge + 1) out.push(["edge", "right edge " + Math.round(r(target).right) + " > parent content edge " + Math.round(edge)]); }
+    if (document.documentElement.scrollWidth > innerWidth) out.push(["page", "document scrollWidth " + document.documentElement.scrollWidth + " > innerWidth " + innerWidth]);
+    return out;
+  };
+  const watch = o.watch ? document.querySelector(o.watch) : target.nextElementSibling;
+  const base = { wrap: wrapNow(), trunc: !!truncNow(), over: overNow().map(([k]) => k), fold: r(target).bottom > innerHeight, watch: watch ? r(watch) : null };
+  const notes = [];
+  if (base.trunc) notes.push("already truncated at the start");
+  for (const [k, m] of overNow()) notes.push("already overflowing at the start: " + m + ". Only the other overflow tests count");
+  if (base.fold) notes.push("already below the fold at the start");
+  const found = new Map();
+  const sample = o.sample || (el && el.textContent) || "M";
+  let k = 0;
+  const lastText = () => { const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let last = null; for (let n = w.nextNode(); n; n = w.nextNode()) last = n; if (!last) { last = document.createTextNode(""); el.appendChild(last); } return last; };
+  for (let at = start + step; at <= max; at += step) {
+    if (items) { const last = items().at(-1); last.after(last.cloneNode(true)); }
+    else { const t = lastText(); let add = ""; for (let i = 0; i < step; i++) add += sample[k++ % sample.length]; t.textContent += add; }
+    void document.body.offsetHeight;
+    const hit = (kind, m) => { if (m && !found.has(kind)) found.set(kind, { kind, at, measurement: m }); };
+    const wn = wrapNow(); if (wn > base.wrap) hit("wrap", (el ? "lines " : "rows ") + base.wrap + " -> " + wn);
+    if (!base.trunc) hit("truncate", truncNow());
+    hit("overflow", (overNow().find(([k2]) => !base.over.includes(k2)) || [])[1]);
+    if (!base.fold && r(target).bottom > innerHeight) hit("below-fold", "bottom " + Math.round(r(target).bottom) + " > innerHeight " + innerHeight);
+    if (watch && base.watch) { const b = r(watch), dx = Math.round(b.left - base.watch.left), dy = Math.round(b.top - base.watch.top); if (Math.abs(dx) > 1 || Math.abs(dy) > 1) hit("shift", "watched element moved " + dx + "px across, " + dy + "px down"); }
+  }
+  const ORDER = ["wrap", "truncate", "overflow", "below-fold", "shift"];
+  const breaks = [...found.values()].sort((a, b) => a.at - b.at || ORDER.indexOf(a.kind) - ORDER.indexOf(b.kind));
+  return { start, step, max, breaks, limit: breaks.length ? breaks[0].at - step : null, unbroken: !breaks.length, notes };
+}`;
+
+// One grow run on a loaded page. Returns the JSON record, or { error } when the target or item is missing.
+export async function growOnPage(page, o) {
+  return page.evaluate(`(${GROW_SRC})(${JSON.stringify(o)})`);
+}
+const growLine = (dim, w, g) => `grow ${dim} ${w}: ${g.breaks.length ? `${g.breaks.map((b) => `${b.kind} at ${b.at} (${b.measurement})`).join(", ")}; limit ${g.limit}` : `no break up to ${g.max}`}`;
+
 const ATTRS = ["role", "disabled", "ariaDisabled", "ariaBusy", "ariaInvalid", "ariaCurrent", "ariaExpanded", "ariaSelected", "required", "type", "href"];
 const byKey = (list) => new Map((list || []).map((x) => [x.key, x]));
 
@@ -311,6 +380,9 @@ Usage:
   node scripts/probe.mjs <file.probe.json>...
   node scripts/probe.mjs --base <url> --routes <r>... [--widths 390] [--height 900] [--click <selector>] [--root <dir>]
   node scripts/probe.mjs --self-test [--fixtures <dir>]   every trap on its fixture pages (fixtures/probe/)
+  node scripts/probe.mjs --grow --base <url> --route <path> --target <css> --dimension count|text
+      [--item <css>] [--text-target <css>] [--sample <string>] [--max <n>] [--step <n>]
+      [--widths 390[,1280]] [--height <px>] [--click <css>] [--watch <css>] [--out <dir>] [--root <dir>]
 
 Prints one line per finding: trap id, element, measurement. It measures five
 traps from references/traps.md:
@@ -335,7 +407,27 @@ reduced motion on.
   --root <dir>        the app's repo root, where Playwright is looked for first.
                       Default: the git root of the first file, else of the current folder
 
-Exit 0 when nothing is found, 1 on any finding, 2 on bad input or no browser.`;
+--grow measures a limit (references/rule-method.md, Limits by measurement). At each
+width it grows the target one step at a time and records the first value where
+each break happens:
+  wrap        text mode: the text's line count rises. count mode: the items
+              fall onto more rows
+  truncate    the text or an item clips with an ellipsis, or overflow hidden or clip
+  overflow    the target scrolls sideways, passes its parent's content edge, or
+              the page scrolls sideways
+  below-fold  the target's bottom passes the viewport's
+  shift       --watch (default the target's next sibling) moves by more than 1px
+  --dimension count   clone the last --item (default the target's last child) up
+                      to --max items in all (default 20)
+  --dimension text    append --sample (default the current text) to --text-target
+                      (default the target), --step characters at a time (default
+                      1), up to --max characters (default 200)
+  --out <dir>         where grow-<dimension>-<width>.json goes. Default
+                      .design-system/evidence/grow/ under the root
+limit is the earliest break minus one step, or null when nothing broke.
+
+Exit 0 when nothing is found, 1 on any finding, 2 on bad input or no browser.
+--grow exits 0 whenever it measured, breaks or not.`;
 
 if (process.argv[1] && (await import("node:path")).resolve(process.argv[1]) === (await import("node:url")).fileURLToPath(import.meta.url)) {
   const { readFileSync, existsSync } = await import("node:fs");
@@ -343,7 +435,7 @@ if (process.argv[1] && (await import("node:path")).resolve(process.argv[1]) === 
   const { launchChromium, repoRoot } = await import("./find-chromium.mjs");
   const argv = process.argv.slice(2);
   if (!argv.length || argv.includes("--help") || argv.includes("-h")) { console.log(HELP); process.exit(argv.length ? 0 : 2); }
-  const bad = argv.filter((a) => a.startsWith("--") && !["--base", "--routes", "--widths", "--height", "--click", "--root", "--self-test", "--fixtures"].includes(a));
+  const bad = argv.filter((a, i) => a.startsWith("--") && argv[i - 1] !== "--sample" && !["--base", "--routes", "--widths", "--height", "--click", "--root", "--self-test", "--fixtures", "--grow", "--route", "--target", "--dimension", "--item", "--text-target", "--sample", "--max", "--step", "--watch", "--out"].includes(a));
   if (bad.length) { console.error(`probe: unknown ${bad.join(", ")}\n\n${HELP}`); process.exit(2); }
   if (argv.includes("--self-test")) {
     // Each fixtures/probe/<trap>/ holds case.json ({ "trap", "width", "height", "click", "expect" }), fail.html and
@@ -361,6 +453,19 @@ if (process.argv[1] && (await import("node:path")).resolve(process.argv[1]) === 
     for (const c of readdirSync(dir).sort()) {
       if (!existsSync(join(dir, c, "case.json"))) continue;
       const spec = JSON.parse(readFileSync(join(dir, c, "case.json"), "utf8"));
+      if (spec.mode === "grow") {
+        // A grow case: page.html, and the first break it must report.
+        const ctx = await launched.browser.newContext({ viewport: { width: spec.width || 390, height: spec.height || 900 } });
+        const page = await ctx.newPage();
+        let g = null, err = "";
+        try { await page.goto(pathToFileURL(join(dir, c, "page.html")).href, { waitUntil: "load" }); g = await growOnPage(page, { dimension: spec.dimension, target: spec.target, item: spec.item, textTarget: spec.textTarget, sample: spec.sample, max: spec.max, step: spec.step, watch: spec.watch }); } catch (e) { err = String(e.message).split("\n")[0]; }
+        await ctx.close();
+        const first = g && !g.error && g.breaks[0];
+        const good = !!first && first.kind === spec.expect.kind && first.at === spec.expect.at;
+        if (!good) ok = false; n++;
+        console.log(`self-test ${good ? "ok  " : "FAIL"} grow ${spec.dimension} ${c}: ${first ? `${first.kind} at ${first.at}` : err || (g && g.error ? `no ${g.error}` : "no break")}, want ${spec.expect.kind} at ${spec.expect.at}`);
+        continue;
+      }
       for (const kind of ["fail", "pass"]) {
         const ctx = await launched.browser.newContext({ viewport: { width: spec.width || 390, height: spec.height || 900 }, reducedMotion: "reduce" });
         const page = await ctx.newPage();
@@ -381,7 +486,41 @@ if (process.argv[1] && (await import("node:path")).resolve(process.argv[1]) === 
     console.log(`self-test: ${n} fixtures, ${ok ? "all as expected" : "FAILED"}`);
     process.exit(ok ? 0 : 1);
   }
-  const val = (f) => { const i = argv.indexOf(f); return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith("--") ? argv[i + 1] : undefined; };
+  const val = (f) => { const i = argv.indexOf(f); return i >= 0 && argv[i + 1] && (f === "--sample" || !argv[i + 1].startsWith("--")) ? argv[i + 1] : undefined; };
+  if (argv.includes("--grow")) {
+    const { mkdirSync, writeFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const base = val("--base"), route = val("--route"), target = val("--target"), dim = val("--dimension");
+    if (!base || !/^https?:\/\//.test(base) || !route || !target || !["count", "text"].includes(dim)) { console.error(`probe: --grow needs --base <url>, --route <path>, --target <css> and --dimension count|text\n\n${HELP}`); process.exit(2); }
+    const num = (f) => { const v = val(f); if (v === undefined) return undefined; const n = Number(v); if (!(n > 0)) { console.error(`probe: ${f} takes a positive number`); process.exit(2); } return n; };
+    const widths = (val("--widths") || "390").split(",").map(Number);
+    if (widths.some((w) => !w)) { console.error("probe: --widths takes numbers, such as 390,1280"); process.exit(2); }
+    const height = num("--height") || 900, max = num("--max"), step = num("--step");
+    const root = repoRoot(val("--root"));
+    const out = val("--out") ? resolve(val("--out")) : join(root, ".design-system/evidence/grow");
+    const launched = await launchChromium({}, { root });
+    if (launched.error) { console.error(`probe: ${launched.error}`); process.exit(2); }
+    for (const w of widths) {
+      const ctx = await launched.browser.newContext({ viewport: { width: w, height }, reducedMotion: "reduce" });
+      const page = await ctx.newPage();
+      let g;
+      try {
+        await page.goto(new URL(route, base).href, { waitUntil: "load" });
+        await page.evaluate("document.fonts.ready");
+        if (val("--click")) { await page.locator(val("--click")).first().click({ timeout: 5000 }); await page.waitForTimeout(400); }
+        g = await growOnPage(page, { dimension: dim, target, item: val("--item"), textTarget: val("--text-target"), sample: val("--sample"), max, step, watch: val("--watch") });
+      } catch (e) { console.error(`probe: ${route} at ${w}: ${String(e.message).split("\n")[0]}`); await launched.browser.close(); process.exit(2); }
+      await ctx.close();
+      if (g.error) { console.error(`grow: no element matches ${g.error === "target" ? target : g.error === "item" ? val("--item") || "a child of the target" : val("--text-target")} on ${route} at ${w}`); await launched.browser.close(); process.exit(2); }
+      const rec = { route, width: w, height, target, dimension: dim, start: g.start, step: g.step, max: g.max, breaks: g.breaks, limit: g.limit, unbroken: g.unbroken };
+      mkdirSync(out, { recursive: true });
+      writeFileSync(join(out, `grow-${dim}-${w}.json`), JSON.stringify(rec, null, 2) + "\n");
+      console.log(growLine(dim, w, g));
+      for (const n of g.notes) console.log(`note: grow ${dim} ${w}: ${n}`);
+    }
+    await launched.browser.close();
+    process.exit(0);
+  }
   const after = (f) => { const i = argv.indexOf(f); if (i < 0) return []; const out = []; for (let k = i + 1; k < argv.length && !argv[k].startsWith("--"); k++) out.push(argv[k]); return out; };
   const flagVals = new Set(["--base", "--widths", "--height", "--click", "--root"].map(val).concat(after("--routes")));
   const files = argv.filter((a) => !a.startsWith("--") && !flagVals.has(a));

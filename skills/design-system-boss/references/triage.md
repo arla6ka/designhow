@@ -124,7 +124,7 @@ Read the ask for these words. The rows run from named complaints to generic verb
 | "consistent", "consistency", "colors" with no verb that means change | review, plus `token-mapping` on the same files, which answers by role |
 | "missing states", or "missing" with a kind of state: "missing loading and error states", "no error state", "no empty state" | harden |
 | "harden", "fill the states", "our components have no rules", "tighten the system", "make it solid", "stops drifting" | harden |
-| "docs", "document the system", "agents can't read our components" | docs |
+| "docs", "document the system", "agents can't read our components", "document all our components", "full design system docs" | docs. "All", "every", "full" or "complete" means every family |
 | "fix it", "fix this", "clean it all up", "clean it up", "mess", "sort out our UI" | full. "Fix it" or "fix this" aimed at a mess or an inconsistency counts as clearance |
 | "migrate", "move every screen", "roll out", "adopt", "nobody uses it", "nobody follows it", "the screens ignore it" | adopt, and the ask counts as clearance |
 | "start a design system", "new app", "from scratch", "from our brand" | seed |

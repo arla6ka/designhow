@@ -33,7 +33,7 @@ node scripts/check-system.mjs --no-self-test --left   # at close: what the allow
 node /abs/skills/build-design-system/scripts/check-system.mjs --root /abs/app --no-self-test   # from any folder
 ```
 
-Read the config `--init` writes, and the lines it prints. `tokenSources` (files whose custom property lines may hold raw values), `uiDir`, `registry`, `driftList`, `allowlist` and `nativeControls` are guesses from the repo. `nativeControls` maps each native tag to the component the ui barrel and ui files export, such as `<button>` to `Button`. `--init` never writes an empty value such as `nativeControls: {}`, which would read as a decision and turn a rule off. When it cannot fill a key, it leaves it out, so the default applies at every run, and prints why. A config that still holds `{}` from an older run is treated as unset, with a note. `rulesOff` is the only way to turn a rule off. `sharedTokens` lists `:root` colors meant to hold one value in every theme, and `varIgnore` lists custom property prefixes a library sets at runtime, such as `--radix-` or `--transform-origin`. The scan skips the run's own scaffolding: `public/`, `scripts/`, `.design-system/`, `.migration/` and skill folders. With no canonical Button yet there is no native-button rule, and one appears on the first run after the Button exists, with no config edit. Everything the check reads lives in the repo, never in `.design-system/` or a skill folder.
+Read the config `--init` writes, and the lines it prints. `tokenSources` (files whose custom property lines may hold raw values), `uiDir`, `registry`, `driftList`, `allowlist` and `nativeControls` are guesses from the repo. `nativeControls` maps each native tag to the component the ui barrel and ui files export, such as `<button>` to `Button`. `--init` never writes an empty value such as `nativeControls: {}`, which would read as a decision and turn a rule off. When it cannot fill a key, it leaves it out, so the default applies at every run, and prints why. A config that still holds `{}` from an older run is treated as unset, with a note. `rulesOff` is the only way to turn a rule off. `sharedTokens` lists `:root` colors meant to hold one value in every theme, and `varIgnore` lists custom property prefixes a library sets at runtime, such as `--radix-` or `--transform-origin`. The scan skips the run's own scaffolding: `public/`, `scripts/`, `.design-system/`, `.migration/` and skill folders. It always scans the docs' example files (`examplesDir` in `scripts/gen-docs.config.json`, default `docs/system/examples`), since readers copy them into product code. With no canonical Button yet there is no native-button rule, and one appears on the first run after the Button exists, with no config edit. Everything the check reads lives in the repo, never in `.design-system/` or a skill folder.
 
 ## What the check covers
 
@@ -64,8 +64,9 @@ One command, such as `npm run check`, runs every rule below and exits nonzero on
 | `rule/deprecated-import` | An import of a path the registry lists under `replaces`, or the config's `deprecated` | yes |
 | `spec/*` | `node scripts/check-spec.mjs docs/system` | separate script |
 | docs | `node scripts/gen-docs.mjs --check`: every twin, the rules page, the index and `llms.txt` match a fresh generation | separate script |
+| `copy/*` | `node scripts/copy-check.mjs`, once `docs/system/writing.md` exists: a stale copy inventory, and strings that break the writing page (`writing-method.md`) | separate script |
 
-Add each `trap/` or `rule/` from the specs that a regex or AST query can see, under its own ID, with fixtures. A rule a script cannot see stays "by hand" on the generated rules page.
+Add each `trap/` or `rule/` from the specs that a regex or AST query can see, under its own ID, with fixtures. A rule a script cannot see shows its own `Check:` clause, or "review", on the generated rules page.
 
 ## Exempting stock files
 
@@ -103,7 +104,7 @@ A `<dialog onClick>` with no `onCancel` still fails.
 
 ## What the check can't see
 
-Every text report ends with a fixed section, "The check cannot see", from `--list-blind-spots`, and `--json` carries it as `blindSpots`. `gen-docs.mjs` copies it to the end of the rules page. It names rendered and non-text contrast, behavior (what Enter, Escape or Cancel does, focus return), layout and target size, overrides on components the registry does not list or built at runtime, loading states that do not use a label ternary, class names built at runtime, Tailwind built-ins such as `bg-white`, files outside `include`, stale role comments, and the rules marked "by hand". A final message that says the check guards drift names these limits in the same breath.
+Every text report ends with a fixed section, "The check cannot see", from `--list-blind-spots`, and `--json` carries it as `blindSpots`. `gen-docs.mjs` copies it to the end of the rules page. It names rendered and non-text contrast, behavior (what Enter, Escape or Cancel does, focus return), layout and target size, overrides on components the registry does not list or built at runtime, loading states that do not use a label ternary, class names built at runtime, Tailwind built-ins such as `bg-white`, files outside `include`, stale role comments, and the rules marked "review". A final message that says the check guards drift names these limits in the same breath.
 
 ## The check has to run
 
@@ -121,6 +122,8 @@ Every rule gets a failing and a passing fixture under `fixtures/check-system/<ru
 - The `unregistered-ui` failing fixture is a file in the ui folder, not on the drift list, with raw hex in it. It must fail both rules. This catches a glob exemption.
 
 The normal scan skips `scripts/` entirely.
+
+`check-spec.mjs --self-test`, `gen-docs.mjs --self-test`, `copy-check.mjs --self-test` and `probe.mjs --self-test` prove the other scripts the same way, from `fixtures/check-spec/`, `fixtures/gen-docs/`, `fixtures/copy-check/` and `fixtures/probe/` in the skill folder. These fixtures never go into the repo.
 
 ## At handoff
 

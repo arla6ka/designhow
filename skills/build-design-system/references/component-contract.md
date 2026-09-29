@@ -81,7 +81,7 @@ Contrast is measured by a script against the rendered colors in each theme. Text
 ## Docs entry and examples
 
 - One `component-docs` entry, run with the component's code, variant list and its real uses taken from `components.tsv` call sites. One real use is enough: the entry is graded ready with gaps and opens a gate. In seed, or for a component the pilot is about to use, pass planned uses marked "(planned)". `component-docs` stops only at zero real and zero planned uses. A deprecated predecessor's call site counts when the migration map maps it. The entry and its page use the nine sections of `system-structure.md`, in order, filled to the spec template.
-- One example file per variant axis and per triggerable state, named `<state>.tsx` with exactly the registry's state name. Examples import the component from the path product code uses.
+- One example file per variant value and per state with a visual or behavior difference, plus one composition inside a parent a real call site uses, at `<examples dir>/<component>/<name>.<ext>` and listed in the spec's `### Example files` table (`spec-template.md`). Each is a complete module: a `Caption:` comment on its first line, the component imported from the path product code uses, and one default-exported example.
 - The example files double as fixtures for screenshots and tests. They use inert data. Mounting an example never sends a request, charges money, or deletes anything.
 
 ## Tests

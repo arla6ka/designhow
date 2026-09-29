@@ -58,6 +58,8 @@ Config keys (all optional, JSON)
                                                 .design-system, .migration, skill folders
   tokenSources   files where raw values may sit on custom property lines (--x: #fff)
   uiDir          the component folder           "components/ui"
+  examplesDir    the docs' example files, always scanned  gen-docs.config.json's, else
+                                                "docs/system/examples"
   registry       registry file                  "registry.json"
   driftList      TSV: file, status, sha256, note "scripts/ui-drift.tsv"
   allowlist      counted exceptions             "scripts/check-allowlist.json"
@@ -114,7 +116,7 @@ const BLIND = [
   "bg-white and text-black when the theme defines no role for their job, their opacity forms such as bg-black/50, and CSS keywords such as white in var() fallbacks",
   "Files outside the include folders, and ui files missing from the drift list (they are scanned, but no hash guards them)",
   "Whether a token's role comment still matches how the token is used",
-  "Rules the generated rules page marks by hand",
+  "Rules the generated rules page marks review, or enforces only through their own Check: clause",
 ];
 const NAMED = "aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue blueviolet brown burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson cyan darkblue darkcyan darkgoldenrod darkgray darkgreen darkgrey darkkhaki darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue dimgray dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite gold goldenrod gray green greenyellow grey honeydew hotpink indianred indigo ivory khaki lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon lightseagreen lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime limegreen linen magenta maroon mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue mediumspringgreen mediumturquoise mediumvioletred midnightblue mintcream mistyrose moccasin navajowhite navy oldlace olive olivedrab orange orangered orchid palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell sienna silver skyblue slateblue slategray slategrey snow springgreen steelblue tan teal thistle tomato turquoise violet wheat white whitesmoke yellow yellowgreen".split(" ");
 const NAMED_RE = new RegExp(`(?<![\\w-])(${NAMED.join("|")})(?![\\w-])`, "i");
@@ -298,6 +300,13 @@ function loadConfig(root, file, override) {
   cfg.varIgnore = [...DEFAULTS.varIgnore, ...(user.varIgnore || []), ...((override || {}).varIgnore || [])];
   if (!cfg.uiDir) cfg.uiDir = ["components/ui", "src/components/ui", "src/ui", "ui"].find((d) => existsSync(join(root, d))) || null;
   cfg.aliases = cfg.aliases || tsAliases(root);
+  // The docs' example files are product code a reader copies, so the scan covers them: examplesDir from the config,
+  // else from scripts/gen-docs.config.json, else docs/system/examples.
+  let gd = {};
+  try { gd = readJSON(join(root, "scripts/gen-docs.config.json")); } catch {}
+  cfg.examplesDir = posix(cfg.examplesDir || gd.examplesDir || "docs/system/examples").replace(/^\.\//, "").replace(/\/+$/, "");
+  const inc = cfg.include.map((d) => posix(d).replace(/^\.\//, "").replace(/\/+$/, ""));
+  if (existsSync(join(root, cfg.examplesDir)) && !inc.some((d) => d === "." || d === "" || cfg.examplesDir === d || cfg.examplesDir.startsWith(d + "/"))) cfg.include = [...cfg.include, cfg.examplesDir];
   // registry
   cfg.registered = new Set();
   cfg.replaces = new Set((cfg.deprecated || []).map(stripExt));

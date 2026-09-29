@@ -36,6 +36,9 @@ Phrase each prompt the way a colleague would. Leave words like "test", "eval" or
 | Direct run on a Next.js Tabs | Next.js apps | Client components, parts and routes all bend the format |
 | Scaffolding is not a real use | Repos after a build run | Docs pages and fixtures import the component without being screens |
 | An adds-only defect lands as a decision | If you run build-design-system | A missing name or `aria-current` must not wait on a person |
+| Usage rules by the method | Yes | Rules with no ground or check read as fact and get copied |
+| Rule method without the sibling | Installs without build-design-system | The inline summary must carry the method alone |
+| Example files on a direct run | Yes | Readers learn a component from complete examples first |
 
 ## Done means
 
@@ -222,5 +225,29 @@ Watch for a section order it made up, usage examples that sound right and were n
 **Expect:** both keep their current behavior in the entry, each with a `Defect:` line that ends `(adds semantics only)`. Neither becomes a Gates block entry. The entry, code and stories stay unedited.
 
 **Fails if:** either defect becomes a gate, the entry claims the fix already landed, or the skill edits the component.
+
+## Usage rules by the method
+
+**Input:** "document the Select" in a repo with two call sites (6 and 9 options), a stories file, and a running dev server.
+
+**Expect:** Usage has the six H3s in order. Every When not to use line names another component and says "instead". Every Behavior, Limits, Content and Best practices line has a `rule/select-<slug>` ID, a condition, a reason, an `Evidence:` ground (call sites, a measurement with its path, or a named principle) and a `Check:`. The Limits number comes from growing the option count on a real instance, sits below the break, and cites the saved file. Each Best practices rule has a `Don't:` line. Guessed at lists any rule that rests on a principle alone.
+
+**Fails if:** a rule says "appropriate", "consistent" or "as needed", a limit has no measurement and no `NEEDS REVIEW (not measured)`, a don't has no instead, or a rule states a number no source or measurement gave.
+
+## Rule method without the sibling
+
+**Input:** the Usage case in a repo where `build-design-system` is not installed.
+
+**Expect:** the run uses the short method in `references/doc-format.md` (Usage) and names it in Sources. The rules have the same shape, grounds and tests as when the sibling is installed.
+
+**Fails if:** the run stops, skips the rule shape, or writes Usage as plain advice because `rule-method.md` is missing.
+
+## Example files on a direct run
+
+**Input:** "document the Badge" in a repo with a `tone` prop (4 values), no example files and no stories, used inside a table cell on one screen. Run directly, then under a coordinator whose SCOPE names only the entry's path.
+
+**Expect:** directly, the run writes one file per tone with a visual difference, the default, and a composition inside the table cell, each at `<examples dir>/badge/<name>.<ext>` with a `Caption:` line, the product import path and inert data taken from the props type and the call site. `### Example files` lists each. Under the coordinator it writes no example file, and each row reads `NOT SUPPLIED: brief scope names no examples folder`.
+
+**Fails if:** an example uses a prop or data no source shows, a tone is dropped without a row, or a file lands outside the brief's SCOPE.
 
 Change one thing between runs. If you change two, the next run cannot tell you which one mattered.

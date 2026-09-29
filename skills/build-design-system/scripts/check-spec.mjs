@@ -1,38 +1,85 @@
 #!/usr/bin/env node
-// check-spec.mjs [--root <repo>] [--no-props] [--no-fresh] <file-or-folder or ->...
+// check-spec.mjs [--root <repo>] [--no-props] [--no-fresh] [--no-rule-tests] [--no-examples] <file-or-folder or ->...
+// check-spec.mjs --self-test [--fixtures <dir>]
 // --root defaults to the git root of the first file or folder, else of the current folder, else the current folder.
-// Fails a component spec that leaves a question from references/spec-template.md open.
-// Prints "file:line rule-id message" per failure. Exit 0 clean, 1 on failures or no specs found, 2 on bad input.
-// No dependencies. Folders are searched for *.md files with a "## States" heading outside code fences. "-" reads one
-// spec from stdin, for an entry that exists only as text (component-docs under a coordinator).
+// Fails a component spec that leaves a question from references/spec-template.md open, and a rule line that breaks
+// the shape in references/rule-method.md. Prints "file:line rule-id message" per failure. Exit 0 clean, 1 on
+// failures or no specs found, 2 on bad input. No dependencies.
+// Folders are searched for *.md files with a "## States" heading outside code fences (component specs) and for
+// foundation pages (basename in FOUNDATIONS, the list gen-docs.mjs uses). Foundation pages get the rule-line rules
+// only: spec/rule-id, spec/rule-shape, spec/vague-word, spec/dont-instead, spec/rule-cite and spec/rule-tests.
+// "-" reads one spec from stdin, for an entry that exists only as text (component-docs under a coordinator).
 // spec/props-drift compares the spec with the component at HEAD, through scripts/props-table.mjs: every Variants
 // axis must be a prop, every listed value of a string-union prop must still exist, and every "- `prop`" note under
 // Props must name a prop. --no-props skips it. Run it at close, so a spec that went stale during the run fails.
 // Freshness, skipped by --no-fresh:
 // spec/call-sites  "Real uses, <n> call sites" under Examples (or "<n> call sites" in the Description) must equal the <Name tags (Name from the H1) in .tsx and .jsx
 //                  files under the check's include folders (scripts/check-system.config.json, else app, src,
-//                  components, lib, pages), outside the component's own folder
+//                  components, lib, pages), outside the component's own folder and the examples folder
 // spec/stale-cite  every file:line or file:start-end the spec cites must hold the same text as it did at the spec's
 //                  last commit. A spec with uncommitted edits is being written against the working tree, so only
 //                  the file's existence and the line count are checked
-import { dirname, join, relative, resolve } from "node:path";
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+// Examples live in examplesDir from scripts/gen-docs.config.json, default docs/system/examples. Rule tests live in
+// docs/system/rule-tests/<id>.tsv. docs/system/vague-words.txt adds words a rule may not lean on.
+import { dirname, join, relative, resolve, basename, sep } from "node:path";
+import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { execFileSync, execSync } from "node:child_process";
+import { execFileSync, execSync, spawnSync } from "node:child_process";
 
 const SECTIONS = ["Description", "Examples", "Variants", "States", "Props", "Usage", "Accessibility", "Tokens", "Related"];
-const USAGE = ["Use it when", "Use something else when", "Writing", "Do and don't"];
+const USAGE = ["When to use", "When not to use", "Behavior", "Limits", "Content", "Best practices"];
+const OLD_USAGE = ["Use it when", "Use something else when", "Writing", "Do and don't"];
+const RULE_SECTIONS = ["Behavior", "Limits", "Content", "Best practices"];
+// Foundation page slugs. Keep equal to FOUNDATIONS in gen-docs.mjs.
+const FOUNDATIONS = ["colors", "typography", "materials", "layout", "spacing", "radius", "elevation", "motion", "icons", "brand", "writing"];
+const HARD_WORDS = ["appropriate", "appropriately", "consistent", "consistently", "properly", "as needed", "user-friendly", "should consider"];
+const SOFT_WORDS = ["short", "long", "few", "many", "clear", "concise", "simple", "large", "small"];
+const RULE_TESTS_HEAD = ["rule_id", "falsify", "negation", "two_agent", "sweep", "verdict", "notes"];
 const CHECKED_BY = /^(test|lint|screenshot|a11y scan|snapshot|by hand)(\s*(,|and|\+)\s*(test|lint|screenshot|a11y scan|snapshot|by hand))*$/i;
 const SKIP = /^(not applicable|not supplied|needs review)\b/i;
+const DEF_RE = /^[-*] `(rule\/[^`]+)`: (.+)$/;
+const CITE_RE = /^[-*] Follows `(rule\/[a-z0-9-]+)`\.?$/;
+const ID_RE = /^rule\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+const HELP = `check-spec.mjs: fail a component spec that leaves a question open
+
+Usage: node scripts/check-spec.mjs [options] <file-or-folder or ->...
+       node scripts/check-spec.mjs --self-test [--fixtures <dir>]
+
+Folders are searched for component specs (*.md with a "## States" heading) and
+foundation pages (colors, typography, writing and the other foundation slugs).
+"-" reads one spec from stdin.
+
+Options
+  --root <dir>       repo root. Default: the git root of the first file or folder,
+                     else of the current folder, else the current folder
+  --no-props         skip spec/props-drift
+  --no-fresh         skip spec/call-sites and spec/stale-cite
+  --no-rule-tests    skip spec/rule-tests
+  --no-examples      skip spec/examples
+  --self-test        run the fixtures in --fixtures <dir>, default
+                     fixtures/check-spec/ beside this script, and nothing else
+  --fixtures <dir>   the fixture folder for the self-test
+  --help             this text
+
+Prints "file:line rule-id message" per failure. Exit 0 clean, 1 on failures or
+no specs found, 2 on bad input.`;
+const USAGE_LINE = "usage: check-spec.mjs [--root <repo>] [--no-props] [--no-fresh] [--no-rule-tests] [--no-examples] <file-or-folder or ->...\n--root defaults to the git root of the first file or folder, else of the current folder. --help for more.";
 
 const argv = process.argv.slice(2);
-if (argv.includes("--help") || argv.includes("-h")) { console.log("usage: check-spec.mjs [--root <repo>] [--no-props] [--no-fresh] <file-or-folder or ->...\n--root defaults to the git root of the first file or folder, else of the current folder.\n--no-fresh skips spec/call-sites and spec/stale-cite. - reads one spec from stdin."); process.exit(0); }
+if (argv.includes("--help") || argv.includes("-h")) { console.log(HELP); process.exit(0); }
+const valOf = (f) => { const i = argv.indexOf(f); return i >= 0 ? argv[i + 1] : undefined; };
+const FLAGS = ["--root", "--no-props", "--no-fresh", "--no-rule-tests", "--no-examples", "--self-test", "--fixtures", "--help"];
+const badFlags = argv.filter((a) => a.startsWith("--") && !FLAGS.includes(a));
+if (badFlags.length) { console.error(`check-spec: unknown ${badFlags.join(", ")}\n${USAGE_LINE}`); process.exit(2); }
+if (argv.includes("--self-test")) process.exit(selfTest(valOf("--fixtures")) ? 0 : 1);
+
 const ri = argv.indexOf("--root");
 const noProps = argv.includes("--no-props");
 const noFresh = argv.includes("--no-fresh");
-const USAGE_LINE = "usage: check-spec.mjs [--root <repo>] [--no-props] [--no-fresh] <file-or-folder or ->...\n--root defaults to the git root of the first file or folder, else of the current folder.";
-const badFlags = argv.filter((a) => a.startsWith("--") && !["--root", "--no-props", "--no-fresh", "--help"].includes(a));
-if (badFlags.length) { console.error(`check-spec: unknown ${badFlags.join(", ")}\n${USAGE_LINE}`); process.exit(2); }
+const noRuleTests = argv.includes("--no-rule-tests");
+const noExamples = argv.includes("--no-examples");
 const args = argv.filter((a, i) => !a.startsWith("--") && !(ri >= 0 && i === ri + 1));
 const STDIN = "<stdin>";
 const stdinText = args.includes("-") ? readFileSync(0, "utf8") : null;
@@ -65,30 +112,193 @@ function propsOf(md) {
   return { own, also };
 }
 
+// ---------- repo settings: examples folder, registry, coverage gaps, vague words ----------
+const posix = (p) => p.split(sep).join("/");
+const readJSON = (p) => { try { return JSON.parse(readFileSync(p, "utf8")); } catch { return null; } };
+const genCfg = readJSON(join(root, "scripts/gen-docs.config.json")) || {};
+const csCfg = readJSON(join(root, "scripts/check-system.config.json")) || {};
+const cleanDir = (d) => posix(d).replace(/^\.\//, "").replace(/\/+$/, "");
+const examplesDir = cleanDir(genCfg.examplesDir || "docs/system/examples");
+const docsDir = join(root, "docs/system");
+const pascal = (id) => id.split(/[^A-Za-z0-9]+/).filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join("");
+const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+// Registry entries: { id, names (for the alternative and one-way matches), tokens (case-sensitive names), import, variants, states }.
+const registry = (() => {
+  const p = join(root, genCfg.registry || csCfg.registry || "registry.json");
+  if (!existsSync(p)) return null;
+  const reg = readJSON(p);
+  if (!reg) { console.error(`check-spec: cannot parse ${posix(relative(root, p))}`); process.exit(2); }
+  const out = [];
+  for (const it of [...(reg.components || []), ...(reg.items || [])]) {
+    const meta = it.meta || {};
+    const id = String(it.id || it.name || "").toLowerCase();
+    if (!id) continue;
+    const tokens = [it.name, meta.name, it.title, pascal(id)].filter((n) => typeof n === "string" && n && n !== id);
+    out.push({ id, names: [...new Set([id, ...tokens])], tokens: [...new Set(tokens)], import: it.import || meta.import || null, variants: it.variants || meta.variants || null, states: it.states || meta.states || null });
+  }
+  return out;
+})();
+// Registry names a rule may use as its checkable token: whole word, case-sensitive.
+const tokenRe = registry && registry.some((e) => e.tokens.length) ? new RegExp(`(?<![\\w-])(${registry.flatMap((e) => e.tokens).map(escRe).join("|")})(?![\\w-])`) : null;
+const regEntry = (id) => registry && registry.find((e) => e.id === id);
+const coverageAreas = (() => {
+  const p = join(docsDir, "coverage-gaps.md");
+  if (!existsSync(p)) return null;
+  const areas = new Set();
+  const rows = readFileSync(p, "utf8").split("\n").filter((l) => /^\s*\|/.test(l));
+  rows.slice(2).forEach((l) => { const c = l.trim().replace(/^\|/, "").split(/(?<!\\)\|/)[0]; const a = c.replace(/[`"*]/g, "").trim(); if (a) areas.add(a.toLowerCase()); });
+  return areas;
+})();
+const vague = (() => {
+  const hard = [...HARD_WORDS], soft = [...SOFT_WORDS];
+  const p = join(docsDir, "vague-words.txt");
+  if (existsSync(p)) for (const raw of readFileSync(p, "utf8").split("\n")) {
+    const l = raw.replace(/#.*$/, "").trim();
+    if (!l) continue;
+    if (l.startsWith("?")) { if (l.slice(1).trim()) soft.push(l.slice(1).trim()); } else hard.push(l);
+  }
+  const re = (w) => new RegExp(`(?<![\\p{L}\\p{N}-])${escRe(w).replace(/\s+/g, "\\s+")}(?![\\p{L}\\p{N}-])`, "iu");
+  return { hard: hard.map((w) => [w, re(w)]), soft: soft.map((w) => [w, re(w)]) };
+})();
+
+// ---------- which files ----------
 const files = [];
+const kinds = new Map(); // file -> "component" | "foundation"
+const stripFenced = (t) => t.replace(/^(```|~~~)[\s\S]*?^\1/gm, "");
 const walk = (p) => {
   const st = statSync(p, { throwIfNoEntry: false });
   if (!st) { console.error(`not found: ${p}`); process.exit(2); }
   if (st.isDirectory()) {
-    for (const e of readdirSync(p)) if (!e.startsWith(".") && e !== "node_modules") walk(join(p, e));
-  } else if (p.endsWith(".md") && (targets.includes(p) || /^## States\s*$/m.test(readFileSync(p, "utf8").replace(/^(```|~~~)[\s\S]*?^\1/gm, "")))) files.push(p);
+    for (const e of readdirSync(p).sort()) if (!e.startsWith(".") && e !== "node_modules") walk(join(p, e));
+    return;
+  }
+  if (!p.endsWith(".md")) return;
+  const isFoundation = FOUNDATIONS.includes(basename(p, ".md"));
+  if (/^## States\s*$/m.test(stripFenced(readFileSync(p, "utf8")))) { files.push(p); kinds.set(p, "component"); }
+  else if (isFoundation) { files.push(p); kinds.set(p, "foundation"); }
+  else if (targets.includes(p)) { files.push(p); kinds.set(p, "component"); }
 };
 // A path resolves against the current folder, and against the root when nothing is there.
 const targets = args.filter((a) => a !== "-").map((a) => (existsSync(resolve(a)) || !existsSync(join(root, a)) ? a : join(root, a)));
 targets.forEach(walk);
-if (stdinText !== null) files.push(STDIN);
+if (stdinText !== null) { files.push(STDIN); kinds.set(STDIN, "component"); }
+
+// ---------- rule lines ----------
+// Split a page into H2 and H3 sections outside fences. Returns { h2: [{name,line}], h3: [{name,line,h2}] }.
+function headings(lines) {
+  const h2 = [], h3 = [];
+  let fence = false;
+  lines.forEach((l, i) => {
+    if (/^(```|~~~)/.test(l)) fence = !fence;
+    if (fence) return;
+    let m;
+    if ((m = l.match(/^## (.+?)\s*$/))) h2.push({ name: m[1], line: i + 1 });
+    else if ((m = l.match(/^### (.+?)\s*$/))) h3.push({ name: m[1], line: i + 1, h2: h2.at(-1)?.name });
+  });
+  return { h2, h3 };
+}
+// The Usage sections of a page: [{ name, line, lines: [{t, line}] }]. A component spec's rule sections are the four
+// rule H3s. A foundation page reads every list item under ## Usage and its H3s as a potential rule section.
+function usageSections(lines) {
+  const out = [];
+  let inUsage = false, cur = null, fence = false;
+  lines.forEach((l, i) => {
+    if (/^(```|~~~)/.test(l)) { fence = !fence; return; }
+    if (fence) return;
+    if (/^## /.test(l)) { inUsage = /^## Usage\s*$/.test(l); cur = inUsage ? { name: "Usage", line: i + 1, lines: [] } : null; if (cur) out.push(cur); return; }
+    if (!inUsage) return;
+    const h = /^### (.+?)\s*$/.exec(l);
+    if (h) { cur = { name: h[1], line: i + 1, lines: [] }; out.push(cur); return; }
+    if (/^#{1,6} /.test(l)) { cur = { name: l.replace(/^#+\s*/, ""), line: i + 1, lines: [] }; out.push(cur); return; }
+    cur.lines.push({ t: l, line: i + 1 });
+  });
+  return out;
+}
+// Parse one rule section into definitions, citations, Not applicable lines and other items.
+function parseRuleSection(sec) {
+  const defs = [], cites = [], na = [], review = [], other = [];
+  let cur = null, inDont = false;
+  for (const { t, line } of sec.lines) {
+    const def = DEF_RE.exec(t);
+    if (def) { cur = { id: def[1], parts: [def[2].trim()], line, dont: null, section: sec.name }; defs.push(cur); inDont = false; continue; }
+    if (!t.trim() || /^#/.test(t)) { cur = null; inDont = false; continue; }
+    if (cur && /^\s{2,}Don't:/.test(t)) { cur.dont = { line, text: t.trim().replace(/^Don't:\s*/, "") }; inDont = true; continue; }
+    if (cur && /^\s{2,}\S/.test(t)) { if (inDont) cur.dont.text += " " + t.trim(); else cur.parts.push(t.trim()); continue; }
+    cur = null; inDont = false;
+    const c = CITE_RE.exec(t);
+    if (c) { cites.push({ id: c[1], line }); continue; }
+    if (/^([-*]\s+)?Not applicable:\s*\S/i.test(t)) { na.push(line); continue; }
+    if (/^([-*]\s+)?NEEDS REVIEW\b/.test(t)) { review.push({ line, t: t.trim() }); continue; }
+    if (/^[-*] /.test(t)) other.push({ line, t: t.trim() });
+  }
+  for (const d of defs) d.text = d.parts.join(" ");
+  return { defs, cites, na, review, other };
+}
+// Every definition on a page, by kind.
+function pageDefs(text, kind) {
+  const secs = usageSections(text.split("\n"));
+  const ruleSecs = kind === "component" ? secs.filter((s) => RULE_SECTIONS.includes(s.name)) : secs;
+  return ruleSecs.flatMap((s) => parseRuleSection(s).defs);
+}
+// The parts of a rule's joined text (rule-method.md, Rule shape).
+function ruleParts(text) {
+  const miss = [];
+  const when = text.startsWith("When ");
+  if (!when) miss.push('"When" at the start');
+  const b = /\bbecause\b/.exec(text);
+  const e = text.indexOf("Evidence: ", b ? b.index : 0);
+  const eAny = text.indexOf("Evidence: ");
+  const c = text.indexOf("Check: ", e >= 0 ? e : 0);
+  if (!b || (eAny >= 0 && eAny < b.index)) miss.push('"because"');
+  if (e < 0) miss.push('"Evidence:"');
+  const action = b ? text.slice(0, b.index) : e >= 0 ? text.slice(0, e) : text;
+  const grounds = e >= 0 ? text.slice(e + 10, c >= 0 ? c : undefined).trim().replace(/\.$/, "").split("; ").map((g) => g.trim()).filter(Boolean) : [];
+  const check = c >= 0 ? text.slice(c + 7).trim() : null;
+  return { miss, action, grounds, check, hasEvidence: e >= 0, hasCheck: c >= 0 };
+}
+function groundKind(g) {
+  let m;
+  if ((m = /^app (\d+)\/(\d+) \S/.exec(g))) return Number(m[1]) <= Number(m[2]) && Number(m[2]) >= 2 ? "app" : null;
+  if (/^single use \S+:\d+/.test(g)) return "single use";
+  if (/^measured .*\d/.test(g)) return "measured";
+  if ((m = /^principle (wcag|platform|heuristic|input): \S/.exec(g))) return m[1] !== "wcag" || /\d+\.\d+(\.\d+)?/.test(g) ? "principle" : null;
+  if (/^gate G-\d+ default/.test(g)) return "gate";
+  return null;
+}
+const stripLiterals = (s) => s.replace(/`[^`]*`/g, " ").replace(/"[^"]*"/g, " ").replace(/\u201c[^\u201d]*\u201d/g, " ");
+
+// Definitions across the scanned files plus docs/system/*.md, for duplicate IDs and citations.
+const defIndex = new Map(); // id -> [{ abs, shown, line }]
+const addDefs = (abs, shown, text, kind) => { for (const d of pageDefs(text, kind)) { if (!defIndex.has(d.id)) defIndex.set(d.id, []); const l = defIndex.get(d.id); if (!l.some((x) => x.abs === abs && x.line === d.line)) l.push({ abs, shown, line: d.line }); } };
+// Stdin text stands in for docs/system/<its slug>.md, so that file leaves the index.
+const slugOfH1 = (text) => ((text.split("\n").find((l) => /^#\s/.test(l)) || "").replace(/^#\s+/, "").trim()).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const stdinSlug = stdinText !== null ? slugOfH1(stdinText) : null;
+// Identity by real path, so a symlinked temp or home folder never makes a file look like two.
+const real = (p) => { try { return realpathSync(p); } catch { return resolve(p); } };
+const indexed = new Set();
+if (existsSync(docsDir)) for (const e of readdirSync(docsDir).sort()) {
+  if (!e.endsWith(".md") || e === "spec-template.md" || e === `${stdinSlug}.md`) continue;
+  const abs = real(join(docsDir, e));
+  const text = readFileSync(abs, "utf8");
+  const kind = /^## States\s*$/m.test(stripFenced(text)) ? "component" : "foundation";
+  addDefs(abs, posix(relative(root, abs)), text, kind); indexed.add(abs);
+}
+for (const f of files) {
+  const abs = f === STDIN ? STDIN : real(f);
+  if (!indexed.has(abs)) addDefs(abs, f, readSpec(f), kinds.get(f));
+}
 
 // Freshness helpers: the check's include folders, <Name tag counts, and git reads.
 const EXCL = new Set(["node_modules", ".next", ".git", "dist", "build", "out", "coverage", ".design-system", ".migration", ".design-review", "public", "scripts", "docs", ".agents", ".claude", ".cursor", ".codex"]);
 let includeDirs = ["app", "src", "components", "lib", "pages"];
-try { const c = JSON.parse(readFileSync(join(root, "scripts/check-system.config.json"), "utf8")); if (Array.isArray(c.include) && c.include.length) includeDirs = c.include; } catch {}
+if (Array.isArray(csCfg.include) && csCfg.include.length) includeDirs = csCfg.include;
 let jsxFiles = null;
 const listJsx = () => {
   if (jsxFiles) return jsxFiles;
   jsxFiles = [];
   const walkJ = (rel) => {
     const st = statSync(join(root, rel), { throwIfNoEntry: false });
-    if (!st || rel.split("/").some((seg) => EXCL.has(seg))) return;
+    if (!st || rel.split("/").some((seg) => EXCL.has(seg)) || (rel && (rel === examplesDir || rel.startsWith(examplesDir + "/")))) return;
     if (st.isDirectory()) { for (const e of readdirSync(join(root, rel))) walkJ(rel ? `${rel}/${e}` : e); return; }
     if (/\.(tsx|jsx)$/.test(rel) && !/\.(test|spec|stories)\./.test(rel)) jsxFiles.push(rel);
   };
@@ -109,22 +319,21 @@ const git = (args) => { try { return execFileSync("git", args, { cwd: root, stdi
 const shown = new Map();
 const fileAt = (sha, rel) => { const k = `${sha}:${rel}`; if (!shown.has(k)) shown.set(k, git(["show", `${sha}:./${rel}`])); return shown.get(k); };
 const norm = (l) => (l ?? "").trim().replace(/\s+/g, " ");
+// A path to show in a finding: relative to the current folder when inside it.
+const disp = (abs) => { const r = relative(real(process.cwd()), real(abs)); return r && !r.startsWith("..") ? posix(r) : abs; };
+const notes = new Set();
+const note = (s) => { if (!notes.has(s)) { notes.add(s); console.log(`note: ${s}`); } };
 
 let failures = 0;
 for (const file of files) {
-  const lines = readSpec(file).split("\n");
+  const text = readSpec(file);
+  const lines = text.split("\n");
+  const kind = kinds.get(file);
   const fail = (line, rule, msg) => { failures++; console.log(`${file}:${line} ${rule} ${msg}`); };
+  const slug = file === STDIN ? stdinSlug : basename(file, ".md");
+  const abs = file === STDIN ? STDIN : real(file);
 
-  // Split into H2 sections, ignoring fenced code blocks.
-  const h2 = [], h3 = [];
-  let fence = false;
-  lines.forEach((l, i) => {
-    if (/^(```|~~~)/.test(l)) fence = !fence;
-    if (fence) return;
-    let m;
-    if ((m = l.match(/^## (.+?)\s*$/))) h2.push({ name: m[1], line: i + 1 });
-    else if ((m = l.match(/^### (.+?)\s*$/))) h3.push({ name: m[1], line: i + 1, h2: h2.at(-1)?.name });
-  });
+  const { h2, h3 } = headings(lines);
   const body = (name) => {
     const i = h2.findIndex((s) => s.name === name);
     if (i < 0) return null;
@@ -146,7 +355,76 @@ for (const file of files) {
     if (rows.length < 2 || !/^[\s:|-]+$/.test(rows[1].cells.join("|"))) return null;
     return { head: rows[0].cells, rows: rows.slice(2) };
   };
-  const filled = (block) => block && block.lines.some((l) => l.trim() && !/^<.*>$/.test(l.trim()));
+  const desc = body("Description");
+  const descText = desc ? desc.lines.join("\n") : "";
+
+  // ---------- rule lines: every page kind ----------
+  const secs = usageSections(lines);
+  const bySec = new Map(secs.map((s) => [s.name, s]));
+  const ruleSecs = kind === "component" ? secs.filter((s) => RULE_SECTIONS.includes(s.name)) : secs;
+  const parsed = new Map(ruleSecs.map((s) => [s.name, parseRuleSection(s)]));
+  const defs = [...parsed.values()].flatMap((p) => p.defs);
+  for (const d of defs) {
+    // spec/rule-id
+    if (!ID_RE.test(d.id) || !d.id.startsWith(`rule/${slug}-`)) fail(d.line, "spec/rule-id", `'${d.id}' must be rule/${slug}-<words>`);
+    for (const o of defIndex.get(d.id) || []) if (!(o.abs === abs && o.line === d.line)) fail(d.line, "spec/rule-id", `'${d.id}' also defined at ${o.shown}:${o.line}`);
+    // spec/rule-shape
+    const p = ruleParts(d.text);
+    for (const m of p.miss) fail(d.line, "spec/rule-shape", `${d.id} needs ${m}`);
+    if (p.hasEvidence) {
+      const bad = p.grounds.filter((g) => !groundKind(g));
+      const counting = p.grounds.filter((g) => { const k = groundKind(g); return k && k !== "gate"; });
+      if (bad.length || !counting.length) fail(d.line, "spec/rule-shape", `${d.id} needs a ground: app n/m, single use file:line, measured <value>, principle <kind>: <name>${bad.length ? ` (not a ground: '${bad[0].slice(0, 60)}')` : ""}`);
+    }
+    const ck = p.hasCheck ? p.check.replace(/\.$/, "").trim() : "";
+    if (!/^(lint|test|probe|review)\b/.test(ck) || (!/^review\b/.test(ck) && !/^(lint|test|probe)\s+\S/.test(ck)))
+      fail(d.line, "spec/rule-shape", `${d.id} needs "Check:" with lint, test, probe or review`);
+    if (!(/\d/.test(p.action) || /"[^"]+"|\u201c[^\u201d]+\u201d/.test(p.action) || /`[^`]+`/.test(p.action) || /\{[^{}\s]+\}/.test(p.action) || (tokenRe && tokenRe.test(p.action))))
+      fail(d.line, "spec/rule-shape", `${d.id} needs a number, literal, {hole}, component name or backticked prop`);
+    // spec/vague-word
+    const bare = stripLiterals(p.action);
+    for (const [w, re] of vague.hard) if (re.test(bare)) fail(d.line, "spec/vague-word", `${d.id} leans on '${w}'. Replace it with the number or literal it stands for`);
+    if (!/\d/.test(bare)) for (const [w, re] of vague.soft) if (re.test(bare)) fail(d.line, "spec/vague-word", `${d.id} leans on '${w}'. Replace it with the number or literal it stands for`);
+    // spec/dont-instead
+    if (/(?<![\p{L}])(don['\u2019]t|do not|never|avoid)(?![\p{L}])/iu.test(p.action) && !/\binstead\b/i.test(p.action)) fail(d.line, "spec/dont-instead", `${d.id} says what not to do. Say what to do instead`);
+  }
+  // spec/rule-cite
+  for (const p of parsed.values()) for (const c of p.cites) if (!defIndex.has(c.id)) fail(c.line, "spec/rule-cite", `cites ${c.id}, which no page defines`);
+
+  // spec/rule-tests
+  if (!noRuleTests && defs.length) {
+    const tsv = join(docsDir, "rule-tests", `${slug}.tsv`);
+    const usageLine = body("Usage")?.start ?? 1;
+    if (!existsSync(tsv)) {
+      if (file === STDIN) note(`spec/rule-tests skipped for stdin, no docs/system/rule-tests/${slug}.tsv`);
+      else fail(usageLine, "spec/rule-tests", `no docs/system/rule-tests/${slug}.tsv`);
+    } else {
+      const tl = readFileSync(tsv, "utf8").replace(/\r\n/g, "\n").split("\n");
+      const tfail = (line, msg) => { failures++; console.log(`${disp(tsv)}:${line} spec/rule-tests ${msg}`); };
+      if (tl[0] !== RULE_TESTS_HEAD.join("\t")) tfail(1, `header must be ${RULE_TESTS_HEAD.join(", ")}, tab-separated`);
+      const defined = new Set(defs.map((d) => d.id));
+      const rows = new Map();
+      tl.slice(1).forEach((l, i) => {
+        if (!l.trim()) return;
+        const line = i + 2;
+        const c = l.split("\t");
+        const [id, ...tests] = c;
+        const verdict = (c[5] || "").trim(), notesCell = (c[6] || "").trim();
+        if (rows.has(id)) { tfail(line, `${id} has a second row, first at line ${rows.get(id)}`); return; }
+        rows.set(id, line);
+        if (defined.has(id)) {
+          ["falsify", "negation", "two_agent", "sweep"].forEach((name, k) => { const v = (tests[k] || "").trim(); if (!/^(pass|n\/a: \S.*)$/.test(v)) tfail(line, `${id} ${name} '${v}' must be pass or n/a: <reason>`); });
+          if (verdict === "gate") tfail(line, `${id} is gated but still defined`);
+          else if (!["ship", "rewritten"].includes(verdict)) tfail(line, `${id} verdict '${verdict}' must be ship or rewritten`);
+          else if (verdict === "rewritten" && !notesCell) tfail(line, `${id} is rewritten and needs notes saying what changed`);
+        } else if (verdict === "gate") {
+          if (!notesCell) tfail(line, `${id} is gated and needs notes naming the gate`);
+        } else tfail(line, `rule-tests row ${id} matches no rule`);
+      });
+      for (const d of defs) if (!rows.has(d.id)) fail(d.line, "spec/rule-tests", `${d.id} has no rule-tests row`);
+    }
+  }
+  if (kind !== "component") continue;
 
   // spec/sections and spec/usage-h3
   const names = h2.map((s) => s.name);
@@ -154,10 +432,47 @@ for (const file of files) {
     fail(h2[0]?.line ?? 1, "spec/sections", `H2s must be ${SECTIONS.join(", ")} in order. Found: ${names.join(", ") || "none"}`);
   const usage = h3.filter((s) => s.h2 === "Usage").map((s) => s.name);
   if (usage.join("|") !== USAGE.join("|"))
-    fail(body("Usage")?.start ?? 1, "spec/usage-h3", `Usage H3s must be ${USAGE.join(", ")}. Found: ${usage.join(", ") || "none"}`);
+    fail(body("Usage")?.start ?? 1, "spec/usage-h3", `Usage H3s must be ${USAGE.join(", ")}. Found: ${usage.join(", ") || "none"}${usage.some((u) => OLD_USAGE.includes(u)) ? ". Older headings: see system-structure.md, Where the older component-docs headings land" : ""}`);
+
+  // spec/usage-empty
+  for (const name of USAGE) {
+    const s = bySec.get(name);
+    if (!s) continue;
+    if (name === "When to use" || name === "When not to use") { if (!s.lines.some((x) => /^[-*] \S/.test(x.t))) fail(s.line, "spec/usage-empty", `${name} is empty`); continue; }
+    const p = parsed.get(name);
+    const ok = p.defs.length || p.na.length || (name !== "Limits" && p.cites.length);
+    if (!ok) fail(s.line, "spec/usage-empty", `${name} is empty`);
+  }
+  // Component rule sections hold rule lines, citations and Not applicable lines only.
+  for (const p of parsed.values()) for (const o of p.other) fail(o.line, "spec/rule-shape", `'${o.t.slice(0, 60)}' is not a rule line (- \`rule/${slug}-<words>\`: When ...) or a citation (- Follows \`rule/<id>\`.)`);
+  // spec/alternative
+  const wnt = bySec.get("When not to use");
+  if (wnt) {
+    if (!registry) note("no registry, so spec/alternative checks only \"instead\" on When not to use lines");
+    for (const x of wnt.lines) {
+      if (!/^[-*] \S/.test(x.t)) continue;
+      const t = x.t.replace(/^[-*]\s+/, "");
+      if (/^Not applicable:/i.test(t)) continue;
+      if (!/\binstead\b/i.test(t)) { fail(x.line, "spec/alternative", `When not to use line does not say "instead"`); continue; }
+      if (!registry) continue;
+      if (!altTargets(t, slug).length && !gapRow(t)) fail(x.line, "spec/alternative", "When not to use line names no registry component or coverage-gaps row");
+    }
+  }
+  // spec/limits
+  const lim = parsed.get("Limits");
+  if (lim) {
+    for (const d of lim.defs) { const p = ruleParts(d.text); if (!/\d/.test(p.action) || !p.grounds.some((g) => groundKind(g) === "measured")) fail(d.line, "spec/limits", `${d.id} is a limit with no measured ground`); }
+    for (const r of lim.review) fail(r.line, "spec/limits", `'${r.t.slice(0, 60)}' is NEEDS REVIEW, still unanswered`);
+  }
+  // spec/best-practices
+  const bp = parsed.get("Best practices");
+  if (bp) {
+    if (bp.defs.length > 5) fail(bySec.get("Best practices").line, "spec/best-practices", `Best practices holds ${bp.defs.length} rules, at most 5`);
+    for (const d of bp.defs) if (!d.dont || !d.dont.text.trim()) fail(d.line, "spec/best-practices", `${d.id} needs a Don't: line with the violating snippet`);
+  }
 
   // spec/placeholder, outside fenced blocks
-  fence = false;
+  let fence = false;
   lines.forEach((l, i) => {
     if (/^(```|~~~)/.test(l)) fence = !fence;
     const prose = l.replace(/`[^`]*`/g, "").replace(/<\/?(br|kbd)\s*\/?>/gi, "");
@@ -166,8 +481,6 @@ for (const file of files) {
   });
 
   // spec/foundation and spec/traps
-  const desc = body("Description");
-  const descText = desc ? desc.lines.join("\n") : "";
   if (!/^Foundation:\s*\S/m.test(descText)) fail(desc?.start ?? 1, "spec/foundation", "Description needs a 'Foundation:' line");
   const fnd = sub("Description", "Foundation");
   if (!fnd) fail(desc?.start ?? 1, "spec/foundation", "Description needs a '### Foundation' H3");
@@ -215,6 +528,82 @@ for (const file of files) {
     for (const r of t.rows) {
       if (r.cells.some((x) => x === "" || x === "?")) fail(r.line, rule, `${name} row '${r.cells[0]}' has an empty cell`);
       if (c >= 0 && r.cells[c] && !CHECKED_BY.test(r.cells[c])) fail(r.line, "spec/checked-by", `'${r.cells[c]}' is not an allowed Checked by value`);
+    }
+  }
+
+  // spec/examples: the Example files table against the registry's variants and states, and the files on disk
+  if (!noExamples) {
+    const exH3 = sub("Examples", "Example files");
+    const exT = table(exH3);
+    const ci = (re) => exT ? exT.head.findIndex((h) => re.test(h)) : -1;
+    const [cf, cc, ccap] = [ci(/^file$/i), ci(/^covers$/i), ci(/^caption$/i)];
+    if (!exH3) fail(body("Examples")?.start ?? 1, "spec/examples", "Examples needs an '### Example files' table");
+    else if (!exT || cf < 0 || cc < 0 || ccap < 0) fail(exH3.start, "spec/examples", "'### Example files' needs a table with File, Covers and Caption columns");
+    else {
+      const dir = `${examplesDir}/${slug}`;
+      const entry = regEntry(slug);
+      const spec = entry?.import || (/from\s+["']([^"']+)["']/.exec(descText) || [])[1] || null;
+      if (!spec) note(`${file} has no import path in the registry or the Description, so example imports are not checked`);
+      const listed = new Set();
+      const covered = new Map(); // covers -> "path" | "na"
+      for (const r of exT.rows) {
+        const fileCell = r.cells[cf] || "", covers = (r.cells[cc] || "").replace(/`/g, "").trim(), caption = r.cells[ccap] || "";
+        if (!/^(default|[A-Za-z][\w-]*=[^\s|]+|state:[\w-]+|composition:[A-Z][\w.]*|matrix:[\w-]+(,[\w-]+)+)$/.test(covers))
+          fail(r.line, "spec/examples", `Covers '${covers}' is not one of default, axis=value, state:, composition:, matrix:`);
+        const na = /^Not applicable:\s*(\S.*)$/.exec(fileCell), ns = /^NOT SUPPLIED:\s*(\S.*)$/.exec(fileCell), path = /^`([^`]+)`$/.exec(fileCell);
+        if (ns) { fail(r.line, "spec/examples", `${covers} has no example file: ${ns[1]}`); covered.set(covers, covered.get(covers) || "open"); continue; }
+        if (na) {
+          if (covers === "default" || covers.startsWith("composition:")) fail(r.line, "spec/examples", `${covers} needs an example file, not Not applicable`);
+          if (!covered.has(covers)) covered.set(covers, "na");
+          continue;
+        }
+        if (!path) { fail(r.line, "spec/examples", `File '${fileCell}' must be one backticked path, or Not applicable: or NOT SUPPLIED: with a reason`); continue; }
+        const p = cleanDir(path[1]);
+        covered.set(covers, "path");
+        listed.add(p);
+        if (!caption || /^none$/i.test(caption)) fail(r.line, "spec/examples", `example ${p} needs a caption`);
+        if (dirname(p) !== dir) { fail(r.line, "spec/examples", `example ${p} must live in ${dir}/`); continue; }
+        const absP = join(root, p);
+        if (!existsSync(absP)) {
+          if (file === STDIN) note(`spec/examples skipped for stdin, no ${p}`);
+          else fail(r.line, "spec/examples", `example ${p} does not exist`);
+          continue;
+        }
+        const code = readFileSync(absP, "utf8");
+        if (!/Caption:/.test(code.split("\n")[0])) fail(r.line, "spec/examples", `example ${p} needs a Caption: comment on line 1`);
+        if (spec && !new RegExp(`(?:from|import)\\s*\\(?\\s*["']${escRe(spec)}["']|require\\(\\s*["']${escRe(spec)}["']`).test(code)) fail(r.line, "spec/examples", `example ${p} needs an import from ${spec}`);
+        if (/\.(tsx|jsx|ts|js|mts|mjs)$/.test(p) && !/export\s+default\b|\bas\s+default\b/.test(code)) fail(r.line, "spec/examples", `example ${p} needs a default export`);
+      }
+      // Coverage: the registry's variants and states, else the Variants section's axes and values.
+      const need = ["default"];
+      let axes = [];
+      if (entry && entry.variants && typeof entry.variants === "object" && !Array.isArray(entry.variants)) {
+        axes = Object.keys(entry.variants);
+        for (const [a, vs] of Object.entries(entry.variants)) for (const v of [].concat(vs)) need.push(`${a}=${v}`);
+        for (const s of [].concat(entry.states || [])) need.push(`state:${s}`);
+      } else {
+        const vars = body("Variants");
+        let axis = null;
+        for (const l of vars ? vars.lines : []) {
+          const h = /^### (.+?)\s*$/.exec(l);
+          if (h) { axis = h[1].replace(/`/g, "").trim(); if (!SKIP.test(axis)) axes.push(axis); else axis = null; continue; }
+          const v = /^[-*]\s*`([^`]+)`:/.exec(l.trim());
+          if (v && axis) need.push(`${axis}=${v[1].replace(/^["']|["']$/g, "")}`);
+        }
+      }
+      for (const c of need) if (!covered.has(c)) fail(exH3.start, "spec/examples", `${c} has no Example files row`);
+      if (![...covered.keys()].some((c) => c.startsWith("composition:")))
+        fail(exH3.start, "spec/examples", "composition:<Parent> has no Example files row");
+      if (axes.length >= 2 && ![...covered.keys()].some((c) => c.startsWith("matrix:"))) fail(exH3.start, "spec/examples", `matrix:${axes.slice(0, 2).join(",")} has no Example files row`);
+      // Orphans: files in the component's examples folder that no row lists.
+      const absDir = join(root, dir);
+      if (existsSync(absDir) && statSync(absDir).isDirectory()) {
+        for (const e of readdirSync(absDir).sort()) {
+          const p = `${dir}/${e}`;
+          if (e.startsWith(".") || statSync(join(absDir, e)).isDirectory()) continue;
+          if (!listed.has(p)) fail(exH3.start, "spec/examples", `example ${p} is not listed in Example files`);
+        }
+      }
     }
   }
 
@@ -308,6 +697,55 @@ for (const file of files) {
     fail(tok?.start ?? 1, "spec/tokens", "Tokens needs a table with rows, or NOT SUPPLIED with a reason");
 }
 
+// The registry components a When not to use line routes to: names or ids, whole word, case-insensitive, after "Use ".
+function altTargets(t, self) {
+  const at = t.indexOf("Use ");
+  if (at < 0 || !registry) return [];
+  const rest = t.slice(at + 4);
+  return registry.filter((e) => e.id !== self && e.names.some((n) => new RegExp(`(?<![\\w-])${escRe(n)}(?![\\w-])`, "i").test(rest))).map((e) => e.id);
+}
+// A 'coverage-gaps row "<Area>"' reference whose Area is a row in docs/system/coverage-gaps.md.
+function gapRow(t) {
+  const m = /coverage-gaps row ["\u201c]([^"\u201d]+)["\u201d]/.exec(t);
+  return !!(m && coverageAreas && coverageAreas.has(m[1].trim().toLowerCase()));
+}
+
 if (!files.length) { console.log("no specs found. A spec is a .md file with a '## States' heading"); process.exit(1); }
 console.log(`${files.length} spec(s) checked, ${failures} failure(s)`);
 process.exit(failures ? 1 : 0);
+
+// ---------- self-test ----------
+// Each fixtures/check-spec/<case>/ holds case.json ({ "rule", "count", "args", "fresh" }) and fail/ and pass/ folders,
+// each a mini repo. Files ending in .fixture are read under their inner name. The run checks docs/system with
+// --no-props, and --no-fresh unless fresh is true, plus the case's args. fail/ must give exactly count findings of the rule and none of any other,
+// and pass/ none at all.
+function selfTest(dirArg) {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const dir = dirArg ? resolve(dirArg) : join(here, "fixtures", "check-spec");
+  if (!existsSync(dir)) { console.log(`self-test: FAIL, no fixtures at ${dir}`); return false; }
+  let ok = true, n = 0;
+  for (const c of readdirSync(dir).sort()) {
+    const caseFile = join(dir, c, "case.json");
+    if (!existsSync(caseFile)) continue;
+    const spec = JSON.parse(readFileSync(caseFile, "utf8"));
+    for (const kind of ["fail", "pass"]) {
+      const src = join(dir, c, kind);
+      if (!existsSync(src)) { console.log(`self-test: ${c}/${kind} missing`); ok = false; continue; }
+      const tmp = mkdtempSync(join(tmpdir(), "check-spec-"));
+      cpSync(src, tmp, { recursive: true });
+      const unfix = (d) => { for (const e of readdirSync(d)) { const p = join(d, e); if (statSync(p).isDirectory()) unfix(p); else if (e.endsWith(".fixture")) renameSync(p, p.slice(0, -8)); } };
+      unfix(tmp);
+      const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), "--root", tmp, ...(spec.fresh ? [] : ["--no-fresh"]), "--no-props", ...(spec.args || []), spec.target || "docs/system"], { cwd: tmp, encoding: "utf8" });
+      rmSync(tmp, { recursive: true, force: true });
+      const found = (r.stdout || "").split("\n").map((l) => /^\S+:\d+ (spec\/[\w-]+) (.*)$/.exec(l)).filter(Boolean);
+      const mine = found.filter((m) => m[1] === spec.rule).length;
+      const others = found.filter((m) => m[1] !== spec.rule);
+      const good = r.status !== 2 && (kind === "fail" ? mine === spec.count && !others.length : !found.length);
+      if (!good) ok = false; n++;
+      const detail = kind === "fail" ? `${spec.rule} ${mine}/${spec.count}` : `${found.length} findings`;
+      console.log(`self-test ${good ? "ok  " : "FAIL"} ${spec.rule} ${c}/${kind}: ${detail}${good ? "" : `  ${[...found.map((m) => m[0]), (r.stderr || "").trim()].filter(Boolean).join(" | ").slice(0, 600)}`}`);
+    }
+  }
+  console.log(`self-test: ${n} fixtures, ${ok ? "all as expected" : "FAILED"}`);
+  return ok;
+}

@@ -1,0 +1,1 @@
+{"mode":"grow","dimension":"text","target":".field","textTarget":".value","sample":"x","width":390,"expect":{"kind":"truncate","at":11}}

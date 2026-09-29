@@ -132,7 +132,7 @@ For a settled system the app has not moved onto. An ask that names families and 
 
 For a settled system with no docs, or docs outside the target structure.
 
-1. `build-design-system`. Receives the existing token source and component folder with the instruction to start from them. Its inventory will find families already canonical, so most of the work lands in its docs and enforcement phases. Done as Build step 1.
+1. `build-design-system`. Receives the existing token source and component folder with the instruction to start from them. Its inventory will find families already canonical, so most of the work lands in its docs and enforcement phases. An ask for all or full docs adds "document everything" (`build-design-system/references/coordinator-path.md`). Done as Build step 1.
 2. Check the docs, as Build step 3.
 
 ## Component

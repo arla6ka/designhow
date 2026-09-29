@@ -11,6 +11,7 @@ Contents
 - Families and duplicates
 - Raw values
 - Existing tokens, fonts and icons
+- Copy
 - Baseline screenshots
 - Delete plan
 - Rerunning at handoff
@@ -119,6 +120,10 @@ Palette classes go in `palette.tsv`, not `values.tsv`. They come from the framew
 - Icons: the import source for icon components, and inline `<svg>` counts per file.
 
 `tokens.tsv` columns: name, defined in, value per theme, use count, stated role (from the name or comment), notes.
+
+## Copy
+
+Every user-facing string, by slot, comes from `scripts/copy-check.mjs --extract` into `docs/system/copy-inventory.tsv`, once the writing page names each slot's sources. `writing-method.md` has the columns and how to find the sources.
 
 ## Baseline screenshots
 

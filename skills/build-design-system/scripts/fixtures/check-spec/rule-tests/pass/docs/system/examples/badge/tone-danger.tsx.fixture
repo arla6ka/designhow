@@ -1,0 +1,6 @@
+// Caption: An Overdue badge
+import { Badge } from "@/components/ui/badge";
+
+export default function Example() {
+  return <Badge tone="danger">Overdue</Badge>;
+}

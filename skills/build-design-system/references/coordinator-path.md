@@ -7,7 +7,7 @@
 1. Create the run branch from the current HEAD: `git switch -c ds/<yyyy-mm-dd>-<route>`, where the route is the mode (`build`, `harden`, `seed`) or the one the boss names. Write the starting branch into the Frame. The run never commits to it.
 2. Create `.design-system/run.md` from `run-record.md`, with the Frame, the standing orders and the known gates. Workers read gates, so the gates exist before any worker starts.
 3. Decide the footprint. When the repo looks like one the person does not own, or the ask mentions a PR or upstream, open a footprint gate with the default "minimal": tokens, the components touched and the screen changes, with no docs site, twins or vendored scripts unless asked. The signals are a remote that is not theirs, a CONTRIBUTING.md, or a README written for outside contributors. Under the minimal default, phases 5 and 7 write only what the repo's own lint and docs already hold, and the repo's own lint, typecheck and build are the check. When the ask also names families, minimal covers those families only, and no migrate audit plan is written. Before editing an instance, confirm something imports its file or export. Minimal closes with a PR body in `.design-system/pr.md`, a check that the branch base matches the upstream tip, and dead hunks dropped, per `design-system-boss/references/routes.md` (Minimal footprint close).
-4. Set up for the footprint. Full: copy the four check scripts per `SKILL.md` phase 1, and add `.design-system/review/**/*.png` and `.design-system/tmp/` to `.gitignore`. Everything else in `.design-system/review/` is a record and is committed: `surfaces.tsv`, `traces.tsv`, the probe files, the review reports and `index.html`. Minimal: copy nothing and leave `.gitignore` alone. List `.design-system/` in `.git/info/exclude` instead, so the run record, captures and scratch stay untracked. Either way, fixtures, capture, pixdiff and montage stay in `<skills>/build-design-system/scripts/` and run from there.
+4. Set up for the footprint. Full: copy the five check scripts per `SKILL.md` phase 1, and add `.design-system/review/**/*.png` and `.design-system/tmp/` to `.gitignore`. Everything else in `.design-system/review/` is a record and is committed: `surfaces.tsv`, `traces.tsv`, the probe files, the review reports and `index.html`. Minimal: copy nothing and leave `.gitignore` alone. List `.design-system/` in `.git/info/exclude` instead, so the run record, captures and scratch stay untracked. Either way, fixtures, capture, pixdiff and montage stay in `<skills>/build-design-system/scripts/` and run from there.
 
 ## Phase caps
 
@@ -18,11 +18,11 @@ Each phase gets a share of the session. The budget is what the person named, els
 | 1 Frame and setup | 5% | `run-record.md` (Frame, Standing orders), the base reference | nothing |
 | 2 Inventory and baselines | 10% | `inventory.md`, `browser.md` (Capture every route in one command, Measuring a loading state). Measure every pilot trap's before state here and save the numbers in `run.md`, since the first edit erases it | screen notes past the pilot |
 | 3 Foundations | 15% | `token-architecture.md` or the base reference | swaps on a route that fails pixdiff go to the map |
-| 4 Components | 15% | `component-contract.md`, `traps.md`, `worker-brief.md` | families past the pilot's, each with a gate naming its missing states |
+| 4 Components | 15% | `component-contract.md`, `traps.md`, `worker-brief.md`, `rule-method.md` | families past the pilot's, each with a gate naming its missing states |
 | 5 Checks | 10% | `checks.md` | never cut. Hits past the cap go to the allowlist |
 | 6 Pilot | 10% | `browser.md` (Compare after a change, Measuring a loading state) | never cut |
 | 6 Surfaces, when cleared | 20% | "Surfaces on the run branch" below | the rest go in Next, by name |
-| 7 Docs | 10% | `system-structure.md`, `spec-template.md` | the HTML docs site. Generated docs never |
+| 7 Docs | 10% | `system-structure.md`, `spec-template.md`, `writing-method.md`, and "Document everything" below when the ask names it | the HTML docs site, then families past the pilot's. Generated docs never |
 | 8 Handoff | 5% | `run-record.md` (Handoff report) | nothing |
 
 With no clearance, the surfaces share goes to components and docs, except the time the decided gate defaults need. Landing them is exempt from the 70% stop, because it is cheap and it is what makes screens change.
@@ -49,6 +49,16 @@ Gate defaults are applied on the run branch, not only recorded. A visible change
 ## Components close
 
 Phase 4 closes only when every family in scope has its missing states built or a gate. In scope means every family the inventory or the harden gap list marks with missing states, not only the pilot's. A family cut at the cap gets a gate naming each missing state, such as "Table: empty, loading, error. Default: build them on the next surface that lists records". A prop the run removes from a component, such as Card's `inset`, is a gate listing its call sites, even when no call site uses it today. Compare `props-table.mjs` on each component file the run edited, at the starting commit (a worktree in `.design-system/tmp/`) and at HEAD. The handoff lists every family in scope as built, or gated with the gate id.
+
+## Document everything
+
+By default, specs cover the pilot's families, and build adds the families the strays touch. The run specs every family in the inventory when the ask says complete, full, all or every component ("document all our components", "full design system docs"), or when the pilot's specs close with budget left before the docs cap.
+
+1. List every canonical row in `components.tsv` by family. Families the pilot touched go first, then the rest by call-site count, highest first.
+2. Write `docs/system/writing.md` first, per `writing-method.md`, so every spec's Content cites it instead of deriving voice on its own.
+3. Fan out one spec worker per family, with the spec-worker variant in `worker-brief.md` and `rule-method.md`, in the rolling window. A family whose code still needs work gets the family template instead.
+4. Review each report as usual. Also open its `rule-tests` file and rerun one two-agent test yourself.
+5. At the docs cap, stop starting families. Each family not reached is one handoff line naming its members and call-site counts.
 
 ## Sibling skills under this coordinator
 

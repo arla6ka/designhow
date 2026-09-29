@@ -1,0 +1,12 @@
+{
+  "components": [
+    {
+      "id": "badge",
+      "name": "Badge"
+    },
+    {
+      "id": "button",
+      "name": "Button"
+    }
+  ]
+}

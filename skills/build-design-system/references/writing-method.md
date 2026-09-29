@@ -1,0 +1,62 @@
+# Writing method
+
+> For the team setting this up: this derives the app's voice from its own strings and turns it into rules a script checks. It carries no voice of its own. The slot names, casing, templates, verbs and banned words all come from this app's copy, or from a named principle. The output is `docs/system/writing.md`, a foundation page (`system-structure.md`, Writing page), plus the copy inventory and the check `scripts/copy-check.mjs` runs.
+
+Contents
+
+- The copy inventory
+- Deriving rules per slot
+- The verb chain
+- Banned words
+- What the check enforces
+
+## The copy inventory
+
+`scripts/copy-check.mjs --extract` writes every user-facing string to `docs/system/copy-inventory.tsv`, from the slot sources the writing page names (below). It is generated, committed, and rechecked for freshness, like a twin. Columns, tab-separated, with a header row:
+
+```
+slot	text	component	source	file	line
+```
+
+- `slot` is one of the slot names in the writing page's `## Slots` table. The starting set is `button`, `link`, `dialog-title`, `dialog-body`, `confirm-action`, `toast`, `notice`, `empty-title`, `empty-body`, `error`, `field-label`, `helper`, `placeholder`, `tooltip`. Drop the ones the app has no use for and add product slots. Rename none after the first commit.
+- `text` is the literal string. Interpolations become `{holes}` named after the expression's last identifier (`{name}`, `{count}`). Tabs and newlines are escaped as `\t` and `\n`.
+- `component` is the tag or call it came from, such as `Button`, `DialogTitle` or `toast.error`.
+- `source` is how it was read: `children`, `prop:<name>`, or `arg:<n>` and `arg:<n>.<key>` for calls.
+- `file` and `line` point at the string.
+
+Rows sort by slot, then file, then line. Strings in tests, stories, fixtures, examples, generated docs and the run's scaffolding stay out, the same exclusions as `inventory.md`.
+
+Before the first extract, find the slot sources by reading the app: which components and calls carry each kind of text. Write them into the Sources column of `## Slots`. Rerun the extract and read the rows each slot got. A slot with zero rows is a wrong source or a slot the app lacks.
+
+## Deriving rules per slot
+
+For each slot, read its rows and answer these, one at a time. Each answer is a rule in the shape from `rule-method.md`, with the slot count as its app evidence and the outliers on the stray list.
+
+1. **Casing.** Sentence, title, or as stored. Count each.
+2. **Template.** The grammar most rows share, written with holes: `{Verb} {object}`, `{Object} {past-tense verb}`, `No {objects} yet`. A slot with two templates doing two jobs gets two rules, each naming its job.
+3. **Length.** The longest row that renders without wrapping or truncating at the narrowest viewport, measured with `probe.mjs --grow --dimension text` on a real instance. The limit sits below the break.
+4. **End punctuation.** Whether the slot ends with a period, and whether that depends on sentence count.
+5. **Recurring jobs.** Strings that do one job on many screens (dismiss, cancel, retry, undo, a completion). Where most rows already agree, the rule fixes the exact literal. Where they don't, it is a gate with the most common literal as its default.
+
+Then apply these principles to every slot. Each is a direction the app's rows are tested against, not a wording to copy:
+
+- **Say what happens.** An action label says what the press does, not that a press is possible. Grounded in `principle heuristic: match between system and the real world`.
+- **Name the object.** A label, title or result that refers to a thing names it, unless one object is already the whole context. Grounded in `principle heuristic: recognition rather than recall`.
+- **No blame.** An error says what failed and what to do next, and never makes the user the subject of the failure. Grounded in `principle heuristic: help users recognize, diagnose and recover from errors`.
+- **One verb from action to result.** See the verb chain below.
+
+A principle that contradicts the majority of a slot's rows is a gate with the principle as its default (`rule-method.md`, Anti-patterns).
+
+## The verb chain
+
+An action that asks for confirmation or reports a result uses one verb in all three places: the button that starts it, the confirmation (its title and its confirm action), and the result message. A different verb at any step makes the user wonder whether the same thing happened.
+
+Declare each chain in the writing page's `## Verb chains` table. `copy-check.mjs --suggest-chains` lists candidates: files where a `confirm-action` or `button` row sits beside a `toast` or `notice` row. Every `confirm-action` row in the inventory belongs to a declared chain, or is listed with its reason in the table's `Exempt` rows.
+
+## Banned words
+
+The team sets the list from its own copy, never from another product. Read the inventory for filler that carries no meaning in this app (apology, hedging, words that could delete without changing the message) and for synonyms that compete with the app's chosen term. A word goes on the list when the majority of the app's rows already avoid it, or when a principle grounds it and a gate records the decision. Each row names what to write instead.
+
+## What the check enforces
+
+`node scripts/copy-check.mjs` runs in the check command once `docs/system/writing.md` exists. It fails, with `file:line rule-id message`, on a stale inventory, a row whose slot breaks its casing, length or end punctuation, a banned word, a declared chain whose steps use different verbs, a chain whose cited text moved, and a confirmation in no chain. Existing violations go in `scripts/copy-check-allowlist.json`, written once, keyed like the `check-system.mjs` allowlist. Rules a script cannot see stay `review` on the rules page.

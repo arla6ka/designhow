@@ -1,0 +1,2 @@
+import { Badge } from "@/components/ui/badge";
+export const X = () => <Badge tone="neutral">Paid</Badge>;

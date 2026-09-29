@@ -1,6 +1,6 @@
 # Worked spec: Combobox
 
-> For the team setting this up: this shows how a spec gets derived, and the depth it should reach. It describes a fictional invoicing app, Northwind, built on shadcn's `base-nova` style with Base UI. Every value in it came from that app's code, call sites and captures, and the second half of this file shows the command or reading behind each answer. A worker copies the method, never the values. Your app's Combobox will have different states, numbers and rules. Replace this file with one of your own specs once one passes the check.
+> For the team setting this up: this shows how a spec gets derived, and the depth it should reach. It describes a fictional invoicing app, Northwind, built on shadcn's `base-nova` style with Base UI. Every value in it came from that app's code, call sites, captures and measurements, and the second half of this file shows the command or reading behind each answer. The Usage rules follow `rule-method.md`, with each ground visible. A worker copies the method, never the values. Your app's Combobox will have different states, numbers and rules. Replace this file with one of your own specs once one passes the check.
 
 Contents
 
@@ -31,13 +31,33 @@ Foundation: shadcn `combobox` (base-nova, base). Traps checked: `trap/field-labe
 Parts, in reading order: input (required), trigger button (optional), clear button (optional), popup with list (required), items inside the list (required), empty row (required), status row (team, optional).
 
 ## Examples
-Default: `components/ui/combobox.examples/default.tsx`.
+Default: `docs/system/examples/combobox/default.tsx`.
 
 Real uses, 11 call sites (`rg -n "<Combobox\b" app components`, outside `components/ui/`). Three are below.
 
 - Invoices > New invoice: "Bill to" picks the customer. `app/(app)/invoices/new/customer-field.tsx:22`, required, async search, clear off.
 - Expenses > Filters: "Project" narrows the table. `app/(app)/expenses/filters.tsx:48`, optional, 40 projects loaded up front, clear on.
 - Settings > Tax: "Region" picks from a fixed list of 61 regions. `app/(app)/settings/tax/region.tsx:15`, required, static.
+
+### Example files
+| File | Covers | Caption |
+|---|---|---|
+| `docs/system/examples/combobox/default.tsx` | default | Required customer field, empty, with the trigger |
+| `docs/system/examples/combobox/show-clear.tsx` | showClear=true | Optional project filter with a value and the clear button |
+| Not applicable: `showClear=false` is the stock default, shown by `default.tsx` | showClear=false | none |
+| Not applicable: every call site uses the stock value, shown by `default.tsx` | showTrigger=true | none |
+| Not applicable: `showTrigger` has one value in use, so `show-clear.tsx` is the whole matrix | matrix:showClear,showTrigger | none |
+| `docs/system/examples/combobox/filled.tsx` | state:filled | A picked customer in the input |
+| `docs/system/examples/combobox/open.tsx` | state:open | The list open with 5 customers, one selected |
+| `docs/system/examples/combobox/loading.tsx` | state:loading | A search in flight, earlier results kept and unpickable |
+| `docs/system/examples/combobox/no-results.tsx` | state:no-results | The empty row for the query "zzzz" |
+| `docs/system/examples/combobox/load-failed.tsx` | state:load-failed | The failure row with Retry, value kept |
+| `docs/system/examples/combobox/invalid.tsx` | state:invalid | Required field submitted empty, with the error text |
+| `docs/system/examples/combobox/disabled.tsx` | state:disabled | The field while its form saves |
+| `docs/system/examples/combobox/read-only.tsx` | state:read-only | A sent invoice's customer, no trigger or clear |
+| `docs/system/examples/combobox/disabled-item.tsx` | state:disabled-item | An archived customer in the open list |
+| `docs/system/examples/combobox/long-name.tsx` | state:long-name | A 48-character name, truncated in the input and wrapped in the list |
+| `docs/system/examples/combobox/in-invoice-form.tsx` | composition:Field | The Bill to field inside the New invoice form, with label and error text |
 
 ## Variants
 
@@ -83,23 +103,40 @@ gen-docs writes the table from `ComboboxPrimitive.Root.Props` and the `ComboboxI
 
 ## Usage
 
-### Use it when
-- The list has more than about 15 options, or grows with the account's data
-- People know the name they want and typing is faster than scanning
+### When to use
+- The person picks one record from a list that grows with the account's data, such as customers or projects
+- The fixed list is longer than Select holds without scrolling (see Limits), and people know the name they want
 
-### Use something else when
-- There are fewer than 5 fixed options. Use RadioGroup, as the app already does in 6 of 7 such fields
-- There are 5 to 15 fixed options and typing adds nothing. Use Select
-- People pick several values. Use the chips form of Combobox, which has its own spec
+### When not to use
+- 4 or fewer fixed options. Use RadioGroup instead, as 6 of 7 such fields in the app already do
+- 5 to 15 fixed options where typing adds nothing. Use Select instead
+- The person picks several values. Use the coverage-gaps row "Multi-value choice" instead
+- The person picks an action to run, not a value for a field. Use Command instead
 
-### Writing
-- `rule/combobox-placeholder`: The placeholder names what is searched, "Search customers". Evidence: 9 of 11 call sites. The two "Select…" placeholders are on strays.tsv.
-- `rule/combobox-empty-row`: The empty row repeats the typed text, "No customers match 'acm'". Evidence: all 3 async call sites.
-- `rule/record-casing`: Record names keep the casing they were saved with. Evidence: every list in the app renders names as stored. Check: lint on `capitalize` classes in item text.
+### Behavior
+- `rule/combobox-debounce`: When the input text changes, start the search 150ms after the last keystroke instead of on every keystroke, because unthrottled requests for "acme l" returned out of order and briefly listed results for "acm". Evidence: app 3/3 async call sites go through `CustomerPicker` (`SEARCH_DELAY_MS`); measured 6 requests and one out-of-order response without the delay, 1 request with it, .design-system/evidence/combobox/debounce-network.txt. Check: test `customer-picker.test.tsx` "sends one request per pause".
+- `rule/combobox-keep-results`: When a search is in flight, keep the previous results listed with `aria-disabled` instead of clearing the list, because clearing moves the list height between 0 and 216px on every keystroke. Evidence: measured 0 to 216px per keystroke when cleared and a constant 216px when kept, .design-system/evidence/combobox/keystroke-height.json; app 3/3 async call sites. Check: test `customer-picker.test.tsx` "keeps results while loading".
+- `rule/combobox-failure-keeps-value`: When a search fails, keep the selected value and the typed text and show a "Retry" button in the status row, because the person can recover without retyping. Evidence: principle heuristic: help users recognize, diagnose and recover from errors, applied as `trap/field-keeps-input`; app 3/3 async call sites. Check: test "keeps value on failed search".
+- `rule/combobox-archived-disabled`: When a record is archived, list it with `aria-disabled` and the suffix "Archived" instead of hiding it, because a selected archived record then still has a row that explains why the field is invalid. Evidence: app 11/11 call sites receive archived records from the API; gate G-07 default. Check: test "archived customer shows as disabled".
+- `rule/combobox-escape`: When `Escape` is pressed with the list open, close it and keep the typed text, and when the list is closed, reset the text to the selected value, because that is the keyboard model screen reader users expect from a combobox. Evidence: principle platform: WAI-ARIA Authoring Practices combobox pattern, which Base UI implements. Check: test for the open case, review for the closed case.
 
-### Do and don't
-- Do keep earlier results listed while a search runs / Don't clear the list on each keystroke, which makes it jump
-- Do disable archived records and label them / Don't hide them, since a selected archived record then has no row to explain it
+### Limits
+- `rule/combobox-min-options`: When a fixed list has 15 or fewer options, use Select instead of Combobox, because Select shows up to 15 options at 390x844 without scrolling, so typing saves nothing. Evidence: measured Select popup scrolls at 16 options at 390x844, .design-system/evidence/select/grow-count-390.json. Check: review, with the option count in the PR.
+- `rule/combobox-name-length`: When a record name is longer than 28 characters, truncate it with an ellipsis in the input and wrap it to at most 2 lines in the list instead of widening the popup, because a popup wider than the input runs past a 390px screen. Evidence: measured truncation at 29 characters in the input at 390px, .design-system/evidence/combobox/grow-text-390.json; measured longest customer name in seed data, 48 characters, .design-system/evidence/combobox/seed-names.txt. Check: probe on `long-name.tsx`.
+
+### Content
+- Follows `rule/writing-record-names`.
+- `rule/combobox-placeholder`: When the input is empty, the placeholder reads "Search {objects}" instead of "Select…", because the placeholder is the only cue that typing filters the list. Evidence: app 9/11 call sites, the two "Select…" placeholders on strays.tsv. Check: lint `rule/combobox-placeholder` on the `placeholder` prop.
+- `rule/combobox-empty-row`: When a search returns nothing, the empty row reads "No {objects} match '{query}'", because repeating the query shows a typo without looking back at the input. Evidence: app 3/3 async call sites. Check: test "empty row repeats the query".
+- `rule/combobox-status-copy`: When the status row shows, it reads "Searching…" while loading and "{Object} search failed" on failure, with the action "Retry", because the failure names what failed and the action names what it does. Evidence: app 3/3 async call sites; principle heuristic: help users recognize, diagnose and recover from errors. Check: test on `loading.tsx` and `load-failed.tsx`.
+
+### Best practices
+- `rule/combobox-in-field`: When a Combobox sits in a form, wrap it in `Field` with a visible `FieldLabel` instead of naming it by placeholder, because the placeholder disappears once a value is picked and the field loses its name. Evidence: app 11/11 call sites; principle wcag: 3.3.2 Labels or Instructions. Check: lint `trap/label-unbound`.
+  Don't: `<Combobox><ComboboxInput placeholder="Customer" /></Combobox>`
+- `rule/combobox-stack-narrow`: When a form row would hold two Comboboxes, stack them below 640px instead of placing them side by side, because side by side at 390px each input truncates names past 14 characters. Evidence: measured 171px per input and truncation at 15 characters, .design-system/evidence/combobox/two-up-390.json; single use `app/(app)/expenses/filters.tsx:44`. Check: probe on the Expenses filters at 390.
+  Don't: `<div className="grid grid-cols-2"><CustomerPicker /><ProjectPicker /></div>`
+- `rule/combobox-not-in-popover`: When a Combobox is needed inside a `Popover` or `Menu`, move the task into a `Dialog` instead, because Escape in the nested list closed both layers and sent focus to the page body. Evidence: measured 1 Escape closing 2 layers with focus on `body`, .design-system/evidence/combobox/nested-popover.txt. Check: review.
+  Don't: `<PopoverContent><Combobox items={projects} /></PopoverContent>`
 
 ## Accessibility
 Rests on Base UI Combobox. The input keeps focus throughout, and the popup never takes it.
@@ -138,6 +175,7 @@ Contrast: NEEDS REVIEW. The status row text on the popup surface was not measure
 
 ## Related
 - Select: fixed lists of 5 to 15 options that need no typing.
+- RadioGroup: fixed lists of 4 or fewer options.
 - NativeSelect: the mobile settings screens, where the platform picker is expected.
 - Command: a list of actions rather than a value for a field.
 ````
@@ -158,7 +196,25 @@ Each question from `spec-template.md`, with what the worker ran or read in North
 
 **6. ARIA.** `agent-browser snapshot -s '[data-slot=combobox]'` gave the roles and properties per part. `agent-browser a11y --tags wcag2a,wcag2aa` found no violations on the field. The status row's announcement cannot be read from a snapshot, so it went to the by-hand list.
 
-**7. Content rules.** The three `rule/` lines came from the method in `traps.md`. The worker collected the placeholder text of all 11 call sites, found 9 in one shape and 2 in another, and wrote the majority as the rule with the outliers on the stray list. It proposed no wording of its own.
+**7. Usage, by the ten questions in `rule-method.md`.** The worker took each question in turn and wrote what it found.
+
+- *Job and not for.* The call sites split into records that grow (customers, projects) and fixed lists (regions, currencies, payment terms). `rg -n "<RadioGroup\b" app` found 7 fixed choice fields with 4 or fewer options, 6 of them radios, which became the RadioGroup line. Multi-value choice has no component, so the line names its coverage-gaps row instead of promising a spec.
+- *Where it breaks and limits.* `probe.mjs --grow --dimension count` on Select at 390x844 found the popup scrolls at 16 options, so 15 is Select's ceiling and Combobox's floor. `--dimension text` on the Bill to input found truncation at 29 characters. The seed data's longest name is 48, so truncation is real, and the rule says what happens instead of banning long names.
+- *States over time.* The network log for typing "acme l" with the delay set to 0 showed 6 requests and one response out of order. That measurement, not the constant in the code, is why the debounce is a rule. List height per keystroke came from the same run.
+- *Input methods.* Escape, Tab and Enter were pressed in both open and closed states. The closed-state reset has no test, so its Check says review for that half.
+- *Copy slots.* The worker read the `placeholder` and `empty-title` rows for Combobox in `docs/system/copy-inventory.tsv`, found 9 of 11 placeholders in one shape, and cited the writing page's record-names rule instead of restating it.
+- *Composition and density.* The Expenses filters are the one place two Comboboxes share a row, so that rule carries a single-use note plus a measurement. The nested Popover case was built as a throwaway example in the evidence folder, run once, and recorded.
+
+**Rule tests.** Each rule was run through the four tests and recorded in `docs/system/rule-tests/combobox.tsv`. Three rows:
+
+```
+rule_id	falsify	negation	two_agent	sweep	verdict	notes
+rule/combobox-placeholder	pass	pass	pass	pass	ship	lint fires on placeholder="Select…"; 2 strays listed
+rule/combobox-min-options	pass	pass	pass	pass	rewritten	first draft said "short fixed lists" and failed two-agent (Select vs Combobox at 12); now 15, measured
+rule/combobox-stack-narrow	pass	pass	pass	pass	ship	single use, grounded by the 390 measurement
+```
+
+The first draft of the min-options rule said "short fixed lists". Two fresh agents given "add a currency picker with 12 options" chose Select and Combobox. The rewrite put the measured number in, and both then chose Select.
 
 **8. Tokens.** Read from the classes in `combobox.tsx` (`border-input`, `ring-ring`, `bg-popover` and so on), each mapped to its CSS variable in the `tailwindCss` file. No token was inferred from a screenshot.
 
@@ -169,6 +225,8 @@ Each question from `spec-template.md`, with what the worker ran or read in North
 ## What a worker should copy
 
 - Each answer names where it came from: a command, a file and line, a capture, or a gate.
-- Numbers come from the app. The debounce, the call-site counts and the option thresholds are Northwind's. Another app finds its own.
+- Numbers come from the app or a measurement on it. The debounce, the call-site counts, 15 options and 28 characters are Northwind's. Another app measures its own.
+- Every rule names its ground: a count, a measurement with its evidence path, or a named principle. A single use says so and adds a second ground.
+- A rule that two agents read differently gets the missing number, then gets tested again.
 - A question the code does not answer becomes a gate with a default, and the spec records the default.
-- Rules come from the app's majority, with outliers sent to migration. The spec never imports a preference from another product.
+- The spec never imports a preference from another product.

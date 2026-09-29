@@ -70,12 +70,17 @@ Reference implementation: <path to the first family's component, examples, tests
 Contract: <paste component-contract.md, or give its path if the worker can read it>
 Foundation and base reference: <foundation from triage, and base-shadcn.md, base-library.md or base-raw.md>
 Spec: <paste spec-template.md and spec-example-combobox.md, or their paths>
+Rule method: <path to rule-method.md, and writing-method.md when the family renders copy>
 Traps for this family: <paste the rows from traps.md>
 Gates that touch this family and their defaults: <list, or "none">
 
 ACCEPTANCE
 - Contract sections met, or each unmet item listed as a gap
-- Examples for every variant axis and triggerable state, importing from <import path>
+- Example files per the spec's Example files table: every variant value and state
+  with a visual or behavior difference, and one composition, each complete and
+  importing from <import path>
+- Every Usage rule has its ID, shape, ground and check (rule-method.md), and a
+  row in docs/system/rule-tests/<component>.tsv with verdict ship or gate
 - Tests pass: <test command>
 - Every trap you mark fixed has measured before and after numbers in
   .design-system/evidence/<family>/, such as the button box idle and pending
@@ -133,17 +138,21 @@ STANDING
 
 ## The spec-worker variant
 
-When only specs fan out (`SKILL.md` phase 1, under about 15 component files and one theme), the coordinator has already written the components, and a spec worker writes one `docs/system/<component>.md` and nothing else. The family template above asks for code, examples, tests and a migration map this worker must not touch, so use this variant. Keep every field.
+When only specs fan out (`SKILL.md` phase 1, under about 15 component files and one theme), or when a document-everything run specs components that already exist (`coordinator-path.md`), the components are written, and a spec worker takes one family. It writes each member's spec, its rule-tests file and its missing example files, and nothing else. The family template above asks for code, tests and a migration map this worker must not touch, so use this variant. Keep every field.
 
 ```
 GOAL
-Write the spec for <Component> at docs/system/<component>.md, filled to
-spec-template.md from this app's evidence. The component is done and is not
-yours to change. A defect you find goes in your report, not in the code.
+Write the spec for each of <Components in the family> at
+docs/system/<component>.md, filled to spec-template.md from this app's evidence,
+with its Usage rules by rule-method.md and its missing example files. The
+components are done and are not yours to change. A defect you find goes in
+your report, not in the code.
 
 SCOPE
-You may write: docs/system/<component>.md, and .design-system/evidence/<component>/
-for probe scripts, captures and measurements. Evidence there survives the run.
+You may write: docs/system/<component>.md, docs/system/rule-tests/<component>.tsv,
+<examples dir>/<component>/ for missing example files, and
+.design-system/evidence/<component>/ for probe scripts, captures and
+measurements. Evidence there survives the run.
 Never cite a file in .design-system/tmp/, which is deleted at close.
 You may read anything in the repo. No git commands: the coordinator commits.
 Dev server: http://localhost:<base port>. Do not start or restart it.
@@ -156,6 +165,8 @@ Real uses: <paste call sites: file:line, screen, variant, state>
 Traps for this family: <paste the rows from traps.md>
 Gates and decisions that touch it, with defaults: <list, or "none">
 Template and worked example: <paths to spec-template.md and spec-example-combobox.md>
+Rule method: <paths to rule-method.md, and writing-method.md with docs/system/writing.md when it exists>
+Copy rows for these components: <paste their rows from docs/system/copy-inventory.tsv, or "none yet">
 Foundation and base reference: <foundation from triage, and the base-*.md path>
 
 ACCEPTANCE
@@ -172,6 +183,9 @@ ACCEPTANCE
   check-spec fails the count, and any file:line you cite, once the code moves
 - In prose, element names go in backticks (`<a>`), since check-spec reads a bare
   angle bracket as a template placeholder
+- Every rule passed the four tests in rule-method.md, or is a gate. Two-agent
+  runs use two fresh subagents given only the rule and one task from this app
+- Every Limits rule cites a probe --grow result saved in the evidence folder
 
 VERIFY
 Run, and paste the last 20 lines and the exit code of each:
@@ -200,6 +214,7 @@ as D-combobox-01. The coordinator renumbers it into the run record.
 Status: DONE, PARTIAL or BLOCKED
 Files written:
 Commands run and their results (pasted):
+Rules: shipped, rewritten and gated, counted from rule-tests
 Defects found in the component, each with its measurement and evidence path:
 Requests for the coordinator:
 Anything you decided that the brief did not cover:

@@ -26,7 +26,7 @@ A coordinator, such as a router skill or `build-design-system`, passes the code,
 5. **Trace every fact.** For each example, variant, prop, state and token, note which source supplied it.
 6. **Compare sources** that state the same facts, such as the props type, the stories, old docs and a spec. Done when every difference is a line under Conflicts.
 7. **Fill each section** from sourced facts, in the format's order. Copy token names and example code character for character. Write each state as what the user can do or what the component does. When two states can hold at once, settle which wins from the built CSS or a browser read before marking it `NEEDS REVIEW`.
-8. **Write do and don't pairs last.** Keep a pair only if the component or its API allows the don't, and cut any pair that restates a line from "Use it when".
+8. **Write Usage rules last,** by the rule method in `references/doc-format.md` (Usage): each rule has a shape, a ground and a check, and passes the four tests or is cut.
 9. **Close out.** Fill Guessed at, then fix each failure on the review checklist in `references/doc-format.md`.
 10. **Spec check.** When the caller asks for a spec, or the repo's entries already have a `### State precedence` section, the entry is a spec. Fill the extra H3s and tables from the repo's `docs/system/`: its vendored spec template when there is one, and an existing spec there as the skeleton. Use `build-design-system/references/spec-template.md` only when the repo has neither. Pipe the entry to `node scripts/check-spec.mjs -` from the repo root, or the skill's copy when the repo has none. Fix each failure from a source or mark the gap. Never invent a state or a precedence to pass. Put the check's last line in the status block.
 
@@ -39,13 +39,14 @@ One Markdown entry, ready to paste, followed by three blocks outside it, and a f
 - **Guessed at.** One line per judgement call: the section, the claim, and what it rests on. "Nothing guessed" when there were none.
 - **Gates.** Only when a rule below adds one: the question and its default. Omit the block otherwise.
 
-Run directly, save the entry with its blocks to `docs/system/<name>.md` with a draft comment on line 1. The reply opens with that path, what the entry covers and its status, then each command run with its exit code, any Defect lines, at most 3 questions with their defaults, and `Next:` with one prompt the person can paste. Every count in the reply, such as NEEDS REVIEW markers, comes from `grep -o` on the saved file below the draft comment, never from memory.
+Run directly, save the entry with its blocks to `docs/system/<name>.md` with a draft comment on line 1, and write each missing example file the Example files table lists, or mark its row `NOT SUPPLIED: <reason>`. The reply opens with that path, what the entry covers and its status, then each command run with its exit code, any Defect lines, at most 3 questions with their defaults, and `Next:` with one prompt the person can paste. Every count in the reply, such as NEEDS REVIEW markers, comes from `grep -o` on the saved file below the draft comment, never from memory.
 
 The entry is ready when:
 
 - It uses every heading in `references/doc-format.md`, in that order, with none added or renamed.
 - Every example, variant, prop, token name and real use traces to a line under Sources.
 - Every gap reads `NOT SUPPLIED` or `NEEDS REVIEW`.
+- Every variant value and state has an example file or a row saying why not.
 - Every probable defect has a Defect line.
 - For a spec, `check-spec.mjs` exits 0, or every remaining failure is listed under Guessed at with why no source settles it.
 

@@ -1,0 +1,1 @@
+export const Page = () => <main className="p-4">Invoices</main>;

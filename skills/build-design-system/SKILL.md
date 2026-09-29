@@ -24,7 +24,7 @@ One list for every mode. The phase 1 predicate holds, with every number measured
 - Every token states its role, per `references/token-architecture.md` or the base reference. A generator run twice leaves no diff.
 - Every raw literal whose token holds exactly its value is swapped, with `pixdiff.mjs` at tolerance 0 showing 0% per route.
 - Build and harden: every inventory row is canonical, merged, deleted, or kept as a product composition.
-- Every canonical component the pilot uses has a spec that passes `node scripts/check-spec.mjs docs/system` and a registry entry. Build adds the families the strays touch. Harden and seed stop at the pilot's families and list the rest as follow-up.
+- Every canonical component the pilot uses has a spec that passes `node scripts/check-spec.mjs docs/system` and a registry entry. Build adds the families the strays touch. Harden and seed stop at the pilot's families and list the rest as follow-up. An ask for complete docs specs every family (`references/coordinator-path.md`, Document everything).
 - `node scripts/gen-docs.mjs --check` exits 0: twins with generated Props tables, the rules page, `llms.txt` and the index. The AGENTS.md block names them and the check command.
 - Every check rule failed on its bad fixture and passed on its good one this session. The full check exits 0 on a clean clone, with existing violations in a committed allowlist, the production build passes, and every route answers 200. A red check is a failed run.
 - The pilot has before and after captures at the same viewports, themes and data, and every difference traces to a decision or gate row. Seed has no before, and says so. Every trap in the pilot's own files is fixed, or gated with its measurement. The checks find nothing in the pilot's files.
@@ -67,7 +67,7 @@ Make and record any decision a reversible change can settle. A fix to broken beh
 1. Read AGENTS.md, CLAUDE.md, the manifest, CSS entry points, theme providers and route tree. Name the mode and the foundation, and load the base reference. On shadcn, save `shadcn info --json`.
 2. Write the person's complaint in their words, and the first visible change that answers it. Choose the pilot, viewports (default 390 and 1280 px) and themes.
 3. Write the predicate with blanks for counts, and the standing orders, one list, per `references/run-record.md`.
-4. Set up the repo for the footprint (`references/coordinator-path.md`, Start). On a minimal footprint, copy nothing and use `.git/info/exclude` instead of `.gitignore`. Otherwise copy only what the repo's check runs into `scripts/`: `check-system.mjs`, `check-spec.mjs`, `gen-docs.mjs` and `props-table.mjs`. Fixtures, capture, pixdiff and montage stay in `<skills>/build-design-system/scripts/` (`<skills>` is `.agents/skills/` or `.claude/skills/`). Copy `references/spec-template.md` to `docs/system/spec-template.md`. Gitignore `.design-system/review/**/*.png` and `.design-system/tmp/`. The review folder's TSVs, reports and `index.html` are committed records. Run `node scripts/check-system.mjs --init` and read its guesses. Nothing in `package.json` reads from `.design-system/` or a skill folder.
+4. Set up the repo for the footprint (`references/coordinator-path.md`, Start). On a minimal footprint, copy nothing and use `.git/info/exclude` instead of `.gitignore`. Otherwise copy only what the repo's check runs into `scripts/`: `check-system.mjs`, `check-spec.mjs`, `gen-docs.mjs`, `props-table.mjs` and `copy-check.mjs`. Fixtures, capture, pixdiff and montage stay in `<skills>/build-design-system/scripts/` (`<skills>` is `.agents/skills/` or `.claude/skills/`). Copy `references/spec-template.md` to `docs/system/spec-template.md`. Gitignore `.design-system/review/**/*.png` and `.design-system/tmp/`. The review folder's TSVs, reports and `index.html` are committed records. Run `node scripts/check-system.mjs --init` and read its guesses. Nothing in `package.json` reads from `.design-system/` or a skill folder.
 5. Size the run with one fan-out rule. Under about 15 component files and one theme, the coordinator writes the components and only specs fan out, one per worker. Otherwise families fan out too, one per worker. Write the Frame and the known gates into the run record, and go on to phase 2 without waiting.
 
 ### 2. Inventory
@@ -90,7 +90,7 @@ Make and record any decision a reversible change can settle. A fix to broken beh
 ### 4. Components
 
 1. Pick each family's canonical implementation by `references/component-contract.md`, on native elements or the behavior library already installed. When the ask names states, every component gets its missing states, not only the pilot's.
-2. Do the most-used family first, end to end, including its spec from `docs/system/spec-template.md` with the family's rows from `references/traps.md`. It is the pattern the briefs point to.
+2. Do the most-used family first, end to end, including its spec from `docs/system/spec-template.md`, with the family's rows from `references/traps.md` and Usage rules by `references/rule-method.md`. It is the pattern the briefs point to.
 3. Write its old-to-new map and a codemod. Move one pilot screen by hand, run the codemod on a pristine copy, and fix it until the diffs match on imports, tags and props. With no duplicates, skip the codemod and record why.
 4. Fan out the other families the pilot and the strays touch, per the rule in phase 1, with `references/worker-brief.md`, in a rolling window.
 5. Review each report as the brief says, rerunning its verify commands. Reject any diff outside its scope.
@@ -113,7 +113,7 @@ Follow `references/checks.md`. `scripts/check-system.mjs` ships the standard rul
 
 Docs are generated, never hand-written.
 
-1. Run `component-docs` per component with its code, variants and real uses, to write `docs/system/<component>.md` to the spec template. The spec's Props section holds notes only. Write the foundation pages the tokens need, from `references/system-structure.md`.
+1. Run `component-docs` per component with its code, variants and real uses, to write `docs/system/<component>.md` to the spec template. The spec's Props section holds notes only. Write the foundation pages the tokens need, from `references/system-structure.md`, and the writing page by `references/writing-method.md`.
 2. Write `docs/system/coverage-gaps.md` from the open gates, each row with its "Meanwhile".
 3. Run `node scripts/gen-docs.mjs`, with `--name` on the first run. It writes the twins, the rules page, the index and `llms.txt`, and saves its flags so `--check` agrees.
 4. An HTML docs site is optional. When one exists, copy `check-docs-leak.mjs` into `scripts/` and the check.
