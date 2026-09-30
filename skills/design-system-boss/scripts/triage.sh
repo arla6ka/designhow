@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# triage.sh [repo] [out-dir]
+# triage.sh [repo] [out-dir]    triage.sh --self-test
 # Read-only. Prints one "signal<TAB>value" line per check and writes the same lines to
 # <out-dir>/signals.tsv, with raw match lists beside it. Needs ripgrep (rg). Reads only
 # files git does not ignore, so node_modules and build output stay out.
@@ -11,6 +11,109 @@
 set -uo pipefail
 exec </dev/null   # rg with no path reads stdin; close it so no call can hang
 case "${1:-}" in -h|--help) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 0;; esac
+
+# --self-test builds small repos in a temp folder, runs the script on each, and checks the
+# signals each past bug got wrong. It ends "all as expected" or exits 1.
+self_test() {
+  local T fails=0 d
+  T=$(mktemp -d) || exit 2
+  w() { mkdir -p "$(dirname "$1")"; cat > "$1"; }
+  sig() { awk -F'\t' -v k="$2" '$1==k{print $2}' "$1/signals.tsv"; }
+  expect() { if [ "$3" = "$4" ]; then echo "ok    $1: $2 = $4"; else echo "FAIL  $1: $2 = $3, expected $4"; fails=$((fails + 1)); fi; }
+  run() { (cd "$1" && git init -q . && git add -A && git -c user.email=t@t -c user.name=t commit -qm init) >/dev/null 2>&1
+    TRIAGE_SHADCN_INFO=0 bash "$0" "$1" "$1.out" >/dev/null 2>&1; }
+
+  # 1. A component declared `export default async function` is a component.
+  d=$T/async
+  w "$d/package.json" <<< '{"dependencies":{"next":"15.0.0","react":"19.0.0"}}'
+  w "$d/app/page.tsx" <<< 'export default async function HomePage() { return <main /> }'
+  w "$d/components/ProfileCard.tsx" <<< 'export default async function ProfileCard() { return <div /> }'
+  run "$d"
+  expect async "ProfileCard in components.tsv" "$(grep -c 'ProfileCard' "$d.out/components.tsv")" 1
+
+  # 2. Specs in docs/system count, so a re-triage after a run sees them.
+  d=$T/specs
+  w "$d/package.json" <<< '{"dependencies":{"next":"15.0.0"}}'
+  w "$d/app/page.tsx" <<< 'export default function Page() { return <main /> }'
+  printf '# Button\n\n### State precedence\n\n1. disabled\n' | w "$d/docs/system/components/button.md"
+  printf '# Button\n\n### State precedence\n' | w "$d/public/system/button.md"
+  run "$d"
+  expect specs component_specs "$(sig "$d.out" component_specs)" 1
+
+  # 3. A Vite app: routes come from the router config, src/pages is not a route list, and the
+  #    layer is the shared components folder, never src itself.
+  d=$T/vite
+  w "$d/package.json" <<< '{"dependencies":{"vite":"5.0.0","react":"18.0.0","react-router-dom":"6.0.0"}}'
+  w "$d/index.html" <<< '<div id="root"></div>'
+  w "$d/src/main.tsx" <<'EOF'
+import { createBrowserRouter } from "react-router-dom";
+import Home from "./pages/Home";
+import Team from "./pages/Team";
+import Billing from "./pages/Billing";
+import Settings from "./pages/Settings";
+import Login from "./pages/Login";
+export const router = createBrowserRouter([
+  { path: "/", element: <Home /> }, { path: "/team", element: <Team /> },
+  { path: "/billing", element: <Billing /> }, { path: "/settings", element: <Settings /> },
+  { path: "/login", element: <Login /> }, { path: "*", element: <Home /> },
+]);
+EOF
+  w "$d/src/App.tsx" <<< 'export function App() { return null }'
+  w "$d/src/data.ts" <<< 'export const rows = []'
+  for c in Button Input Card Badge Tooltip; do
+    w "$d/src/components/$c.tsx" <<< "export function $c() { return <div className=\"x\" /> }"
+  done
+  for p in Home Team Billing Settings Login Header Footer Row Empty; do
+    w "$d/src/pages/$p.tsx" <<EOF
+import { Button } from "../components/Button";
+import { Input } from "../components/Input";
+import { Card } from "../components/Card";
+import { rows } from "../data";
+import { App } from "../App";
+export default function $p() { return <div style={{ color: "#ff0000" }}><Button /><Input /><Card /></div> }
+EOF
+  done
+  run "$d"
+  expect vite routes "$(sig "$d.out" routes)" 5
+  expect vite shared_ui_dirs "$(sig "$d.out" shared_ui_dirs)" src/components
+  expect vite raw_color_lines "$(sig "$d.out" raw_color_lines)" 9
+  expect vite small_app "$(sig "$d.out" small_app)" yes
+
+  # 4. Next routes: private folders are not routes.
+  d=$T/next
+  w "$d/package.json" <<< '{"dependencies":{"next":"15.0.0"}}'
+  for r in app/page.tsx app/team/page.tsx app/_draft/x/page.tsx; do w "$d/$r" <<< 'export default function P() { return null }'; done
+  run "$d"
+  expect next routes "$(sig "$d.out" routes)" 2
+
+  # 5. Families count canonical components. A copy merged into Button (a wrapper, an alias or a
+  #    @deprecated definition) no longer counts; a separate implementation still does.
+  d=$T/families
+  w "$d/package.json" <<< '{"dependencies":{"next":"15.0.0"}}'
+  w "$d/app/page.tsx" <<< 'export default function P() { return null }'
+  w "$d/components/ui/Button.tsx" <<< 'export function Button(p) { return <button {...p} /> }'
+  w "$d/components/PrimaryButton.tsx" <<'EOF'
+import { Button } from "./ui/Button";
+export function PrimaryButton(p) { return <Button variant="primary" {...p} /> }
+EOF
+  w "$d/components/GhostButton.tsx" <<'EOF'
+import { Button } from "./ui/Button";
+export const GhostButton = Button;
+EOF
+  w "$d/components/OldButton.tsx" <<'EOF'
+/** @deprecated Use Button. */
+export function OldButton(p) { return <button {...p} /> }
+EOF
+  w "$d/components/Input.tsx" <<< 'export function Input(p) { return <input {...p} /> }'
+  w "$d/components/TextField.tsx" <<< 'export function TextField(p) { return <input className="a b c" {...p} /> }'
+  run "$d"
+  expect families "Button family" "$(awk -F'\t' '$1=="Button"{print $2}' "$d.out/families.tsv")" 1
+  expect families families_with_2plus "$(sig "$d.out" families_with_2plus)" 1
+
+  rm -rf "$T"
+  if [ "$fails" -eq 0 ]; then echo "all as expected"; else echo "$fails failed"; exit 1; fi
+}
+[ "${1:-}" = --self-test ] && { self_test; exit 0; }
 
 REPO=${1:-.}
 OUT=${2:-$REPO/.design-system/boss/triage}
@@ -29,10 +132,12 @@ mkdir -p "$OUT"
 EXCL=(-g '!**/.design-system/**' -g '!**/.migration/**' -g '!**/.agents/**' -g '!**/.claude/**'
   -g '!**/node_modules/**' -g '!**/.next/**' -g '!**/dist/**' -g '!**/build/**'
   -g '!**/scripts/**' -g '!**/fixtures/**' -g '!**/__fixtures__/**' -g '!**/*.fixture' -g '!**/*.fixture.*'
-  -g '!**/docs/system/**' -g '!**/public/system/**' -g '!**/static/system/**'
+  -g '!**/public/system/**' -g '!**/static/system/**'
   -g '!**/*.min.*' -g '!**/*.svg' -g '!**/*.lock' -g '!package-lock.json')
 SKILLDIRS=$(rg --files --hidden -g '**/SKILL.md' -g '!**/node_modules/**' -g '!.git/**' . 2>/dev/null | sed 's#^\./##' | xargs -n1 dirname 2>/dev/null | sort -u)
 while read -r d; do [ -n "$d" ] && [ "$d" != . ] && EXCL+=(-g "!$d/**"); done <<< "$SKILLDIRS"
+# Specs live in docs/system, so component_specs reads with SPECX, which keeps it. Every other count uses EXCL.
+SPECX=("${EXCL[@]}"); EXCL+=(-g '!**/docs/system/**')
 SRC=(-g '*.{css,scss,sass,less,ts,tsx,js,jsx,vue,svelte,astro,html,mdx}')
 MARKUP=(-g '*.{tsx,jsx,vue,svelte,astro,html}')
 # Not product components: check fixtures, examples, docs, generated twins and check folders.
@@ -110,18 +215,65 @@ elif [ -n "$own" ]; then foundation="package:$own"; fi
 # An empty app (1 or fewer routes, 2 or fewer product components) has no foundation yet. Printed
 # once product_component_defs is known, as "none (default: shadcn)", the Seed route's default.
 
-# Routes a user can reach. Next.js private folders (app/**/_name) are not routes.
-routes=$(rg --files -g '**/app/**/page.{tsx,jsx,ts,js,mdx}' -g '**/pages/**/*.{tsx,jsx,vue}' -g '**/routes/**/+page.svelte' -g '!**/pages/_*' -g '!**/pages/api/**' -g '!**/app/**/_*/**' "${EXCL[@]}" 2>/dev/null | tee "$OUT/routes.txt" | wc -l | tr -d ' ')
+# Routes a user can reach. A file-based router (Next, Nuxt, SvelteKit, Astro, Remix) lists route
+# files, and private folders (app/**/_name) are not routes. Any other app reads its router config
+# (react-router `path:` or `<Route path=`, vue-router `path:`), one route per distinct path, `*`
+# left out. There a pages/ folder is only a folder. routes.txt holds one route per line, and
+# route-files.txt the files the routes render, which the component layer check reads.
+: > "$OUT/routes.txt"; : > "$OUT/route-files.txt"
+case "$fw" in
+  next) RGR=(-g '**/app/**/page.{tsx,jsx,ts,js,mdx}' -g '**/pages/**/*.{tsx,jsx,ts,js,mdx}' -g '!**/pages/_*' -g '!**/pages/api/**' -g '!**/app/**/_*/**') ;;
+  nuxt) RGR=(-g '**/pages/**/*.vue') ;;
+  @sveltejs/kit) RGR=(-g '**/routes/**/+page.svelte') ;;
+  astro) RGR=(-g '**/src/pages/**/*.{astro,md,mdx,html}' -g '!**/src/pages/**/_*') ;;
+  @remix-run/react) RGR=(-g '**/app/routes/**/*.{tsx,jsx}' -g '!**/app/routes/**/_*') ;;
+  *) RGR=() ;;
+esac
+[ ${#RGR[@]} -gt 0 ] && rg --files "${RGR[@]}" "${EXCL[@]}" 2>/dev/null | sed 's#^\./##' | sort | tee "$OUT/route-files.txt" > "$OUT/routes.txt"
+if [ ! -s "$OUT/routes.txt" ] && command -v node >/dev/null; then
+  rg -l "${SRC[@]}" "${EXCL[@]}" -e 'create(Browser|Hash|Memory)Router|useRoutes|<Route[\s>]|createRouter\(|new VueRouter|RouterProvider' . 2>/dev/null \
+    | sed 's#^\./##' > "$OUT/.router-files"
+  node -e '
+    const fs=require("fs"),path=require("path");
+    const [list,routesOut,filesOut]=process.argv.slice(1);
+    const cfg=fs.readFileSync(list,"utf8").split("\n").filter(Boolean);
+    const isFile=p=>{try{return fs.statSync(p).isFile()}catch{return false}};
+    const exts=["",".tsx",".ts",".jsx",".js",".vue",".svelte","/index.tsx","/index.ts","/index.jsx","/index.js"];
+    const resolve=(from,s)=>{let b;if(s.startsWith("."))b=path.join(path.dirname(from),s);else{const a=s.match(/^[@~#]\/(.*)$/);if(!a)return null;b=isFile("src/"+a[1])||exts.some(e=>isFile("src/"+a[1]+e))?"src/"+a[1]:a[1]}
+      for(const e of exts)if(isFile(b+e))return path.normalize(b+e);return null};
+    const paths=new Map(),files=new Set();
+    for(const f of cfg){let s;try{s=fs.readFileSync(f,"utf8")}catch{continue}
+      let hit=false;
+      for(const m of s.matchAll(/\bpath\s*[:=]\s*\{?\s*["\x27`]([^"\x27`]*)["\x27`]/g)){const p=m[1];hit=true;if(p===""||p==="*")continue;
+        if(!paths.has(p))paths.set(p,f+":"+s.slice(0,m.index).split("\n").length)}
+      if(!hit)continue;
+      for(const m of s.matchAll(/(?:from|import\()\s*["\x27]([^"\x27]+)["\x27]/g)){const r=resolve(f,m[1]);if(r&&r!==f)files.add(r)}}
+    fs.writeFileSync(routesOut,[...paths].map(([p,w])=>p+"\t"+w).join("\n")+(paths.size?"\n":""));
+    fs.writeFileSync(filesOut,[...files].sort().join("\n")+(files.size?"\n":""));
+  ' "$OUT/.router-files" "$OUT/routes.txt" "$OUT/route-files.txt" 2>/dev/null
+  rm -f "$OUT/.router-files"
+  # No file routes and no router config: Next app/ or SvelteKit routes/ by name, else one page.
+  if [ ! -s "$OUT/routes.txt" ]; then
+    rg --files -g '**/app/**/page.{tsx,jsx,ts,js,mdx}' -g '**/routes/**/+page.svelte' -g '!**/app/**/_*/**' "${EXCL[@]}" 2>/dev/null | sed 's#^\./##' | sort | tee "$OUT/route-files.txt" > "$OUT/routes.txt"
+    [ ! -s "$OUT/routes.txt" ] && [ "$fw" != none ] && [ -f index.html ] && printf '/\tindex.html (no router)\n' > "$OUT/routes.txt"
+  fi
+fi
+routes=$(wc -l < "$OUT/routes.txt" | tr -d ' ')
 put routes "$routes"
 # Size, for the budget: lines in source files git tracks or would track
 put source_lines "$(rg -c '' "${SRC[@]}" "${EXCL[@]}" . 2>/dev/null | awk -F: '{n+=$NF} END {print n+0}')"
+# UI code: markup and style files. With routes, it decides the small-app fast path (8 routes or
+# fewer and under 3000 lines), which runs one coordinator with no fan-out.
+ui_lines=$(rg -c '' "${MARKUP[@]}" -g '*.{css,scss,sass,less}' "${EXCL[@]}" -g '!**/*.{test,spec,stories}.*' . 2>/dev/null | awk -F: '{n+=$NF} END {print n+0}')
+put ui_lines "$ui_lines"
+put small_app "$( [ "$routes" -le 8 ] && [ "$ui_lines" -lt 3000 ] && echo yes || echo no )"
 # How much scaffolding the counts skipped, so a before/after reader can see it was left out
 all_src=$(rg --files --hidden "${SRC[@]}" -g '!**/node_modules/**' -g '!.git/**' . 2>/dev/null | wc -l | tr -d ' ')
 prod_src=$(rg --files "${SRC[@]}" "${EXCL[@]}" . 2>/dev/null | wc -l | tr -d ' ')
 put scaffold_files_skipped "$(( all_src - prod_src ))"
 
 # Component definitions: exported inline, or declared and then listed in an export { } block
-rg -l -g '*.{tsx,jsx}' -g '!**/*.{test,spec,stories}.*' "${EXCL[@]}" "${NONPROD[@]}" -e '^\s*(export\s+)?(default\s+)?(function|const|class)\s+[A-Z]' . 2>/dev/null \
+rg -l -g '*.{tsx,jsx}' -g '!**/*.{test,spec,stories}.*' "${EXCL[@]}" "${NONPROD[@]}" -e '^\s*(export\s+)?(default\s+)?(async\s+)?(function|const|class)\s+[A-Z]' . 2>/dev/null \
   | while read -r f; do
       perl -0777 -ne '
         my %ex; while (/export\s*\{([^}]*)\}/g) { $ex{$_}=1 for ($1 =~ /\b([A-Z][A-Za-z0-9]*)\b/g) }
@@ -142,10 +294,10 @@ if command -v node >/dev/null; then
   node -e '
     const fs=require("fs"),path=require("path");
     const [routes,comps]=process.argv.slice(1,3).map(f=>fs.readFileSync(f,"utf8").split("\n").filter(Boolean));
-    const compDirs=new Set(comps.map(l=>path.dirname(l.split("\t")[0])));
+    const compFiles=new Set(comps.map(l=>path.normalize(l.split("\t")[0])));
     const isDir=p=>{try{return fs.statSync(p).isDirectory()}catch{return false}};
     const isFile=p=>{try{return fs.statSync(p).isFile()}catch{return false}};
-    const exts=["",".tsx",".ts",".jsx",".js",".vue",".svelte"];
+    const exts=["",".tsx",".ts",".jsx",".js",".vue",".svelte","/index.tsx","/index.ts","/index.jsx","/index.js"];
     const hits=new Map();
     for (const r of routes) {
       let src; try{src=fs.readFileSync(r,"utf8")}catch{continue}
@@ -154,25 +306,33 @@ if command -v node >/dev/null; then
         const s=m[1]; let bases=[];
         if (s.startsWith(".")) bases=[path.join(path.dirname(r),s)];
         else { const a=s.match(/^[@~#]\/(.*)$/); if (!a) continue; bases=["src/"+a[1],a[1]]; }
+        // Only an import of a file that defines a component counts, never a data or helper file.
         for (const b of bases) {
-          let dir=null;
-          if (isDir(b)) dir=b; else if (exts.some(e=>isFile(b+e))) dir=path.dirname(b);
-          if (dir) { dir=path.normalize(dir); if (compDirs.has(dir)) seen.add(dir); break; }
+          const e=exts.find(e=>isFile(b+e)); if (e===undefined) continue;
+          const f=path.normalize(b+e); if (compFiles.has(f)) seen.add(path.dirname(f)); break;
         }
       }
       for (const d of seen) hits.set(d,(hits.get(d)||0)+1);
     }
-    const routeTree=/^(src\/)?(app|pages|routes)(\/|$)/;   // route-local _components folders are not the layer
+    const routeTree=/^(src\/)?(app|pages|routes|views|screens)(\/|$)/;   // route-local _components folders are not the layer
     const nComp=d=>new Set(comps.filter(l=>path.dirname(l.split("\t")[0])===d).map(l=>l.split("\t")[1])).size;
     for (const [d,n] of hits) if (n>=3 && !routeTree.test(d)) {
       console.log(d+"\timported by "+n+" routes");
       // Harden needs a layer worth hardening: 5 or more components that 3 or more routes import.
       if (nComp(d)>=5) fs.appendFileSync(process.argv[3],d+"\t"+nComp(d)+" components, imported by "+n+" routes\n");
     }
-  ' "$OUT/routes.txt" "$OUT/components.tsv" "$OUT/harden-dirs.tsv" >> "$OUT/layer-dirs.tsv" 2>/dev/null
+  ' "$OUT/route-files.txt" "$OUT/components.tsv" "$OUT/harden-dirs.tsv" >> "$OUT/layer-dirs.tsv" 2>/dev/null
 fi
 LAYER=$(cut -f1 "$OUT/layer-dirs.tsv" | sort -u)
 [ -n "$UI_DIR" ] && [ "$UI_DIR" != unknown ] && LAYER=$(printf '%s\n%s\n' "$LAYER" "$UI_DIR" | sed '/^$/d' | sort -u)
+# The layer is a folder of shared components, never the source root. A folder that holds a route
+# file (src above src/pages) is dropped, with its reason in layer-dirs.tsv.
+LAYER=$(printf '%s\n' "$LAYER" | while read -r d; do
+  [ -z "$d" ] && continue
+  if [ "$d" = . ] || awk -v d="$d/" 'index($0,d)==1{f=1} END{exit !f}' "$OUT/route-files.txt"; then
+    printf '%s\tdropped: holds route files\n' "$d" >> "$OUT/layer-dirs.tsv"; continue; fi
+  echo "$d"; done)
+awk -F'\t' 'NR==FNR{k[$0]=1;next} ($1 in k)' <(printf '%s\n' "$LAYER") "$OUT/harden-dirs.tsv" > "$OUT/.hd" && mv "$OUT/.hd" "$OUT/harden-dirs.tsv"
 # A stray is a layer folder, not itself a harden dir or the shadcn ui folder, holding a family the
 # harden dir already has (components/custom/Button beside components/ui/button). It is a duplicate,
 # not the layer, so it leaves the layer and its raw values count as product code.
@@ -265,12 +425,40 @@ else put ui_raw_lines 0; fi
 # Renamed or team-added files in the ui folder count like product code.
 STOCK='accordion|alert-dialog|alert|aspect-ratio|attachment|avatar|badge|breadcrumb|bubble|button-group|button|calendar|card|carousel|chart|checkbox|collapsible|combobox|command|context-menu|dialog|direction|drawer|dropdown-menu|empty|field|form|hover-card|input-group|input-otp|input|item|kbd|label|marker|menubar|message-scroller|message|native-select|navigation-menu|pagination|popover|progress|questionnaire|radio-group|resizable|scroll-area|select|separator|sheet|sidebar|skeleton|slider|sonner|spinner|switch|table|tabs|textarea|toast|toaster|toggle-group|toggle|tooltip'
 if [ "$shadcn" = yes ] && [ -n "$UI_DIR" ]; then
-  awk -F'\t' -v ui="$UI_DIR/" -v stock="^($STOCK)\\.(t|j)sx$" '{ f=$1; sub(/^.*\//,"",f); print ((index($1,ui)==1 && f ~ stock) ? "stock" : "own") "\t" $2 }' "$OUT/components.tsv" > "$OUT/components-layer.tsv"
+  awk -F'\t' -v ui="$UI_DIR/" -v stock="^($STOCK)\\.(t|j)sx$" '{ f=$1; sub(/^.*\//,"",f); print ((index($1,ui)==1 && f ~ stock) ? "stock" : "own") "\t" $2 "\t" $1 }' "$OUT/components.tsv" > "$OUT/components-layer.tsv"
 else
-  awk -F'\t' '{print "own\t" $2}' "$OUT/components.tsv" > "$OUT/components-layer.tsv"
+  awk -F'\t' '{print "own\t" $2 "\t" $1}' "$OUT/components.tsv" > "$OUT/components-layer.tsv"
+fi
+# Families count canonical components. A definition that only stands in for another member of its
+# family is a wrapper, not a member: it renders an imported member (PrimaryButton returning
+# <Button>), is an alias (const PrimaryButton = Button), or is marked @deprecated. So a run that
+# merges a copy into the canonical component lowers the count. wrappers.tsv gives each reason.
+: > "$OUT/wrappers.tsv"
+command -v node >/dev/null && node -e '
+  const fs=require("fs");
+  const [comps,famS,out]=process.argv.slice(1);
+  const fams=famS.split(";").map(f=>new RegExp("("+f+")$"));
+  const defs=fs.readFileSync(comps,"utf8").split("\n").filter(Boolean).map(l=>l.split("\t"));
+  const rows=[],names=new Set(defs.map(d=>d[1]));   // only members defined in the repo, never a library import
+  for(const [f,name] of defs){const fi=fams.findIndex(r=>r.test(name));if(fi<0)continue;
+    let s;try{s=fs.readFileSync(f,"utf8")}catch{continue}
+    const at=s.search(new RegExp("(function|const|class)\\s+"+name+"\\b"));
+    const before=at<0?"":s.slice(Math.max(0,at-300),at);
+    let why="";
+    const doc=before.match(/\/\*\*((?:(?!\*\/)[\s\S])*)\*\/\s*(?:export\s+)?(?:default\s+)?$/);
+    const alias=s.match(new RegExp("(?:const|let)\\s+"+name+"\\s*=\\s*([A-Z]\\w*)\\s*;?\\s*$","m"));
+    if(doc&&/@deprecated/.test(doc[1]))why="deprecated";
+    else if(alias&&alias[1]!==name&&names.has(alias[1])&&fams[fi].test(alias[1]))why="alias of "+alias[1];
+    if(!why){const imported=new Set();for(const m of s.matchAll(/import\s+([^;]*?)\s+from/g))for(const n of m[1].matchAll(/\b([A-Z]\w*)\b/g))imported.add(n[1]);
+      for(const o of imported)if(o!==name&&names.has(o)&&fams[fi].test(o)&&new RegExp("<"+o+"[\\s/>]").test(s)){why="renders "+o;break}}
+    if(why)rows.push(f+"\t"+name+"\t"+why)}
+  fs.writeFileSync(out,rows.length?rows.join("\n")+"\n":"");
+' "$OUT/components.tsv" "$(IFS=';'; echo "${FAMS[*]}")" "$OUT/wrappers.tsv" 2>/dev/null
+if [ -s "$OUT/wrappers.tsv" ]; then
+  awk -F'\t' 'NR==FNR{w[$1 "\t" $2]=1;next} $1=="own" && (($3 "\t" $2) in w){$1="wrap"} {print $1 "\t" $2 "\t" $3}' "$OUT/wrappers.tsv" "$OUT/components-layer.tsv" > "$OUT/.cl" && mv "$OUT/.cl" "$OUT/components-layer.tsv"
 fi
 put stock_ui_defs "$(rg -c '^stock' "$OUT/components-layer.tsv" 2>/dev/null || echo 0)"
-pdefs=$(rg -c '^own' "$OUT/components-layer.tsv" 2>/dev/null || echo 0)
+pdefs=$(rg -c '^(own|wrap)' "$OUT/components-layer.tsv" 2>/dev/null || echo 0)
 put product_component_defs "$pdefs"
 [ "$foundation" = raw ] && [ "$routes" -le 1 ] && [ "$pdefs" -le 2 ] && foundation="none (default: shadcn)"
 put foundation "$foundation"
@@ -317,10 +505,11 @@ IFS=';' read -r -a RAWN <<< "${RAW:-}"
 i=0
 for fam in "${FAMS[@]}"; do
   o=$(awk -F'\t' '$1=="own"{print $2}' "$OUT/components-layer.tsv" | rg -c "($fam)\$" 2>/dev/null || true)
+  w=$(awk -F'\t' '$1=="wrap"{print $2}' "$OUT/components-layer.tsv" | rg -c "($fam)\$" 2>/dev/null || true)
   st=$(awk -F'\t' '$1=="stock"{print $2}' "$OUT/components-layer.tsv" | rg -c "($fam)\$" 2>/dev/null || true)
   r=${RAWN[$i]:-0}; i=$((i + 1))
   n=$(( ${o:-0} + ( ${st:-0} > 0 ? 1 : 0 ) + r ))
-  echo "$fam	$n	own ${o:-0}, stock ${st:-0}, raw copies $r" >> "$OUT/families.tsv"
+  echo "$fam	$n	own ${o:-0}, stock ${st:-0}, raw copies $r, wrappers ${w:-0} (not counted)" >> "$OUT/families.tsv"
 done
 put raw_family_copies "$(wc -l < "$OUT/raw-families.tsv" | tr -d ' ')"
 put families_with_2plus "$(awk -F'\t' '$2>1' "$OUT/families.tsv" | wc -l | tr -d ' ')"
@@ -340,7 +529,7 @@ done
 put registry_json "$reg"
 put system_docs_routes "$(rg --files -g '**/app/system/**' -g '**/app/design-system/**' -g '**/pages/system/**' "${EXCL[@]}" 2>/dev/null | wc -l | tr -d ' ')"
 # Specs only: twins, fixtures and examples repeat a spec and would count it twice.
-put component_specs "$(rg -l -g '*.md' "${EXCL[@]}" -g '!**/fixtures/**' -g '!**/__fixtures__/**' -g '!**/*.examples/**' -g '!**/public/**' -g '!**/static/**' -g '!**/checks/**' -g '!**/spec-template.md' -g '!**/*template*.md' -e '^### State precedence' 2>/dev/null | wc -l | tr -d ' ')"
+put component_specs "$(rg -l -g '*.md' "${SPECX[@]}" -g '!**/fixtures/**' -g '!**/__fixtures__/**' -g '!**/*.examples/**' -g '!**/public/**' -g '!**/static/**' -g '!**/checks/**' -g '!**/spec-template.md' -g '!**/*template*.md' -e '^### State precedence' 2>/dev/null | wc -l | tr -d ' ')"
 
 # Earlier runs
 put build_record "$( [ -f .design-system/run.md ] && echo .design-system/run.md || echo none )"

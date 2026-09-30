@@ -1,0 +1,2 @@
+.card { transition: transform 200ms ease-out, opacity 200ms ease-out; }
+.row { transition-property: opacity; }

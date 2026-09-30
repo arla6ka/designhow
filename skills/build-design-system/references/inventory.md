@@ -146,7 +146,7 @@ rg -n --no-heading -o "\b(transition|animation)[A-Za-z]*\s*:\s*[^;,}]+|\b(durati
   --glob '*.{tsx,jsx,ts,js,mjs,html,vue,svelte}' app components src
 ```
 
-A hit from the first motion command can carry one leading character; trim it. `delay` and `duration` keys also match options that are not motion, so look at each hit. Motion rows go in `values.tsv` with category `duration`, `easing` or `animated-properties`. Mark each `transition: all` row with `trap/motion-layout-property`. `animated-properties` rows are inventory only, and `token-mapping` skips them.
+A hit from the first motion command can carry one leading character; trim it. `delay` and `duration` keys also match options that are not motion, so look at each hit. Motion rows go in `values.tsv` with category `duration`, `easing` or `animated-properties`. Mark each `transition: all` or `transition-all` row with `trap/motion-transition-all`. `animated-properties` rows are inventory only, and `token-mapping` skips them.
 
 Normalize before counting, with the rules in `token-mapping`'s rules file: lengths to px on the project's root size, colors to sRGB hex with alpha. `#FFF`, `#ffffff` and `rgb(255 255 255)` are one value.
 
@@ -171,7 +171,15 @@ Every user-facing string, by slot, comes from `scripts/copy-check.mjs --extract`
 
 ## Baseline screenshots
 
-Before any edit, capture every route with one `capture.mjs --kind before` command (`browser.md`, Capture every route in one command). Mark routes that failed to load or need auth as unverified in `routes.tsv`.
+Before any edit, list every surface in `.design-system/review/surfaces.tsv` and capture them with one `capture.mjs --kind before` command (`browser.md`, Capture every route in one command). Mark routes that failed to load or need auth as unverified in `routes.tsv`.
+
+`surfaces.tsv` columns: `surface`, `route`, `states` (comma separated) and `tier`, how often a person meets the surface in a session. Assign the tier from the code, first match wins:
+
+- `high`: the shared shell and nav, list and index routes whose rows a person opens, menus, and any surface that holds the product's primary action
+- `low`: settings, onboarding, and routes that only render an empty or error state
+- `mid`: everything else
+
+The tier ranks surfaces for landing and review, sets how much announce motion a surface gets (`token-architecture.md`), and breaks ties in the pilot choice toward a `high` flow.
 
 ## Delete plan
 

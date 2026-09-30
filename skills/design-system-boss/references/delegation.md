@@ -29,11 +29,11 @@ Find out before the first brief, and write the answers in the state file.
 - **Nesting.** Can that agent start agents of its own? Some hosts allow it and some do not. When unsure, assume not.
 - **Isolation.** Can each agent get its own branch or worktree? Writing workers need it.
 - **Browser.** Can an agent open the running app and take screenshots? The build pilot, baselines and every design review depend on it. Probe with one open and one screenshot of the dev server through a browser tool, per `build-design-system/references/browser.md`, and record which tool answered.
-- **Headroom.** Free memory and swap, from the OS's own tool (`vm_stat` and `sysctl vm.swapusage` on macOS, `free -m` on Linux). It sizes the window (Machine budget, below).
+- **Headroom.** Memory pressure, from `memory_pressure -Q` on macOS or `free -m` on Linux. It sizes the window (Machine budget, below).
 
 ## Machine budget
 
-The window by worker kind, the swap limits, the service stops and the command locks are in `build-design-system/references/coordinator-path.md` (Machine budget). It is the ceiling for every sibling, the migration's rolling window included. The boss records the reading and the window as a decision row in `state.md` and rechecks before each new wave. When the person names a model for workers, use it and record it. Otherwise pick by role, per `build-design-system/references/worker-brief.md`: the cheapest model that can read the whole scope for read-only surveys, the strongest for code, rules and the second review.
+The window by worker kind, the memory rule, the service stops and the command locks are in `build-design-system/references/coordinator-path.md` (Machine budget). It is the ceiling for every sibling, the migration's rolling window included. The boss records the reading and the window as a decision row in `state.md` and rechecks before each new wave. When the person names a model for workers, use it and record it. Otherwise pick by role, per `build-design-system/references/worker-brief.md`: the cheapest model that can read the whole scope for read-only surveys, the strongest for code, rules and the second review.
 
 ## Three ways to run a step
 
@@ -47,9 +47,9 @@ The window by worker kind, the swap limits, the service stops and the command lo
 
 Some hosts give the coordinator file tools and subagents but no shell. Then every shell step goes to a worker: `triage.sh` before and after, `git status` saves, the dev server, check reruns, the clean-clone check and pixel diffs. Each brief names the exact command and asks for its full output and exit code. The coordinator saves that output under `triage/` or `returns/` and judges it as its own. A worker that owns the dev server keeps it up until the last browser step returns. Record "no shell: shell steps delegated" as a decision row. With no shell and no subagents, the run stops at triage and says which commands to run.
 
-Read-only work fans out on any host with subagents: a triage scout per app, a `ui-review` per flow, a `component-docs` per component. Writing steps follow `SKILL.md` (Run the steps), and disjoint means file lists that share no path, checked as in "Without worktrees" below.
+Read-only work fans out on any host with subagents: a triage scout per app, a `ui-review` per flow, a `component-docs` per component. Writing steps follow `SKILL.md` (step 6 and Clear the migration), and disjoint means file lists that share no path, checked as in "Without worktrees" below.
 
-Live workers at handback follow standing order 16 in `build-design-system/references/run-record.md`. If the host cannot wait on background agents, or they die with the parent, run the steps in sequence. If the host forces a handback anyway, write the Running workers section in `state.md` first (`state.md`, Live workers).
+Workers run in the foreground whenever the coordinator is itself a subagent (`coordinator-path.md`, top). If the host forces a handback anyway, write the Running workers section in `state.md` first (`state.md`, Live workers).
 
 ## The dev server
 
@@ -119,7 +119,7 @@ Open a step's files only after its final message returns, since a live worker ma
 |---|---|
 | `build-design-system` | Its Handoff section exists. Rerun the check command it names on a clean clone, after the repo's own typecheck prerequisites, and see it exit 0, with any allowlist committed. The check reads nothing from `.design-system/` or a skill folder. Rerun the spec check from the repo's `scripts/`. Walk the "Done, page by page" table in `system-structure.md`. Every trap in the pilot's files is fixed with before and after numbers, or gated with its measurement. Every ui-review finding on the pilot that existing tokens and components can fix is fixed, and the rest are gated. A red check is `failed` |
 | `migrate-design-system`, audit | `plan.md` exists and its counts match `inventory/counts.txt`. Its pin is the token commit or later. `scripts/migration-inventory.mjs --help` exits 2 and changes no file. No path in `legacy.txt` is a `registry.json` entry or a kept product composition. Before the first edit brief, and again at close, its gates agree with the build's, or it was re-pinned |
-| `migrate-design-system`, edit | Rerun its inventory `--check` on the final commit. Read `.migration/<run>/queue.tsv` for rows not `landed` |
+| `migrate-design-system`, edit | Rerun its inventory `--check` on the final commit. Read `.migration/<run>/queue.tsv` for rows not `done` |
 | `token-mapping`, `ui-review`, `component-docs` | The status line is present and its counts match the report body |
 
 Verdicts use the worker statuses in `build-design-system/references/run-record.md` (Terms): `done`, `partial` (each gap named), `blocked` (the sibling's stop condition quoted, a `Status: stopped: <condition>` line included) and `failed` (the check that failed, with its output). A verdict with no evidence path does not go in the state file.
@@ -128,7 +128,7 @@ Verdicts use the worker statuses in `build-design-system/references/run-record.m
 
 - A step that failed a check gets one retry, with the failing output pasted into its brief. A second failure stops the route at that step.
 - Worker retries inside a step, and the stop on one cause failing two units, follow `build-design-system/references/coordinator-path.md` (Dev server and retries). In a seat the boss holds, a unit that fails its retry splits or becomes a gate, never boss-written code.
-- Judge a quiet step by what it left: commits on its branch, its record file, its return. Past its budget with nothing new, mark it `blocked: no return` and move on to close.
+- Judge a quiet step by what it left: commits on its branch, its record file, its return. Past its budget with nothing new, mark it `blocked (no return)` and move on to close.
 - The boss messages a running step or worker for two reasons only. An amendment carries a changed decision or the person's words, pasted. A STOP names which of the worker's own edits to revert. Never ask how it is going.
 - A step agent that hands back while its own workers still run is not done. Copy each live worker its report names into the Running workers section of `state.md`, with its brief path, and wait for each one. If one seems gone, list the live agents first, then rerun its brief as a fresh spawn. Verify the step only once none is live.
 - Record a sibling's stop as its verdict and run only steps that don't need its output.

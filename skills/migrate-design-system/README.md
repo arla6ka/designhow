@@ -18,7 +18,7 @@ This skill ships no scripts. The agent writes `scripts/migration-inventory.mjs` 
 
 ## Use as-is
 
-Ask for a migration and give a budget, or let the session be the budget. A loose request is fine. The run works on its own branch, `ds/<yyyy-mm-dd>-migrate`, and merging it into yours is always your call. The coordinator looks for the system itself (a `build-design-system` handoff, `registry.json`, a token source or a UI package) and writes what it found, plus every other default, into `frame.md` for you to check. For a first try, ask for audit mode, read `plan.md`, then start the real run from it.
+Ask for a migration by name ("migrate every screen onto our system") and give a budget, or let the session be the budget. Any other ask, such as "clean the app up", runs audit mode, which ends at `plan.md` and a ranked list of what it found, and offers the migration with its size. The run works on its own branch, `ds/<yyyy-mm-dd>-migrate`, and merging it into yours is always your call. The coordinator looks for the system itself (a `build-design-system` handoff, `registry.json`, a token source or a UI package) and writes what it found, plus every other default, into `frame.md` for you to check. For a first try, ask for audit mode, read `plan.md`, then start the real run from it.
 
 The model can invoke it so a router or `build-design-system`'s handoff can start it, and no editing worker starts before `frame.md` states a budget. To start it only by hand, add `disable-model-invocation: true` to the frontmatter.
 
@@ -34,6 +34,7 @@ The model can invoke it so a router or `build-design-system`'s handoff can start
 
 Each prevents a failure that shows up at scale. Change one only when its stated reason doesn't apply to you.
 
+- Full mode only on an ask that names it. A migration nobody asked for moves every screen at once and leaves a diff too large to review.
 - One coordinator rule, stated once under Boundaries in `SKILL.md`. It exists because while the coordinator fixes code, no worker return gets processed and free slots stay empty.
 - Inventory by script. A search the model runs by hand gives a different count each time, so "done" means nothing.
 - Block new legacy usage before migrating. Otherwise feature work adds it back as fast as workers remove it.

@@ -1,0 +1,3 @@
+export function Card() {
+  return <div className="[-webkit-tap-highlight-color:transparent]" style={{ WebkitTapHighlightColor: "transparent" }} />;
+}

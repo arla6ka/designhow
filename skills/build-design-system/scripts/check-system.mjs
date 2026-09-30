@@ -3,10 +3,14 @@
 // Reads whole JSX tags, not lines, so a multi-line <div onClick> is still one tag.
 // Run `node scripts/check-system.mjs --help` for usage.
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { appendFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
-import { execFileSync, execSync } from "node:child_process";
+import { execFileSync, execSync, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+// oklch.mjs beside this script names the nearest color token. Without it, raw-value findings name no color token.
+let oklch = null;
+try { oklch = await import(new URL("./oklch.mjs", import.meta.url).href); } catch {}
 
 const HELP = `check-system.mjs: design system check (starter)
 
@@ -28,7 +32,8 @@ Options
   --fixtures <dir>     the fixture folder for the self-test
   --no-self-test       skip the fixtures. With no fixture folder beside the script,
                        the default run skips them anyway
-  --files <f>...       check only these files, with no allowlist (use on the pilot)
+  --files <f>...       check only these files. The allowlist still applies
+  --no-allowlist       ignore the allowlist, so every finding fails. Shows all a file holds
   --init               write a starter config guessed from the repo. Refuses to overwrite
   --init-allowlist     write the allowlist from today's findings. Refuses to overwrite
   --shrink-allowlist   lower allowlist counts to what is found now. Never raises one
@@ -58,6 +63,17 @@ Options
                        GITHUB_ACTIONS is set, else "file:line warning ...". Skips
                        the self-test. The blocking check stays a separate run
   --format <f>         github or plain, overriding the guess --warn makes
+  --summary <file>     also append every finding and warning to <file> as a Markdown
+                       table. Pass $GITHUB_STEP_SUMMARY, so nothing is lost past
+                       the annotation cap
+  --ratchet [<file>]   count findings per rule over the whole repo and compare with
+                       <file> (JSON, rule id to count; default
+                       scripts/check-ratchet.json). Fails only when a count
+                       rises. Writes the file when it is missing. With --warn, a
+                       rise is a warning and the exit is 0
+  --ratchet-update     with --ratchet, lower the file's counts to what is found now
+                       once a count falls. Never raises one
+  --explain <rule-id>  print the rule, why it matters and the fix
   --list-rules         print rule id and rule, tab separated
   --list-blind-spots   print what the check cannot see, one line each
   --json               print findings as JSON
@@ -97,6 +113,14 @@ Config keys (all optional, JSON)
                  string or {"name","why"}. A hit in a banDocs page is a
                  rule/outside-name warning, which never fails the check
 
+Allowlist: {"<file>": {"<rule>": {"<literal>": <count>}}}. A count may instead be
+{"count": <n>, "removeBy": "YYYY-MM-DD"}. Once the date has passed, every run prints
+a warning for that row. It never fails the check.
+
+Raw-value, arbitrary-value and px findings name the nearest token: color tokens for
+the property's job (text, background, border) by deltaE OK, lengths by kind
+(space, radius, type, size) by distance in px.
+
 Fixture files end in .fixture (button.tsx.fixture), so tsc, lint and the
 framework never compile them. The self-test reads them under their inner name.
 A repo keeps only fixtures for rules the run added, in scripts/fixtures/check-system/.`;
@@ -124,7 +148,49 @@ const RULES = {
   "rule/unregistered-ui": ["A file in the ui folder with no registry entry and no drift-list row", "register it, or move it out of the ui folder"],
   "rule/deprecated-import": ["An import of a component the registry says was replaced", "import the canonical component"],
   "rule/outside-name": ["An outside product name from the config's names list in a shipped docs page. A warning, never a failure", "describe the pattern in this app's own words"],
+  "trap/motion-transition-all": ["transition: all, transition-property: all or the transition-all utility, in CSS, a class list or an inline style", "name the properties that move, usually transform and opacity, through a motion preset"],
+  "trap/motion-ease-in-enter": ["An entrance eased in: ease-in (or an ease-in cubic-bezier) beside an enter keyframe, an enter class such as animate-in, or an open-state selector. Also a motion component whose initial and animate props run with ease easeIn", "ease entrances out: the enter preset"],
+  "trap/motion-overshoot": ["A cubic-bezier() whose second or fourth value is outside 0 to 1, so the motion overshoots and springs back", "a preset whose curve stays inside 0 to 1, unless the motion follows the hand"],
+  "trap/hover-unguarded": ["A CSS :hover rule outside @media (hover: hover) that changes display or visibility, or reveals a child, sibling or ::before/::after through opacity. On touch, a tap shows it and leaves it stuck", "wrap the rule in @media (hover: hover), and give the content another way to show on touch"],
+  "trap/zoom-disabled": ["user-scalable=no, user-scalable=0 or maximum-scale=1 in the viewport meta, or userScalable: false or maximumScale: 1 in a viewport export", "remove it. Fix input zoom with a 16px input text size"],
+  "trap/viewport-height": ["100vh or h-screen (height or max-height) on a shell or sheet, with no dvh or svh value beside it. min-height passes", "use dvh, or svh when the height must not change while scrolling"],
+  "trap/touch-autofocus": ["autoFocus or autofocus on a field in a page, outside any dialog, sheet, popover or command menu. A conditional value such as autoFocus={!isTouch} passes", "drop it, or set it only where typing is the one thing to do and the device has a keyboard"],
+  "trap/touch-tap-highlight": ["-webkit-tap-highlight-color: transparent in CSS, a class or an inline style, in a repo with no pressed style: no :active rule, no active: class and no data-pressed style", "give every control a pressed state that shows from pointer-down, or keep the system highlight"],
 };
+// Why each rule matters, for --explain.
+const WHY = {
+  "rule/raw-value": "A literal color skips the theme, so it breaks in dark mode and drifts from its token when the token changes.",
+  "rule/named-color": "A named color is a raw value with a friendlier name. It ignores the theme the same way.",
+  "rule/arbitrary-value": "An arbitrary value makes a one-off step the scale never agreed on, and the next screen copies it.",
+  "rule/palette-use": "A palette step names a hue, not a job, so a theme or brand change cannot reach it.",
+  "rule/doubled-utility": "A token role that repeats its utility's property word reads twice in every class and invites near-duplicate roles.",
+  "rule/inline-px": "An inline length skips the scale and the responsive rules the stylesheet holds.",
+  "rule/css-px": "A literal length in CSS skips the spacing, radius and type scale, so screens drift apart one pixel at a time.",
+  "rule/token-parity": "A token read and never defined falls back to nothing. A color with no dark value shows the light value in dark mode.",
+  "trap/native-control": "A native control beside the system's own looks and behaves differently, and misses the fixes the component carries.",
+  "trap/button-div": "A div with a click handler takes no keyboard focus, no Enter or Space, and no button role, so keyboard and screen reader users cannot use it.",
+  "trap/role-button": "role=button promises the keyboard behavior of a button, which a div does not have unless every key is wired by hand.",
+  "trap/link-as-button": "A link dressed as a button copies the button's look and drifts from it, and people expect a button to act, not navigate.",
+  "trap/button-clone": "A copy of the Button's classes drifts from the Button and misses its states and fixes.",
+  "trap/link-wraps-button": "Two nested interactive elements give two tab stops and two roles for one action, and the HTML is invalid.",
+  "trap/label-unbound": "A label tied to nothing focuses nothing on click, and the field has no accessible name.",
+  "trap/overlay-conditional-render": "Unmounting an overlay cuts its exit animation and breaks focus return and state.",
+  "trap/loading-label-swap": "A label that changes while pending shifts the button's width and gives it a new accessible name mid-action.",
+  "rule/component-override": "A visual override at the call site forks the component, so the next change to it misses this screen.",
+  "rule/stock-edit": "An unreviewed edit to a stock file is lost or fought at the next upgrade.",
+  "rule/unregistered-ui": "A file in the ui folder that nothing registers is a component nobody documents or checks.",
+  "rule/deprecated-import": "An import of a replaced component keeps the old look and behavior alive.",
+  "rule/outside-name": "Another product's name in the docs reads as a dependency or an endorsement the app does not have.",
+  "trap/motion-transition-all": "Every property that changes animates, layout included, so unrelated changes lag and the motion stutters.",
+  "trap/motion-ease-in-enter": "Ease-in starts slow, so an entrance feels late exactly when the person is waiting for it.",
+  "trap/motion-overshoot": "An overshooting curve bounces past its target, which reads as playful and slows the settle.",
+  "trap/hover-unguarded": "Touch screens fire hover on tap, so hover-only content flashes or sticks until the next tap elsewhere.",
+  "trap/zoom-disabled": "People with low vision need pinch zoom. WCAG 1.4.4 asks that text resize to 200%.",
+  "trap/viewport-height": "100vh is the large viewport on phones, so the bottom of a full-height shell sits under the browser bar.",
+  "trap/touch-autofocus": "On a phone, autofocus opens the keyboard over the screen before the person asked to type.",
+  "trap/touch-tap-highlight": "With the tap highlight gone and no pressed style, a tap gives no feedback until the action lands.",
+};
+const whyFor = (rule) => WHY[rule] || "";
 // The fix a finding prints. A ban's id is the person's, so it has no RULES row.
 const fixFor = (rule) => RULES[rule]?.[1] || (rule.startsWith("rule/ban-") ? "remove it, since the person banned it" : "see the rules page");
 
@@ -139,6 +205,8 @@ const BLIND = [
   "Files outside the include folders, and ui files missing from the drift list (they are scanned, but no hash guards them)",
   "Whether a token's role comment still matches how the token is used",
   "Rules the generated rules page marks review, or enforces only through their own Check: clause",
+  "Motion that is only measured: exit slower than enter, frequent-surface motion, linear easing, press delay, input lag and jank. Easing set in script or through a variable, and hover reveals written as Tailwind classes (v4 guards hover: itself, v3 does not)",
+  "Whether a pressed style covers the control whose tap highlight was removed: any pressed style in the repo passes trap/touch-tap-highlight",
 ];
 const NAMED = "aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue blueviolet brown burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson cyan darkblue darkcyan darkgoldenrod darkgray darkgreen darkgrey darkkhaki darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue dimgray dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite gold goldenrod gray green greenyellow grey honeydew hotpink indianred indigo ivory khaki lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon lightseagreen lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime limegreen linen magenta maroon mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue mediumspringgreen mediumturquoise mediumvioletred midnightblue mintcream mistyrose moccasin navajowhite navy oldlace olive olivedrab orange orangered orchid palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell sienna silver skyblue slateblue slategray slategrey snow springgreen steelblue tan teal thistle tomato turquoise violet wheat white whitesmoke yellow yellowgreen".split(" ");
 const NAMED_RE = new RegExp(`(?<![\\w-])(${NAMED.join("|")})(?![\\w-])`, "i");
@@ -147,6 +215,7 @@ const INTERACTIVE = new Set(["button", "input", "select", "textarea", "option", 
 const CODE_EXT = /\.(tsx|jsx|ts|js|mjs|cjs|vue|svelte|astro)$/;
 const JSX_EXT = /\.(tsx|jsx)$/;
 const CSS_EXT = /\.(css|scss|sass|less|pcss)$/;
+const HTML_EXT = /\.html?$/;
 const DEFAULTS = {
   include: ["app", "src", "components", "lib", "pages"],
   exclude: ["node_modules", ".next", ".git", "dist", "build", "out", "coverage", ".design-system", ".migration", ".ui-review", "public", "scripts", ".agents", ".claude", ".cursor", ".codex", "__fixtures__"],
@@ -454,6 +523,172 @@ function tsAliases(root) {
   return { "@/": "" };
 }
 
+// ---------- motion, touch and viewport traps ----------
+const CUBIC = /cubic-bezier\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)/g;
+// ease-in, or a cubic-bezier that starts slow and ends straight (ease-in-out ends eased, so it passes).
+const easeIn = (v) => /(?<![\w-])ease-in(?![\w-])/.test(v) || [...String(v).matchAll(CUBIC)].some((m) => +m[1] >= 0.3 && +m[2] <= 0.1 && +m[3] >= 0.8 && +m[4] >= 0.8);
+const ENTER_NAME = /(?:^|[-_])(?:in|enter|entering|appear|show|open|reveal)(?:$|[-_])|(?:fade|slide|zoom|scale|pop|grow|drop|rise|blur)-?in(?![a-z])|enter|appear|reveal/i;
+const ENTER_SEL = /\[data-(?:state|status)\s*=\s*["']?(?:open|entering|entered|visible|shown)\b|\[data-(?:enter|entering|entered|open|starting-style|show|visible)\b|[-_](?:enter|appear)(?:-(?:active|to|done))?\b|\.(?:enter|entering|appear|is-open|is-visible|open|show)\b|:popover-open|\[open\]/;
+const TIMING_WORD = /^(?:ease(?:-in|-out|-in-out)?|linear|step-start|step-end|infinite|alternate(?:-reverse)?|reverse|normal|forwards|backwards|both|none|running|paused|initial|inherit|[-\d.(]|cubic-bezier|steps|linear\().*$|^[\d.]+\)?$/;
+const animNames = (v) => String(v).split(/[\s,]+/).filter((n) => n && !TIMING_WORD.test(n));
+const ENTER_CLASS = /^(?:animate-in|fade-in(?:-\d+)?|zoom-in(?:-\d+)?|spin-in(?:-\d+)?|slide-in-from-[\w-]+|animate-[\w-]*?(?:-in|enter|appear)(?:-[\w-]*)?)$/;
+const OPEN_VARIANT = /(?:^|:)(?:data-\[state=open\]|data-open|open|group-data-\[state=open\]|starting|data-\[entering\]|data-entering|data-\[starting-style\]|data-starting-style):/;
+const NO_TAP = /^(?:transparent|rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\)|#0000(?:0000)?|hsla?\([^)]*[,/]\s*0\s*\))$/i;
+const OVERLAY_FILE = /(?:dialog|modal|sheet|drawer|popover|command|palette|lightbox|overlay)[^/]*$/i;
+const vh100 = (v) => /(?<![\d.])100vh\b/.test(v);
+const overshoot = (m) => [+m[2], +m[4]].some((y) => y < 0 || y > 1);
+const utilOf = (tok) => tok.replace(/^(?:[^:\s]*?\[[^\]]*\][^:\s]*:|[a-z0-9@/-]+:)+/, "").replace(/^!/, "");
+
+// Zoom and autofocus in markup: HTML pages, and templates in .vue, .svelte and .astro files.
+function markupTraps(cfg, rel, code, inStr, hit, autofocus = true) {
+  for (const m of code.matchAll(/user-scalable\s*=\s*(?:no|0)\b|maximum-scale\s*=\s*1(?:\.0*)?(?![\d.])/gi)) if (inStr(m.index)) hit(m.index, "trap/zoom-disabled", m[0]);
+  if (!autofocus || OVERLAY_FILE.test(rel)) return;
+  for (const m of code.matchAll(/<(input|textarea|select)\b[^>]*?\sautofocus\b/gi)) if (!/<dialog\b[^>]*>(?![\s\S]*<\/dialog>)/i.test(code.slice(0, m.index)) && !/type\s*=\s*["']?(?:checkbox|radio|button|submit|reset|hidden|range|color|file)\b/i.test(m[0])) hit(m.index, "trap/touch-autofocus", `<${m[1]} autofocus>`);
+}
+
+// The CSS side: transition all, overshoot, eased-in entrances, unguarded hover reveals, 100vh and the tap highlight.
+function cssMotionTraps(cfg, code, hit) {
+  const blocks = cssBlocks(code);
+  const enterKf = new Set();
+  for (const b of blocks) {
+    const kf = b.chain.map((p) => /^@(?:-webkit-)?keyframes\s+([\w-]+)/.exec(p)).find(Boolean);
+    if (!kf) continue;
+    if (ENTER_NAME.test(kf[1])) enterKf.add(kf[1]);
+    if (/^(?:from|0%)$/.test(b.prelude) && b.decls.some((d) => (d.prop === "opacity" && /^0(?:\.0*)?$/.test(d.value)) || (d.prop === "transform" && /scale\(0?\.\d|translate/.test(d.value)))) enterKf.add(kf[1]);
+  }
+  const enterName = (n) => enterKf.has(n) || ENTER_NAME.test(n);
+  for (const b of blocks) {
+    if (b.chain.some((p) => /^@(?:-webkit-)?keyframes/.test(p))) continue;
+    const decl = (re) => b.decls.filter((d) => re.test(d.prop));
+    for (const d of decl(/^transition(?:-property)?$/)) if (/(?:^|,)\s*all\b/.test(d.value)) hit(d.pos, "trap/motion-transition-all", `${d.prop}: ${d.value}`);
+    // An entrance eased in: an enter animation with ease-in, or a transition with ease-in in an open or enter state.
+    const anim = decl(/^animation$/), names = decl(/^animation-name$/).map((d) => d.value), timing = decl(/^animation-timing-function$/).map((d) => d.value).join(" ");
+    for (const d of anim) { const ns = animNames(d.value); if (ns.some(enterName) && (easeIn(d.value) || easeIn(timing))) hit(d.pos, "trap/motion-ease-in-enter", `animation: ${d.value}`); }
+    if (!anim.length && names.some((v) => animNames(v).some(enterName)) && easeIn(timing)) hit(b.pos, "trap/motion-ease-in-enter", `animation-name: ${names.join(", ")}; animation-timing-function: ${timing}`);
+    if (ENTER_SEL.test(b.prelude) || b.chain.some((p) => /^@starting-style/.test(p))) for (const d of decl(/^transition(?:-timing-function)?$/)) if (easeIn(d.value)) hit(d.pos, "trap/motion-ease-in-enter", `${b.prelude} { ${d.prop}: ${d.value} }`);
+    // Hover that reveals or hides, outside a hover media query.
+    if (/:hover\b/.test(b.prelude) && !b.chain.some((p) => /^@media[^{]*\((?:any-)?hover\s*:\s*(?:hover|none)\s*\)|^@media[^{]*\((?:any-)?pointer\s*:\s*fine\s*\)/.test(p))) {
+      const reveal = b.prelude.split(",").some((sel) => { const i = sel.indexOf(":hover"); return i >= 0 && /^(?::[\w-]+(?:\([^)]*\))?)*(?:\s+|\s*[>+~]\s*|::?(?:before|after))\S?/.test(sel.slice(i + 6)) && sel.slice(i + 6).trim() !== ""; });
+      const d = b.decls.find((x) => /^(?:display|visibility)$/.test(x.prop) || (reveal && x.prop === "opacity"));
+      if (d) hit(d.pos, "trap/hover-unguarded", `${b.prelude.replace(/\s+/g, " ")} { ${d.prop}: ${d.value} }`);
+    }
+    for (const prop of ["height", "max-height"]) {
+      const ds = decl(new RegExp(`^${prop}$`));
+      const bad = ds.find((d) => vh100(d.value)), fix = ds.some((d) => /\d[dsl]vh\b|fill-available|-moz-available|stretch/.test(d.value));
+      if (bad && !fix) hit(bad.pos, "trap/viewport-height", `${prop}: ${bad.value}`);
+    }
+    if (!cfg.hasPress) for (const d of decl(/^-webkit-tap-highlight-color$/)) if (NO_TAP.test(d.value)) hit(d.pos, "trap/touch-tap-highlight", `-webkit-tap-highlight-color: ${d.value}, and the repo has no pressed style`);
+  }
+}
+
+// The code side: class lists and CSS in strings, and style objects.
+function jsMotionTraps(cfg, rel, code, mask, hit) {
+  const markup = /\.(vue|svelte|astro)$/.test(rel);
+  markupTraps(cfg, rel, code, (i) => mask[i] || markup, hit, markup);
+  for (const m of code.matchAll(/(?<![\w$])(userScalable\s*:\s*(?:false|0|["'`]no["'`])|maximumScale\s*:\s*1(?:\.0*)?(?![\d.]))/g)) if (!mask[m.index]) hit(m.index, "trap/zoom-disabled", m[1]);
+  for (const m of code.matchAll(/(["'`])((?:\\.|(?!\1)[^\\])*)\1/g)) {
+    if (!mask[m.index]) continue;
+    const text = m[2], at = m.index + 1;
+    const toks = [...text.matchAll(/\S+/g)].map((t) => ({ t: t[0], u: utilOf(t[0]), pos: at + t.index }));
+    for (const x of toks) if (x.u === "transition-all") hit(x.pos, "trap/motion-transition-all", x.t);
+    // Tailwind: ease-in in an open state, or bare ease-in beside an enter class.
+    const enter = toks.some((x) => ENTER_CLASS.test(x.u) && !/(?:closed|exit|leav)/.test(x.t));
+    for (const x of toks) if (x.u === "ease-in" && !/(?:closed|exit|leav)/.test(x.t) && (OPEN_VARIANT.test(x.t) || (enter && x.t === x.u))) hit(x.pos, "trap/motion-ease-in-enter", `${x.t} beside ${toks.find((y) => ENTER_CLASS.test(y.u))?.t || "an open state"}`);
+    const dyn = toks.some((x) => /^(?:max-)?h-(?:dvh|svh|lvh|\[\d+[dsl]vh\])$/.test(x.u));
+    for (const x of toks) if (/^(?:max-)?h-(?:screen|\[[^\]]*(?<![\d.])100vh[^\]]*\])$/.test(x.u) && !dyn) hit(x.pos, "trap/viewport-height", x.t);
+    if (!cfg.hasPress) for (const x of toks) if (/^\[-webkit-tap-highlight-color:(?:transparent|rgba\(0,0,0,0\))\]$/.test(x.u)) hit(x.pos, "trap/touch-tap-highlight", `${x.t}, and the repo has no pressed style`);
+    // CSS written in a string, such as a styled-components template.
+    for (const c of text.matchAll(/(?<![\w-])transition(?:-property)?\s*:\s*all\b/g)) hit(at + c.index, "trap/motion-transition-all", c[0]);
+    for (const c of text.matchAll(/(?<![\w-])(?:max-)?height\s*:\s*[^;"'`]*?(?<![\d.])100vh\b/g)) if (!/\d[dsl]vh\b/.test(text)) hit(at + c.index, "trap/viewport-height", c[0]);
+    if (!cfg.hasPress) for (const c of text.matchAll(/(?<!\[)-webkit-tap-highlight-color\s*:\s*(transparent|rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\))/g)) hit(at + c.index, "trap/touch-tap-highlight", `${c[0]}, and the repo has no pressed style`);
+    for (const c of text.matchAll(/(?<![\w-])animation\s*:\s*([^;"'`]*)/g)) if (easeIn(c[1]) && animNames(c[1]).some((n) => ENTER_NAME.test(n))) hit(at + c.index, "trap/motion-ease-in-enter", c[0].trim());
+  }
+  // Style objects: the key sits outside the string.
+  const obj = (re, rule, detail) => { for (const m of code.matchAll(re)) if (!mask[m.index]) hit(m.index, rule, detail(m)); };
+  obj(/(?<![\w$-])transition(?:Property)?\s*:\s*(["'`])\s*all\b[^"'`]*\1/g, "trap/motion-transition-all", (m) => m[0]);
+  obj(/(?<![\w$-])(?:height|maxHeight)\s*:\s*(["'`])[^"'`]*?(?<![\d.])100vh[^"'`]*\1/g, "trap/viewport-height", (m) => m[0]);
+  if (!cfg.hasPress) obj(/(?<![\w$-])WebkitTapHighlightColor\s*:\s*(["'`])\s*(?:transparent|rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\))\s*\1/g, "trap/touch-tap-highlight", (m) => `${m[0]}, and the repo has no pressed style`);
+  for (const m of code.matchAll(/(?<![\w$-])animation\s*:\s*(["'`])([^"'`]*)\1/g)) if (!mask[m.index] && easeIn(m[2]) && animNames(m[2]).some((n) => ENTER_NAME.test(n))) hit(m.index, "trap/motion-ease-in-enter", m[0]);
+  // Overshoot in a motion library's ease array.
+  for (const m of code.matchAll(/(?<![\w$])ease\s*:\s*\[\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\]/g)) if (!mask[m.index] && [+m[2], +m[4]].some((y) => y < 0 || y > 1)) hit(m.index, "trap/motion-overshoot", m[0]);
+}
+
+// ---------- nearest token ----------
+// A raw value's nearest token, chosen by the job of the property it sits on and then by distance: color tokens by
+// deltaE OK (oklch.mjs), lengths by px. Token values come from the repo's own CSS, light and :root blocks only.
+const PALETTE_TOKEN = new RegExp(`^--(?:color-)?(?:${PALETTE})-\\d+$`);
+const hsl2rgb = (h, s, l) => { s /= 100; l /= 100; const k = (n) => (n + h / 30) % 12, a = s * Math.min(l, 1 - l); return [0, 8, 4].map((n) => 255 * (l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1)))); };
+function colorLab(v, vars, depth = 0) {
+  v = String(v).trim().toLowerCase();
+  const ref = /^var\(\s*(--[\w-]+)\s*(?:,[^)]*)?\)$/.exec(v);
+  if (ref) return depth < 6 && vars.has(ref[1]) ? colorLab(vars.get(ref[1]), vars, depth + 1) : null;
+  if (!oklch) return null;
+  let m;
+  if ((m = /^oklch\(\s*([\d.]+)(%?)\s+([\d.]+)(%?)\s+([\d.]+|none)(?:deg)?\s*(?:\/[^)]*)?\)$/.exec(v))) {
+    const L = m[2] ? m[1] / 100 : +m[1], C = m[4] ? (m[3] / 100) * 0.4 : +m[3], H = m[5] === "none" ? 0 : (m[5] * Math.PI) / 180;
+    return [L, C * Math.cos(H), C * Math.sin(H)];
+  }
+  if ((m = /^(?:hsla?\()?\s*(-?[\d.]+)(?:deg)?[\s,]+([\d.]+)%[\s,]+([\d.]+)%\s*(?:[,/][^)]*)?\)?$/.exec(v))) return oklch.toOklab(hsl2rgb(((+m[1] % 360) + 360) % 360, +m[2], +m[3]));
+  const rgb = oklch.parse(v);
+  return rgb ? oklch.toOklab(rgb) : null;
+}
+const toPx = (v) => { const m = /(-?\d*\.?\d+)(px|r?em)?\b/.exec(String(v)); return m ? Number(m[1]) * (m[2] && m[2] !== "px" ? 16 : 1) : null; };
+// The job a property or Tailwind utility does: a color's purpose (fg, bg, border) or a length's kind.
+function propJob(p) {
+  p = String(p || "").replace(/^(?:[a-z0-9-]+:)+/, "").replace(/[A-Z]/g, (c) => "-" + c.toLowerCase()).replace(/^-/, "");
+  if (/^(?:background|bg|from|via|to)(?:-|$)/.test(p)) return { color: "bg" };
+  if (/^(?:border|outline|ring|divide|column-rule)(?:-|$)/.test(p) && !/radius/.test(p)) return { color: "border", length: "size" };
+  if (/^(?:color|text|fill|stroke|caret|decoration|text-decoration|placeholder|accent)(?:-color)?$/.test(p)) return { color: "fg", length: "type" };
+  if (/radius|^rounded/.test(p)) return { length: "radius" };
+  if (/^font-size$/.test(p)) return { length: "type" };
+  if (/^(?:margin|padding|gap|row-gap|column-gap|inset|top|right|bottom|left|scroll-(?:margin|padding)|space|[pm][xytrblse]?)(?:-|$)/.test(p)) return { length: "space" };
+  if (/^(?:(?:min-|max-)?(?:width|height|[wh])|size|flex-basis|basis)(?:-|$)/.test(p)) return { length: "size" };
+  return {};
+}
+const COLOR_PURPOSE = { bg: /(?:^|-)(?:bg|background|surface|card|popover|panel|canvas|base|muted|secondary|accent|primary|destructive|fill)(?:$|-(?!foreground|fg))/, fg: /foreground|(?:^|-)(?:fg|text|ink|content|icon)(?:$|-)/, border: /border|edge|ring|outline|divider|separator|stroke|input/ };
+const LENGTH_KIND = { radius: /radius|rounded/, type: /^--(?:text|font-size|fs|type)-|font-size/, space: /space|spacing|gap|gutter|inset|pad|margin|^--[pms]-\d/, size: /size|height|width|control|^--[hw]-/ };
+function tokenIndex(cfg) {
+  if (cfg._tokenIndex) return cfg._tokenIndex;
+  const vars = cfg.tokenValues || new Map(), colors = [], lengths = [];
+  for (const [name, v] of vars) {
+    if (PALETTE_TOKEN.test(name) || cfg.varIgnore.some((x) => name.startsWith(x))) continue;
+    const bare = name.replace(/^--color-/, "--");
+    const lab = colorLab(v, vars);
+    if (lab) { colors.push({ name, lab, purpose: Object.keys(COLOR_PURPOSE).filter((k) => COLOR_PURPOSE[k].test(bare)) }); continue; }
+    if (/^-?\d*\.?\d+(px|r?em)$/.test(v.trim()) && !/leading|tracking|line-height|letter/.test(name)) {
+      const kind = Object.keys(LENGTH_KIND).find((k) => LENGTH_KIND[k].test(name));
+      if (kind) lengths.push({ name, px: toPx(v), kind });
+    }
+  }
+  return (cfg._tokenIndex = { vars, colors, lengths });
+}
+// "--name (deltaE 1.2)" or "--name (12px)", or null when no token of that job exists.
+function nearestToken(cfg, prop, value) {
+  const idx = tokenIndex(cfg), job = propJob(prop);
+  const lab = colorLab(value, idx.vars);
+  if (lab) {
+    if (!idx.colors.length) return null;
+    const own = idx.colors.filter((c) => job.color && c.purpose.includes(job.color));
+    const best = (own.length ? own : idx.colors).map((c) => [c, 100 * Math.hypot(c.lab[0] - lab[0], c.lab[1] - lab[1], c.lab[2] - lab[2])]).sort((a, b) => a[1] - b[1] || (a[0].name < b[0].name ? -1 : 1))[0];
+    return `${best[0].name} (deltaE ${best[1].toFixed(1)})`;
+  }
+  const px = toPx(value);
+  if (px === null || !job.length) return null;
+  const own = idx.lengths.filter((l) => l.kind === job.length);
+  if (!own.length) return null;
+  const best = own.map((l) => [l, Math.abs(l.px - Math.abs(px))]).sort((a, b) => a[1] - b[1] || (a[0].name < b[0].name ? -1 : 1))[0][0];
+  return `${best.name} (${+best.px.toFixed(2)}px)`;
+}
+// The property a literal at code[i] sits on: a Tailwind utility "bg-[", or a declaration or style key "color: ".
+function ctxProp(code, i) {
+  const before = code.slice(Math.max(0, i - 80), i);
+  const u = /([a-z][\w-]*)-\[$/.exec(before);
+  if (u) return u[1];
+  const d = /([A-Za-z][\w-]*)\s*:\s*["'`]?[^;{}"'`:]*$/.exec(before);
+  return d ? d[1] : "";
+}
+const shown = (f) => f.detail + (f.nearest ? ` (nearest token ${f.nearest})` : "");
+
 // ---------- the scan ----------
 const GENERIC = /^((inline-)?flex|grid|block|relative|items-.*|justify-.*|gap-.*|shrink.*|grow.*|whitespace-.*|transition.*|outline-none|select-none|text-(xs|sm|base|lg)|font-(normal|medium)|underline.*|hover:underline|w-.*|truncate|sr-only|group(\/.*)?)$/;
 
@@ -463,17 +698,18 @@ const normLine = (l) => l.trim().replace(/\s+/g, " ");
 const VALUE_RULES = new Set(["rule/raw-value", "rule/named-color", "rule/arbitrary-value", "rule/palette-use", "rule/inline-px", "rule/css-px"]);
 function checkFile(cfg, rel, report, stockLines) {
   const src = readRel(cfg, rel);
-  const js = CODE_EXT.test(rel), css = CSS_EXT.test(rel), jsx = JSX_EXT.test(rel);
+  const js = CODE_EXT.test(rel), css = CSS_EXT.test(rel), jsx = JSX_EXT.test(rel), html = HTML_EXT.test(rel);
   const { code, mask } = lex(src, js);
   const lineOf = lineIndex(src);
   const srcLines = stockLines ? src.split("\n") : null;
   const on = (r) => !cfg.off.has(r);
-  const hit = (pos, rule, detail) => {
+  const hit = (pos, rule, detail, nearest) => {
     if (!on(rule)) return;
     const line = lineOf(pos);
     if (stockLines && VALUE_RULES.has(rule) && stockLines.has(normLine(srcLines[line - 1] || ""))) { cfg.stockExempt = (cfg.stockExempt || 0) + 1; return; }
-    report({ file: rel, line, rule, detail });
+    report({ file: rel, line, rule, detail, ...(nearest ? { nearest } : {}) });
   };
+  if (html) { markupTraps(cfg, rel, code, () => true, hit); return; }
   const isToken = cfg.tokenSources.map(posix).includes(rel);
   const lines = code.split("\n");
   const tokenLine = (pos) => isToken && /^\s*--[\w-]+\s*:/.test(lines[lineOf(pos) - 1]);
@@ -488,7 +724,8 @@ function checkFile(cfg, rel, report, stockLines) {
     // hsl(var(--x)) and hsl(var(--x) / 50%) read a token that stores bare channels (Tailwind v3 with shadcn).
     if (m[0].endsWith("(") && /^[a-z]+\(\s*var\(--[\w-]+\)\s*(?:\/\s*[\d.]+%?\s*)?\)/i.test(code.slice(m.index, m.index + 120))) continue;
     const call = m[0].endsWith("(") ? /^[a-z]+\([^()]*\)/i.exec(code.slice(m.index, m.index + 80)) : null;
-    hit(m.index, "rule/raw-value", call ? call[0].replace(/\s+/g, " ") : m[0].endsWith("(") ? m[0] + ")" : m[0].toLowerCase());
+    const lit = call ? call[0].replace(/\s+/g, " ") : m[0].endsWith("(") ? m[0] + ")" : m[0].toLowerCase();
+    hit(m.index, "rule/raw-value", lit, nearestToken(cfg, ctxProp(code, m.index), lit));
   }
   // named colors
   if (css) {
@@ -507,10 +744,11 @@ function checkFile(cfg, rel, report, stockLines) {
   if (js) {
     for (const m of code.matchAll(/(?<![\w\-[\]])((?:[a-z0-9-]+:)*!?-?[a-z][a-z0-9]*(?:-[a-z0-9.]+)*)-\[([^\]\s'"`]+)\](?!:|\/[\w-]*:|[\w-])/g)) {
       if (!mask[m.index] || /^var\(--[\w-]+\)$/.test(m[2])) continue;
-      hit(m.index, "rule/arbitrary-value", `${m[1].replace(/^(?:[a-z0-9-]+:)+/, "")}-[${m[2]}]`);
+      const util = m[1].replace(/^(?:[a-z0-9-]+:)+/, "").replace(/^!?-?/, "");
+      hit(m.index, "rule/arbitrary-value", `${m[1].replace(/^(?:[a-z0-9-]+:)+/, "")}-[${m[2]}]`, nearestToken(cfg, util, m[2]));
     }
     for (const m of code.matchAll(/(?<![\w\-[\]&])\[([a-z][a-z-]*):([^\]\s'"`]+)\](?!:|\/[\w-]*:|[\w-])/g)) {
-      if (mask[m.index]) hit(m.index, "rule/arbitrary-value", m[0]);
+      if (mask[m.index]) hit(m.index, "rule/arbitrary-value", m[0], nearestToken(cfg, m[1], m[2]));
     }
     const pal = new RegExp(`(?<![\\w-])(?:[a-z0-9-]+:)*(?:bg|text|border(?:-[trblxyse])?|ring(?:-offset)?|fill|stroke|from|via|to|outline|decoration|divide|placeholder|caret|accent|shadow)-(?:${PALETTE})-(?:50|[1-9]00|950)(?:\\/\\d+)?(?![\\w-])`, "g");
     for (const m of code.matchAll(pal)) if (mask[m.index]) hit(m.index, "rule/palette-use", m[0]);
@@ -535,7 +773,7 @@ function checkFile(cfg, rel, report, stockLines) {
       const at = m.index + m[0].indexOf(m[1]);
       const relOk = /^(?:line-height|letter-spacing)$/.test(m[1]) || /\d(?:[dsl]?v[hw]|%)/.test(m[2]);
       const len = [...m[2].matchAll(/(-?\d*\.?\d+)(px|r?em)\b/g)].filter((x) => x[2] === "px" ? Math.abs(Number(x[1])) > 1 : !relOk && Number(x[1]) !== 0);
-      if (len.length && !tokenLine(at)) hit(at, "rule/css-px", `${m[1]}: ${m[2].trim()}`);
+      if (len.length && !tokenLine(at)) hit(at, "rule/css-px", `${m[1]}: ${m[2].trim()}`, nearestToken(cfg, m[1], len[0][0]));
     }
   }
 
@@ -568,6 +806,12 @@ function checkFile(cfg, rel, report, stockLines) {
     }
   }
 
+  // motion, touch and viewport traps
+  for (const m of code.matchAll(CUBIC)) if ((!js || mask[m.index]) && overshoot(m)) hit(m.index, "trap/motion-overshoot", m[0].replace(/\s+/g, ""));
+  if (css) cssMotionTraps(cfg, code, hit);
+  if (css) for (const m of code.matchAll(/@apply\s[^;]*?(?<![\w-])transition-all(?![\w-])/g)) hit(m.index, "trap/motion-transition-all", "@apply transition-all");
+  if (js) jsMotionTraps(cfg, rel, code, mask, hit);
+
   // whole JSX tags
   if (!jsx) return;
   const tags = jsxTags(code, mask);
@@ -586,7 +830,7 @@ function checkFile(cfg, rel, report, stockLines) {
         // a string with rem or em and no px: rem and em pass in lineHeight, letterSpacing and viewport math, and at 0
         if (!num && !/\dpx\b/.test(m[2]) && (/^(?:lineHeight|letterSpacing)$/.test(m[1]) || /\d(?:[dsl]?v[hw]|%)/.test(m[2]) || ![...m[2].matchAll(/(-?\d*\.?\d+)r?em\b/g)].some((x) => Number(x[1]) !== 0))) continue;
         const off = code.indexOf(style.value, t.pos) + m.index;
-        hit(off, "rule/inline-px", `${m[1]}: ${m[2]}`);
+        hit(off, "rule/inline-px", `${m[1]}: ${m[2]}`, nearestToken(cfg, m[1], m[2].replace(/^["'`]|["'`]$/g, "")));
       }
     }
     // activation handlers on non-interactive elements
@@ -607,6 +851,20 @@ function checkFile(cfg, rel, report, stockLines) {
       // Read the element's inner source, since a tag after plain JSX text ("Remember me <input />") is not in tags.
       const inner = close > 0 ? code.slice(t.end, close) : "";
       if (![...inner.matchAll(/<([A-Za-z][\w.]*)(?=[\s/>])/g)].some((m) => controls.has(m[1]))) hit(t.pos, "trap/label-unbound", `<${t.name}> with no htmlFor and no control inside`);
+    }
+    // autofocus on a field in a page, not in a dialog
+    const af = attr(t, "autoFocus") || attr(t, "autofocus");
+    if (af && !systemFile && on("trap/touch-autofocus") && (af.value === true || (af.expr ? /^\s*true\s*$/.test(af.value) : af.value !== "false"))) {
+      const type = (literalOf(attr(t, "type")) || "text").toLowerCase();
+      const field = (["input", "textarea", "select"].includes(t.name) && !/^(?:checkbox|radio|button|submit|reset|hidden|range|color|file)$/.test(type)) || /(?:Input|Textarea|TextArea|Field|Search|Combobox|Editor|Select)$/.test(t.name);
+      const overlay = (u) => u.name === "dialog" || /Dialog|Modal|Sheet|Drawer|Popover|Command|Popup/.test(u.name) || cfg.overlayComponents.some((o) => u.name.startsWith(o)) || /^(?:alert)?dialog$/.test(literalOf(attr(u, "role")) || "");
+      const inside = tags.some((u) => u.pos < t.pos && overlay(u) && closingTag(code, tags, u) > t.pos);
+      if (field && !inside && !OVERLAY_FILE.test(rel)) hit(af.pos, "trap/touch-autofocus", `<${t.name} ${af.name}> in a page`);
+    }
+    // a motion component whose entrance eases in
+    if (on("trap/motion-ease-in-enter") && attr(t, "initial") && attr(t, "animate")) {
+      const v = ["transition", "animate"].map((n) => String(attr(t, n)?.value || "")).join(" ");
+      if (/(?<![\w$])ease\s*:\s*["'`]easeIn["'`]|(?<![\w$])ease\s*:\s*\[\s*0?\.4\d*\s*,\s*0\s*,\s*1\s*,\s*1\s*\]/.test(v)) hit(t.pos, "trap/motion-ease-in-enter", `<${t.name} initial animate> with ease easeIn`);
     }
     // role="button" on non-buttons
     if (role === "button" && t.name !== "button") hit(attr(t, "role").pos, "trap/role-button", `<${t.name} role="button">`);
@@ -629,6 +887,8 @@ function checkFile(cfg, rel, report, stockLines) {
       const lit = (x) => /^(["'`])[^"'`]*\1$/.test(x.trim());
       for (const m of inner.matchAll(/\{\s*(!?\s*[\w$.]+)\s*\?\s*([^:{}]+?)\s*:\s*([^{}]+?)\s*\}/g)) {
         const [a, b] = [m[2], m[3]];
+        // An attribute value, such as className={busy ? "invisible" : ""} on a stacked label, is not the label.
+        if (/=\s*$/.test(inner.slice(0, m.index))) continue;
         if (!(lit(a) || lit(b)) || !(lit(a) || a.trim().startsWith("<")) || !(lit(b) || b.trim().startsWith("<"))) continue;
         const cond = m[1].replace(/^!\s*/, ""), last = cond.split(".").pop();
         const state = ["disabled", "loading", "pending", "isLoading", "isPending", "busy", "aria-busy", "aria-disabled"].map((n) => attr(t, n)).filter((x) => x && x.expr).some((x) => new RegExp(`(^|[^\\w$.])${cond.replace(/[.$]/g, "\\$&")}(?![\\w$])`).test(x.value));
@@ -729,7 +989,7 @@ function listFiles(cfg) {
     if (st.isDirectory()) { if (rel && existsSync(join(abs, "SKILL.md"))) return; for (const e of readdirSync(abs).sort()) walk(rel ? `${rel}/${e}` : e); return; } // a folder holding a SKILL.md is a skill, not product code
     const logical = cfg.fixtures ? unfix(rel) : rel;
     if (cfg.fixtures && logical === rel && /\.(tsx|jsx|ts|js)$/.test(rel)) return; // fixtures must be .fixture files
-    if (CODE_EXT.test(logical) || CSS_EXT.test(logical)) out.push(logical);
+    if (CODE_EXT.test(logical) || CSS_EXT.test(logical) || HTML_EXT.test(logical)) out.push(logical);
   };
   for (const d of cfg.include) walk(d === "." || d === "./" ? "" : posix(d).replace(/^\.\//, ""));
   for (const t of cfg.tokenSources) if (!out.includes(posix(t)) && existsRel(cfg, t)) out.push(posix(t));
@@ -784,6 +1044,8 @@ function indexRepo(cfg) {
   const bgPad = new Map();
   const visual = new Map();
   const onButtons = new Set();
+  const tokenValues = new Map();
+  let hasPress = false;
   const seenCss = new Set();
   const readCssDefs = (abs, depth) => {
     if (depth > 4 || seenCss.has(abs)) return;
@@ -804,10 +1066,12 @@ function indexRepo(cfg) {
           if (!d.prop.startsWith("--")) continue;
           defined.add(d.prop);
           if (!dark) lightDefs.add(d.prop);
+          if (!dark && !tokenValues.has(d.prop) && !b.chain.some((p) => /^@(?:-webkit-)?keyframes/.test(p))) tokenValues.set(d.prop, d.value);
           const at = { file: rel, pos: d.pos, value: d.value };
           if (dark && !darkKeys.has(d.prop)) darkKeys.set(d.prop, at);
           if (root && !rootKeys.has(d.prop)) rootKeys.set(d.prop, at);
         }
+        if (/(?<!not\()\:active\b|\[data-pressed\b|\[aria-pressed=["']?true/.test(b.prelude)) hasPress = true;
         const classes = b.prelude.split(",").map((x) => /^\.([\w-]+)$/.exec(x.trim())?.[1]);
         if (!classes.length || classes.some((x) => !x)) continue;
         const bg = b.decls.find((d) => /^background(-color)?$/.test(d.prop) && !/^(transparent|none|inherit|initial|unset)\b/.test(d.value));
@@ -822,6 +1086,7 @@ function indexRepo(cfg) {
       for (const m of code.matchAll(/(["'`])(--[\w-]+)\1/g)) defined.add(m[2]);
       for (const m of code.matchAll(/\[(--[\w-]+):/g)) if (mask[m.index]) defined.add(m[1]);
       if (JSX_EXT.test(rel)) for (const t of jsxTags(code, mask)) if (t.name === "button" || t.name === "Button") for (const c of classTokens(attr(t, "className"))) onButtons.add(c);
+      if (!hasPress && [...code.matchAll(/(?<![\w-])(?:[\w\-[\]=&]+:)*(?:active|data-pressed|data-\[pressed\]|pressed):[!\w[-]|(?<![\w$])whileTap\b|:active\b/g)].some((m) => mask[m.index] || /whileTap/.test(m[0]))) hasPress = true;
     }
   }
   const parity = [];
@@ -831,7 +1096,7 @@ function indexRepo(cfg) {
   }
   const cssButtons = new Map();
   for (const [c, loc] of candidates) if (/btn|button|cta/i.test(c) || onButtons.has(c)) cssButtons.set(c, loc);
-  return { tokens: { defined, parity }, cssButtons, cssBgPad: bgPad, cssVisual: visual };
+  return { tokens: { defined, parity }, cssButtons, cssBgPad: bgPad, cssVisual: visual, tokenValues, hasPress, _tokenIndex: null };
 }
 
 // Upstream's copy of a customized ui file, saved by --save-stock as <stockDir>/<file>.stock.
@@ -887,7 +1152,7 @@ function checkBans(cfg, files, report, onlyGiven) {
       const st = statSync(join(cfg.root, rel), { throwIfNoEntry: false });
       if (!st) return;
       if (st.isDirectory()) { for (const e of readdirSync(join(cfg.root, rel)).sort()) walk(`${rel}/${e}`); return; }
-      if (/\.mdx?$/.test(rel) && !/(^|\/)spec-template\.md$/.test(rel)) docs.push(rel);
+      if (/\.mdx?$/.test(rel) && !/(^|\/)(?:spec-template|changelog)\.md$/.test(rel)) docs.push(rel); // the changelog quotes commit subjects
     };
     for (const d of cfg.banDocs || []) walk(posix(d).replace(/^\.\//, "").replace(/\/$/, ""));
   }
@@ -911,7 +1176,7 @@ function checkNames(cfg, report) {
     const st = statSync(join(cfg.root, rel), { throwIfNoEntry: false });
     if (!st) return;
     if (st.isDirectory()) { for (const e of readdirSync(join(cfg.root, rel)).sort()) walk(`${rel}/${e}`); return; }
-    if (!/\.mdx?$/.test(rel) || /(^|\/)spec-template\.md$/.test(rel)) return;
+    if (!/\.mdx?$/.test(rel) || /(^|\/)(?:spec-template|changelog)\.md$/.test(rel)) return;
     readFileSync(join(cfg.root, rel), "utf8").split("\n").forEach((l, i) => {
       if (l.includes("rule/outside-name")) return;
       for (const n of res) if (n.re.test(l)) report({ file: rel, line: i + 1, rule: "rule/outside-name", detail: `${n.name}${n.why ? ` (${n.why})` : ""}: ${l.trim().slice(0, 60)}`, warn: true });
@@ -951,6 +1216,35 @@ function gitChanged(root, ref) {
   return out;
 }
 const FILE_RULES = new Set(["rule/stock-edit", "rule/unregistered-ui"]);
+// An allowlist count: a number, or {"count": n, "removeBy": "YYYY-MM-DD"}.
+const capOf = (v) => (typeof v === "number" ? v : v && typeof v === "object" ? Number(v.count) || 0 : 0);
+// Allowlist rows whose removeBy date is before today (YYYY-MM-DD): [{ file, rule, key, removeBy }].
+function expiredRows(allow, today) {
+  const out = [];
+  for (const [file, rules] of Object.entries(allow || {})) for (const [rule, v] of Object.entries(rules || {})) {
+    if (!v || typeof v !== "object") continue;
+    for (const [key, c] of Object.entries(v)) if (c && typeof c === "object" && /^\d{4}-\d{2}-\d{2}$/.test(c.removeBy || "") && c.removeBy < today) out.push({ file, rule, key, removeBy: c.removeBy });
+  }
+  return out;
+}
+// Per-rule counts now against the ratchet file's: which rose, which fell, and the file lowered to what fell.
+function ratchetCompare(old, now) {
+  const rose = [], fell = [], next = {};
+  for (const r of [...new Set([...Object.keys(old), ...Object.keys(now)])].sort()) {
+    const a = Number(old[r]) || 0, b = now[r] || 0;
+    if (b > a) rose.push([r, a, b]);
+    else if (b < a) fell.push([r, a, b]);
+    if (r in old && Math.min(a, b) > 0) next[r] = Math.min(a, b);
+  }
+  return { rose, fell, next };
+}
+const ratchetCounts = (findings) => { const c = {}; for (const f of findings) if (!f.warn) c[f.rule] = (c[f.rule] || 0) + 1; return c; };
+// Findings as a Markdown table, for a job summary.
+function summaryMarkdown(title, list, extra = []) {
+  const cell = (x) => String(x).replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
+  const rows = list.map((f) => `| \`${cell(f.file)}\` | ${f.line} | \`${f.rule}\` | ${cell(shown(f))} | ${cell(fixFor(f.rule))} |`);
+  return `### ${title}\n\n${rows.length ? `| File | Line | Rule | Found | Fix |\n|---|---|---|---|---|\n${rows.join("\n")}\n` : "Nothing found.\n"}${extra.length ? `\n${extra.map((e) => `- ${cell(e)}`).join("\n")}\n` : ""}\n`;
+}
 // The findings a change adds: on a changed line (a file-level rule on any changed file), and past the allowlist's
 // count for that file, rule and literal. With changed null, every line counts.
 function newFindings(findings, changed, allow) {
@@ -961,7 +1255,7 @@ function newFindings(findings, changed, allow) {
   for (const [k, list] of groups) {
     const [file, rule, key] = k.split("\t");
     const entry = allow[file]?.[rule];
-    const over = list.length - (typeof entry === "number" ? entry : entry?.[key] ?? 0);
+    const over = list.length - (typeof entry === "number" ? entry : capOf(entry?.[key]));
     if (over > 0) out.push(...list.filter(hit).slice(0, over));
   }
   return out.sort((a, b) => (a.file < b.file ? -1 : a.file > b.file ? 1 : a.line - b.line));
@@ -989,8 +1283,10 @@ function selfTest(dirArg) {
       if (kind === "fail") {
         const exp = spec.expect || { [spec.rule]: 1 };
         const bad = Object.entries(exp).filter(([r, k]) => count(r) !== k);
-        good = !bad.length;
-        msg = Object.entries(exp).map(([r, k]) => `${r} ${count(r)}/${k}`).join(", ");
+        // nearest: { "<detail or part of it>": "<token the finding must name>" }
+        const near = Object.entries(spec.nearest || {}).filter(([d, tok]) => !found.some((f) => f.detail.includes(d) && (f.nearest || "").split(" ")[0] === tok));
+        good = !bad.length && !near.length;
+        msg = Object.entries(exp).map(([r, k]) => `${r} ${count(r)}/${k}`).join(", ") + (spec.nearest ? `, nearest ${Object.keys(spec.nearest).length - near.length}/${Object.keys(spec.nearest).length}${near.length ? ` (missed ${near.map(([d, t]) => `${d} -> ${t}: got ${found.filter((f) => f.detail.includes(d)).map((f) => f.nearest || "none").join(", ") || "no finding"}`).join("; ")})` : ""}` : "");
       } else {
         good = found.length === 0;
         msg = good ? "0 findings" : found.map((f) => `${f.file}:${f.line} ${f.rule} ${f.detail}`).join("; ");
@@ -1000,8 +1296,59 @@ function selfTest(dirArg) {
       console.log(`self-test ${good ? "ok  " : "FAIL"} ${spec.rule} ${kind}: ${msg}`);
     }
   }
-  console.log(`self-test: ${n} fixtures, ${ok ? "all as expected" : "FAILED"}`);
-  return ok;
+  const u = unitTests(dir);
+  console.log(`self-test: ${n} fixtures and ${u.n} checks, ${ok && u.ok ? "all as expected" : "FAILED"}`);
+  return ok && u.ok;
+}
+
+// Checks that are not one rule on one fixture: the traps list, the allowlist, ratchet and summary helpers, and the
+// CLI modes on fixtures/check-system/_cli (copied to a temp folder, since the CLI reads real file names).
+function unitTests(dir) {
+  let ok = true, n = 0;
+  const t = (name, good, got) => { n++; if (!good) ok = false; console.log(`self-test ${good ? "ok  " : "FAIL"} ${name}: ${got}`); };
+  const traps = join(dirname(fileURLToPath(import.meta.url)), "..", "references", "traps.md");
+  if (existsSync(traps)) {
+    const ids = readFileSync(traps, "utf8").split("\n").map((l) => /^\|\s*`(trap\/[a-z0-9-]+)`\s*\|/.exec(l)?.[1]).filter(Boolean);
+    const dup = [...new Set(ids.filter((x, i) => ids.indexOf(x) !== i))];
+    t("traps.md ids", ids.length > 0 && !dup.length, dup.length ? `listed twice: ${dup.join(", ")}` : `${ids.length} trap ids, each once`);
+  } else console.log("self-test: no references/traps.md beside this script, so the duplicate trap id check is skipped");
+  t("rules explained", Object.keys(RULES).every((r) => WHY[r]), `${Object.keys(RULES).filter((r) => !WHY[r]).join(", ") || "every rule has a why"}`);
+  const rc = ratchetCompare({ "rule/a": 3, "rule/b": 2, "rule/d": 1 }, { "rule/a": 4, "rule/b": 1, "rule/c": 1 });
+  t("ratchet compare", JSON.stringify(rc.rose.map((x) => x[0])) === '["rule/a","rule/c"]' && JSON.stringify(rc.fell.map((x) => x[0])) === '["rule/b","rule/d"]' && JSON.stringify(rc.next) === '{"rule/a":3,"rule/b":1}', JSON.stringify(rc));
+  const ex = expiredRows({ "a.tsx": { "rule/raw-value": { "#fff": { count: 1, removeBy: "2000-01-01" }, "#000": { count: 1, removeBy: "2999-01-01" }, "#111": 2 } }, "b.tsx": { "rule/css-px": 3 } }, "2026-01-01");
+  t("removeBy expiry", ex.length === 1 && ex[0].key === "#fff" && capOf({ count: 2 }) === 2 && capOf(3) === 3, JSON.stringify(ex));
+  const md = summaryMarkdown("t", [{ file: "a|b.tsx", line: 2, rule: "rule/raw-value", detail: "#fff", nearest: "--bg (deltaE 0.0)" }]);
+  t("summary markdown", md.includes("| `a\\|b.tsx` | 2 | `rule/raw-value` | #fff (nearest token --bg (deltaE 0.0)) |"), md.split("\n")[4] || md);
+  const src = join(dir, "_cli");
+  if (!existsSync(src)) { t("cli fixtures", false, `missing ${src}`); return { ok, n }; }
+  const tmp = realpathSync(mkdtempSync(join(tmpdir(), "check-system-")));
+  try {
+    cpSync(src, tmp, { recursive: true });
+    const unfixAll = (d) => { for (const e of readdirSync(d)) { const p = join(d, e); if (statSync(p).isDirectory()) unfixAll(p); else if (e.endsWith(".fixture")) renameSync(p, p.slice(0, -8)); } };
+    unfixAll(tmp);
+    const run = (...a) => { const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), "--root", tmp, "--no-self-test", ...a], { cwd: tmp, encoding: "utf8", env: { ...process.env, GITHUB_ACTIONS: "" } }); return { code: r.status, out: (r.stdout || "") + (r.stderr || "") }; };
+    let r = run("--files", "app/page.tsx");
+    t("--files honours the allowlist", r.code === 0 && /2 allowlisted/.test(r.out), `exit ${r.code}, ${r.out.split("\n").find((l) => l.startsWith("check-system:")) || r.out.slice(0, 200)}`);
+    t("removeBy warns", /warning: .*"#fafafa" passed its removeBy date 2000-01-01/.test(r.out) && !/"#0a0a0a" passed/.test(r.out), r.out.split("\n").find((l) => /removeBy/.test(l)) || "no warning");
+    r = run("--files", "app/page.tsx", "--no-allowlist");
+    t("--no-allowlist fails", r.code === 1 && /nearest token --foreground/.test(r.out), `exit ${r.code}, ${r.out.split("\n")[0]}`);
+    r = run("--ratchet", "scripts/check-ratchet.json");
+    t("--ratchet fails on a rise", r.code === 1 && /rule\/raw-value rose 1 -> 2/.test(r.out), `exit ${r.code}, ${r.out.split("\n")[0]}`);
+    r = run("--ratchet", "scripts/check-ratchet.json", "--warn");
+    t("--ratchet --warn exits 0", r.code === 0 && /warning: ratchet: rule\/raw-value rose/.test(r.out), `exit ${r.code}, ${r.out.split("\n")[0]}`);
+    writeFileSync(join(tmp, "scripts/high.json"), '{ "rule/raw-value": 5, "rule/css-px": 2 }\n');
+    r = run("--ratchet", "scripts/high.json", "--ratchet-update");
+    const high = readFileSync(join(tmp, "scripts/high.json"), "utf8");
+    t("--ratchet-update lowers", r.code === 0 && JSON.stringify(JSON.parse(high)) === '{"rule/raw-value":2}', `exit ${r.code}, file ${high.replace(/\s+/g, " ").trim()}`);
+    r = run("--ratchet", "scripts/new.json");
+    t("--ratchet starts a file", r.code === 0 && existsSync(join(tmp, "scripts/new.json")), `exit ${r.code}, ${r.out.split("\n")[0]}`);
+    r = run("--warn", "--no-allowlist", "--summary", join(tmp, "summary.md"));
+    const sum = existsSync(join(tmp, "summary.md")) ? readFileSync(join(tmp, "summary.md"), "utf8") : "";
+    t("--summary writes every finding", r.code === 0 && (sum.match(/`rule\/raw-value`/g) || []).length === 2, `exit ${r.code}, ${(sum.match(/`rule\/raw-value`/g) || []).length} rows`);
+    r = run("--explain", "trap/viewport-height");
+    t("--explain", r.code === 0 && /^Why: \S/m.test(r.out) && /^Fix: \S/m.test(r.out), r.out.split("\n").slice(0, 2).join(" / "));
+  } finally { rmSync(tmp, { recursive: true, force: true }); }
+  return { ok, n };
 }
 
 // ---------- CLI ----------
@@ -1013,6 +1360,11 @@ const listAfter = (f) => { const i = argv.indexOf(f); if (i < 0) return null; co
 if (flag("--help") || flag("-h")) { console.log(HELP); process.exit(0); }
 if (flag("--list-rules")) { for (const [id, [rule, fix]] of Object.entries(RULES)) console.log(`${id}\t${rule}. Fix: ${fix}.`); process.exit(0); }
 if (flag("--list-blind-spots")) { BLIND.forEach((b) => console.log(b)); process.exit(0); }
+if (flag("--explain") && RULES[val("--explain")]) {
+  const id = val("--explain");
+  console.log(`${id}\nRule: ${RULES[id][0]}.\nWhy: ${whyFor(id)}\nFix: ${RULES[id][1]}.`);
+  process.exit(0);
+}
 
 // --root, else the git root of the first path argument, else of the current folder, else the current folder.
 function repoRoot(rootFlag, firstPath) {
@@ -1061,6 +1413,12 @@ if (flag("--init")) {
 }
 
 const cfg = loadConfig(root, val("--config"));
+if (flag("--explain")) {
+  const id = val("--explain"), ban = (cfg.bans || []).find((b) => b && b.id === id);
+  if (ban) { console.log(`${id}\nRule: the person's ban, /${ban.pattern}/, in UI code and the docs pages.\nWhy: ${ban.why || "the person banned it"}\nFix: ${fixFor(id)}.`); process.exit(0); }
+  console.error(`check-system: no rule ${id || "(none given)"}. Rules: ${Object.keys(RULES).join(", ")}`);
+  process.exit(2);
+}
 
 if (flag("--save-stock")) {
   const [file, upstream] = listAfter("--save-stock");
@@ -1126,7 +1484,7 @@ if (flag("--hash-stock") || flag("--rehash")) {
 // the default run self-tests only when a fixture folder sits beside this script (or --fixtures names one).
 let testOk = true;
 const fixturesAt = val("--fixtures") || (existsSync(defaultFixtures()) ? null : undefined);
-if (!flag("--no-self-test") && !flag("--files") && !flag("--warn") && !flag("--changed") && !flag("--diff") && !flag("--init-allowlist") && !flag("--shrink-allowlist") && !flag("--prune-allowlist") && fixturesAt !== undefined) testOk = selfTest(fixturesAt);
+if (!flag("--no-self-test") && !flag("--files") && !flag("--warn") && !flag("--ratchet") && !flag("--changed") && !flag("--diff") && !flag("--init-allowlist") && !flag("--shrink-allowlist") && !flag("--prune-allowlist") && fixturesAt !== undefined) testOk = selfTest(fixturesAt);
 
 const onlyArgs = listAfter("--files");
 const only = onlyArgs ? onlyArgs.map((f) => posix(relative(root, inRoot(f)))) : null;
@@ -1152,7 +1510,7 @@ if (flag("--prune-allowlist")) {
   for (const [file, rules] of Object.entries(al)) {
     for (const [rule, v] of Object.entries(rules)) {
       if (typeof v === "number") { if (!liveRule.has(`${file}\t${rule}`)) { gone.push(`${file} ${rule} (${v})`); delete rules[rule]; } continue; }
-      for (const [key, n] of Object.entries(v)) if (!live.has(`${file}\t${rule}\t${key}`)) { gone.push(`${file} ${rule} "${key}" (${n})`); delete v[key]; }
+      for (const [key, n] of Object.entries(v)) if (!live.has(`${file}\t${rule}\t${key}`)) { gone.push(`${file} ${rule} "${key}" (${capOf(n)})`); delete v[key]; }
       if (!Object.keys(v).length) delete rules[rule];
     }
     if (!Object.keys(rules).length) delete al[file];
@@ -1171,29 +1529,60 @@ if (flag("--init-allowlist") || flag("--shrink-allowlist")) {
   for (const [k, list] of [...byKey].sort(([a], [b]) => (a < b ? -1 : 1))) {
     const [file, rule, key] = k.split("\t");
     const prev = old?.[file]?.[rule];
-    const n = !old ? list.length : typeof prev === "number" ? list.length : Math.min(list.length, prev?.[key] ?? 0);
-    if (n) ((al[file] ||= {})[rule] ||= {})[key] = n;
+    const n = !old ? list.length : typeof prev === "number" ? list.length : Math.min(list.length, capOf(prev?.[key]));
+    const removeBy = prev && typeof prev === "object" && prev[key]?.removeBy;
+    if (n) ((al[file] ||= {})[rule] ||= {})[key] = removeBy ? { count: n, removeBy } : n;
   }
   mkdirSync(dirname(alPath), { recursive: true });
   writeFileSync(alPath, JSON.stringify(al, null, 2) + "\n");
   let total = 0;
-  for (const r of Object.values(al)) for (const v of Object.values(r)) for (const n of Object.values(v)) total += n;
+  for (const r of Object.values(al)) for (const v of Object.values(r)) for (const n of Object.values(v)) total += capOf(n);
   console.log(`wrote ${cfg.allowlist}: ${total} allowed finding(s) in ${Object.keys(al).length} file(s), keyed by literal value`);
   process.exit(0);
 }
 
 let allow = {};
-if (!only) {
+if (!flag("--no-allowlist")) {
   if (existsSync(alPath)) allow = readJSON(alPath);
-  else if (findings.length && !flag("--json") && !flag("--warn")) console.log(`note: no allowlist at ${cfg.allowlist}. Every finding fails. Create one once with --init-allowlist.`);
+  else if (!only && findings.length && !flag("--json") && !flag("--warn") && !flag("--ratchet")) console.log(`note: no allowlist at ${cfg.allowlist}. Every finding fails. Create one once with --init-allowlist.`);
+}
+const format = val("--format") || (process.env.GITHUB_ACTIONS === "true" ? "github" : "plain");
+const esc = (s) => String(s).replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
+const warnLine = (msg) => console.log(format === "github" && (flag("--warn") || process.env.GITHUB_ACTIONS === "true") ? `::warning::${esc(msg)}` : `warning: ${msg}`);
+// Allowlist rows past their removeBy date: a warning on every run, never a failure.
+const expired = expiredRows(allow, new Date().toISOString().slice(0, 10)).map((x) => `${cfg.allowlist}: ${x.file} ${x.rule} "${x.key}" passed its removeBy date ${x.removeBy}. Fix those findings, or move the date with a reason`);
+const summaryPath = val("--summary");
+const summarize = (title, list, extra = []) => { if (summaryPath) try { appendFileSync(resolve(summaryPath), summaryMarkdown(title, list, extra)); } catch (e) { console.error(`check-system: cannot write --summary ${summaryPath}: ${e.message}`); } };
+
+// --ratchet: per-rule counts over the whole repo. Fails only when a count rises.
+if (flag("--ratchet")) {
+  const rp = !val("--ratchet") || val("--ratchet").startsWith("--") ? "scripts/check-ratchet.json" : val("--ratchet");
+  if (only || flag("--changed") || flag("--diff")) { console.error("check-system: --ratchet counts the whole repo. Drop --files, --changed and --diff, or run them as a separate step."); process.exit(2); }
+  const p = inRoot(rp), now = ratchetCounts(findings);
+  expired.forEach(warnLine);
+  if (!existsSync(p)) {
+    mkdirSync(dirname(p), { recursive: true });
+    writeFileSync(p, JSON.stringify(Object.fromEntries(Object.entries(now).sort()), null, 2) + "\n");
+    console.log(`check-system: wrote ${rp} with ${Object.keys(now).length} rule count(s), ${findings.filter((f) => !f.warn).length} finding(s). Commit it; later runs fail only when a count rises.`);
+    summarize(`check-system ratchet: started at ${findings.filter((f) => !f.warn).length} finding(s)`, [], expired);
+    process.exit(0);
+  }
+  let old;
+  try { old = readJSON(p); } catch (e) { console.error(`check-system: cannot parse ${rp}: ${e.message}`); process.exit(2); }
+  const { rose, fell, next } = ratchetCompare(old, now);
+  for (const [r, a, b] of rose) (flag("--warn") ? warnLine : console.log)(`ratchet: ${r} rose ${a} -> ${b}. ${fixFor(r)}. List the new ones with --changed <base>`);
+  for (const [r, a, b] of fell) console.log(`ratchet: ${r} fell ${a} -> ${b}`);
+  if (fell.length && flag("--ratchet-update")) { writeFileSync(p, JSON.stringify(next, null, 2) + "\n"); console.log(`check-system: lowered ${rp} for ${fell.length} rule(s). Commit it.`); }
+  else if (fell.length) console.log(`check-system: ${fell.length} count(s) fell. Run --ratchet-update to lock them in.`);
+  summarize(`check-system ratchet: ${rose.length ? `${rose.length} rule(s) rose` : "no count rose"}`, findings.filter((f) => !f.warn && rose.some(([r]) => r === f.rule)), [...rose.map(([r, a, b]) => `${r} rose ${a} -> ${b}`), ...fell.map(([r, a, b]) => `${r} fell ${a} -> ${b}`), ...expired]);
+  console.log(`check-system: ratchet ${rose.length ? `${rose.length} rule(s) rose` : "held"}${fell.length ? `, ${fell.length} fell` : ""}${rose.length && flag("--warn") ? ", reported as warnings. Exit 0" : ""}`);
+  process.exit(rose.length && !flag("--warn") ? 1 : 0);
 }
 
 // --changed, --diff and --warn: what a pull request adds, as warnings (--warn) or as failures scoped to its lines.
 if (flag("--changed") || flag("--diff") || flag("--warn")) {
   const warn = flag("--warn");
   const ref = val("--changed"), diffFile = val("--diff");
-  const format = val("--format") || (process.env.GITHUB_ACTIONS === "true" ? "github" : "plain");
-  const esc = (s) => String(s).replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
   let changed = null;
   if (ref || diffFile) {
     try { changed = diffFile ? parseDiff(readFileSync(diffFile === "-" ? 0 : diffFile, "utf8")) : gitChanged(root, ref); }
@@ -1208,18 +1597,21 @@ if (flag("--changed") || flag("--diff") || flag("--warn")) {
   try { prefix = execFileSync("git", ["rev-parse", "--show-prefix"], { cwd: root, stdio: ["ignore", "pipe", "ignore"] }).toString().trim(); } catch {}
   const list = newFindings(findings, changed, allow);
   for (const f of list) {
-    const msg = `${f.rule}: ${fixFor(f.rule)}. Found: ${f.detail}`;
+    const msg = `${f.rule}: ${fixFor(f.rule)}. Found: ${shown(f)}`;
     if (warn && format === "github") console.log(`::warning file=${esc(prefix + f.file).replace(/:/g, "%3A").replace(/,/g, "%2C")},line=${f.line}::${esc(msg)}`);
     else console.log(`${f.file}:${f.line} ${warn || f.warn ? "warning " : ""}${msg}`);
   }
   const hard = list.filter((f) => !f.warn).length;
   const scope = changed ? `on lines changed${ref ? ` since ${ref}` : ` in ${diffFile}`}` : "past the allowlist";
+  expired.forEach(warnLine);
+  summarize(`check-system: ${list.length} finding(s) ${scope}`, list, expired);
   console.log(`check-system: ${list.length} finding(s) ${scope}${warn ? ", reported as warnings. Exit 0" : ""}`);
   process.exit(warn || !hard ? 0 : 1);
 }
 
 let failed = 0, allowed = 0, legacy = 0;
 const shrink = [];
+const failing = [];
 const printed = [];
 const legacyLeft = new Map(); // old per-file counts, spent across literals
 for (const [k, list] of byKey) {
@@ -1227,16 +1619,17 @@ for (const [k, list] of byKey) {
   const entry = allow[file]?.[rule];
   let cap;
   if (typeof entry === "number") { legacy++; const left = legacyLeft.has(`${file}\t${rule}`) ? legacyLeft.get(`${file}\t${rule}`) : entry; cap = Math.min(left, list.length); legacyLeft.set(`${file}\t${rule}`, left - cap); }
-  else cap = entry?.[key] ?? 0;
+  else cap = capOf(entry?.[key]);
   if (list.length > cap) {
     failed += list.length - cap;
     const why = typeof entry === "number" ? ` (legacy allowlist count for this file is used up)` : cap ? ` (allowlist holds ${cap} of "${key}" here, found ${list.length})` : entry ? ` ("${key}" is not in the allowlist for this file)` : "";
-    for (const f of list) printed.push(`${f.file}:${f.line} ${f.rule} ${f.detail}. Fix: ${fixFor(f.rule)}${why}`);
+    for (const f of list) { printed.push(`${f.file}:${f.line} ${f.rule} ${shown(f)}. Fix: ${fixFor(f.rule)}${why}`); failing.push(f); }
   } else { allowed += list.length; if (list.length < cap) shrink.push(`${file} ${rule} "${key}" ${cap} -> ${list.length}`); }
 }
 for (const [file, rules] of Object.entries(allow)) for (const [rule, v] of Object.entries(rules)) {
   if (typeof v === "number") continue;
-  for (const [key, cap] of Object.entries(v)) if (!byKey.has(`${file}\t${rule}\t${key}`) && cap > 0) shrink.push(`${file} ${rule} "${key}" ${cap} -> 0`);
+  if (only && !only.includes(file)) continue;
+  for (const [key, c] of Object.entries(v)) { const cap = capOf(c); if (!byKey.has(`${file}\t${rule}\t${key}`) && cap > 0) shrink.push(`${file} ${rule} "${key}" ${cap} -> 0`); }
 }
 
 // What the allowlist still holds, by file and rule: the "left" numbers a final message quotes.
@@ -1244,15 +1637,17 @@ const left = new Map();
 for (const [k, list] of byKey) {
   const [file, rule, key] = k.split("\t");
   const entry = allow[file]?.[rule];
-  const cap = typeof entry === "number" ? entry : entry?.[key] ?? 0;
+  const cap = typeof entry === "number" ? entry : capOf(entry?.[key]);
   const n = Math.min(cap, list.length);
   if (n) left.set(`${file}\t${rule}`, (left.get(`${file}\t${rule}`) || 0) + n);
 }
 
-if (flag("--json")) console.log(JSON.stringify({ findings, failed, allowed, warnings: warnings.length, shrink, left: [...left].map(([k, n]) => { const [file, rule] = k.split("\t"); return { file, rule, count: n }; }), stockExempt: cfg.stockExempt || 0, notes: cfg.notes, blindSpots: BLIND }, null, 2));
+summarize(`check-system: ${failed} failing, ${allowed} allowlisted`, [...failing, ...warnings], expired);
+if (flag("--json")) console.log(JSON.stringify({ findings, failed, expired, allowed, warnings: warnings.length, shrink, left: [...left].map(([k, n]) => { const [file, rule] = k.split("\t"); return { file, rule, count: n }; }), stockExempt: cfg.stockExempt || 0, notes: cfg.notes, blindSpots: BLIND }, null, 2));
 else {
   printed.forEach((l) => console.log(l));
-  for (const f of warnings) console.log(`${f.file}:${f.line} warning ${f.rule} ${f.detail}. Fix: ${fixFor(f.rule)}`);
+  for (const f of warnings) console.log(`${f.file}:${f.line} warning ${f.rule} ${shown(f)}. Fix: ${fixFor(f.rule)}`);
+  expired.forEach(warnLine);
   if (shrink.length) console.log(`allowlist can shrink (run --shrink-allowlist):\n  ${shrink.join("\n  ")}`);
   if (legacy) console.log(`note: ${cfg.allowlist} still holds per-file counts. Delete it and run --init-allowlist to key it by literal value.`);
   for (const n of cfg.notes) console.log(`note: ${n}`);

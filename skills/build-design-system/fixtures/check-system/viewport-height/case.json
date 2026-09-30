@@ -1,0 +1,1 @@
+{ "rule": "trap/viewport-height", "expect": { "trap/viewport-height": 4 } }

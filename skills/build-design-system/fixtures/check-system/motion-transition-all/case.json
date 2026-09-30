@@ -1,0 +1,1 @@
+{ "rule": "trap/motion-transition-all", "expect": { "trap/motion-transition-all": 5 } }

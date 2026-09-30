@@ -15,6 +15,11 @@
 // Props must name a prop. A component that forwards a native element's attributes also accepts those names
 // (type, disabled, readOnly, inputMode, on* handlers and the rest). --no-props skips it. Run it at close, so a
 // spec that went stale during the run fails.
+// spec/motion: when the component's source (the Description's source `path`) or a stylesheet it imports has a
+// transition, an animation, @keyframes, a transition or animate-* class, or a motion library import, States needs a
+// '### Motion' table (Trigger | Kind | Preset | Properties | Reduced motion) with Kind input or announce and no empty
+// Kind, Preset or Reduced motion cell. 'Not applicable: no motion' passes only when the code has none. It reads the
+// working tree, so it runs under --no-fresh too (CI tier 1).
 // A rule the four tests sent to a gate is one line in its section, on any page kind:
 // - Gated: `rule/<id>` (G-NN). <the question>   (references/spec-template.md, Gated rules)
 // Freshness, skipped by --no-fresh:
@@ -66,6 +71,13 @@ Folders are searched for component specs (*.md with a "## States" heading) and
 foundation pages (colors, typography, writing and the other foundation slugs).
 "-" reads one spec from stdin.
 
+spec/motion: when the component's source or a stylesheet it imports moves (a
+transition, animation, @keyframes, a transition or animate-* class, or a motion
+library import), States needs a '### Motion' table after State precedence:
+  | Trigger | Kind | Preset | Properties | Reduced motion |
+Kind is input or announce. Kind, Preset and Reduced motion are never empty.
+'Not applicable: no motion' passes only when the code has no motion.
+
 spec/props-drift checks Variants axes and Props notes against the component's
 props at HEAD. When the component forwards a native element's attributes, native
 names such as type, disabled, readOnly, inputMode and on* handlers count as props.
@@ -80,7 +92,8 @@ Options
   --no-props         skip spec/props-drift
   --no-fresh         skip the checks against the repo now: spec/call-sites,
                      spec/stale-cite, spec/dead-path, spec/example-export and
-                     the spec/test-file warning
+                     the spec/test-file warning. The CI tier that runs on every
+                     pull request uses it. spec/motion still runs
   --no-rule-tests    skip spec/rule-tests
   --no-examples      skip spec/examples
   --self-test        run the fixtures in --fixtures <dir>, default
@@ -420,6 +433,27 @@ const listTests = () => {
   walkT("");
   return testFiles;
 };
+// Motion in a component's source and the stylesheets it imports: a transition or animation in CSS, a style object or a
+// class list (transition, transition-*, animate-*), @keyframes, element.animate(), or a motion library import. Returns
+// what was found, or "".
+const MOTION_LIBS = /(?:from\s*|import\s*\(?\s*|require\(\s*)["'](framer-motion|motion(?:\/[\w-]+)?|react-spring|@react-spring\/[\w-]+|gsap(?:\/[\w-]+)?|animejs|react-transition-group|@formkit\/auto-animate(?:\/[\w-]+)?|@motionone\/[\w-]+)["']/;
+function motionIn(rel, depth = 0) {
+  let code;
+  try { code = readFileSync(join(root, rel), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, ""); } catch { return ""; }
+  let m;
+  if ((m = MOTION_LIBS.exec(code))) return `imports ${m[1]}`;
+  if ((m = /(?<![\w$-])(transition|animation)(?:-[a-z-]+|[A-Z]\w*)?\s*:\s*(?!\s*["'`]?\s*(?:none|initial|unset)\b)["'`]?[\w.(-]/.exec(code))) return m[0].replace(/\s+/g, " ").slice(0, 40);
+  if ((m = /@keyframes\s+[\w-]+|\.animate\(\s*[[{]/.exec(code))) return m[0];
+  for (const q of code.matchAll(/(["'`])((?:\\.|(?!\1)[^\\])*)\1/g)) for (const tok of q[2].split(/\s+/)) {
+    const u = tok.replace(/^(?:[^:\s]*?\[[^\]]*\][^:\s]*:|[a-z0-9@/-]+:)+/, "").replace(/^!/, "");
+    if (/^(?:transition(?:-(?!none$)[a-z-]+)?|animate-(?!none$)[\w-]+)$/.test(u)) return `class ${tok}`;
+  }
+  if (depth < 1) for (const i of code.matchAll(/(?:^|\n)\s*import\s+(?:[\w{},\s*]+from\s+)?["'](\.{1,2}\/[^"']+\.(?:css|scss|sass|less))["']/g)) {
+    const found = motionIn(posix(join(dirname(rel), i[1])), depth + 1);
+    if (found) return `${found} in ${posix(join(dirname(rel), i[1]))}`;
+  }
+  return "";
+}
 const squash = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 const hasTestFor = (...names) => { const keys = names.filter(Boolean).map(squash); return listTests().some((rel) => keys.includes(squash(basename(rel).split(".")[0]))); };
 
@@ -637,6 +671,29 @@ for (const file of files) {
       if (/^not applicable\b/i.test(t) || /^[^:?]+:\s*not applicable\b\s*[:,.-]?\s*\S/i.test(t)) continue;
       if (/\?\s*$|\bTBD\b|\bunanswered\b/i.test(x.t) || (/^[-*]\s/.test(x.t) && !/\bwins\b|\bboth show\b/i.test(x.t)))
         fail(x.line, "spec/precedence", `unanswered precedence: '${x.t.slice(0, 80)}'`);
+    }
+  }
+
+  // spec/motion: a component whose code moves has a ### Motion table under States, one row per state change
+  const srcRel = (/source\s+`([^`]+\.(?:tsx|jsx|ts|js|vue|svelte))`/.exec(descText) || [])[1];
+  if (srcRel && existsSync(join(root, srcRel))) {
+    const moves = motionIn(srcRel);
+    const mo = sub("States", "Motion");
+    const na = mo && mo.lines.some((l) => /^\s*(?:[-*]\s*)?Not applicable:\s*no motion\b/i.test(l));
+    const mt = table(mo);
+    const mcol = (re) => (mt ? mt.head.findIndex((h) => re.test(h)) : -1);
+    const [cTrig, cKind, cPre, cProp, cRed] = [/^trigger$/i, /^kind$/i, /^preset$/i, /^properties$/i, /^reduced motion$/i].map(mcol);
+    if (moves && !mo) fail(states?.start ?? 1, "spec/motion", `${srcRel} animates (${moves}), so States needs a '### Motion' table after State precedence: Trigger | Kind | Preset | Properties | Reduced motion`);
+    else if (moves && !mt) fail(mo.start, "spec/motion", na ? `'Not applicable: no motion', but ${srcRel} animates (${moves})` : "'### Motion' needs a table: Trigger | Kind | Preset | Properties | Reduced motion");
+    else if (mo && !mt && !na) fail(mo.start, "spec/motion", "'### Motion' needs a table, or 'Not applicable: no motion' when the code has none");
+    else if (mt && [cTrig, cKind, cPre, cProp, cRed].some((c) => c < 0)) fail(mo.start, "spec/motion", `'### Motion' table columns are ${mt.head.join(" | ")}, want Trigger | Kind | Preset | Properties | Reduced motion`);
+    else if (mt) {
+      if (!mt.rows.length) fail(mo.start, "spec/motion", "'### Motion' table has no rows");
+      for (const r of mt.rows) {
+        const empty = [[cKind, "Kind"], [cPre, "Preset"], [cRed, "Reduced motion"]].filter(([c]) => !r.cells[c] || r.cells[c] === "?" || /^tbd$/i.test(r.cells[c])).map(([, n]) => n);
+        if (empty.length) fail(r.line, "spec/motion", `motion row '${r.cells[cTrig] || "(blank)"}' leaves ${empty.join(", ")} empty`);
+        else if (!/^`?(input|announce)`?$/i.test(r.cells[cKind])) fail(r.line, "spec/motion", `motion row '${r.cells[cTrig] || "(blank)"}' has Kind '${r.cells[cKind]}', want input (follows a pointer, drag or scroll) or announce`);
+      }
     }
   }
 

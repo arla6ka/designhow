@@ -5,7 +5,24 @@ description: Reports how hardcoded style values on a page, file or diff map onto
 
 # Token mapping
 
-A report that lands raw values (hex codes, pixel values, shadows) on a token list someone else owns. With no token set, it hands back groundwork for building one. The rules and an example report are in `references/mapping-rules.md`, finding and reading sources in `references/sources.md`.
+1. Load the rules: `references/mapping-rules.md`, AGENTS.md or CLAUDE.md, and `docs/system/decisions.md`. Note overrides and any precedence rule.
+2. Load the list and record its name, format, location, read method and time (`references/sources.md`).
+3. Resolve every alias to its final value in each mode, and write down every disagreement with a second source.
+4. Collect the groundwork: one row per property, with its location, category and job (`mapping-rules.md`, What counts as the team's list).
+5. Normalize both sides per the rules file, converting colors with code.
+6. Classify: candidate tokens whose stated purpose covers the job, semantic before primitive, one class per row per mode, each with a reason and its difference in numbers.
+7. Count and close: the gap threshold, Consistency by role when the rules call for it, then Summary and Source.
+
+Never ship:
+
+- A token name that is not in the list that was read. A gap never gets a new name.
+- A match on value before purpose, or outside the rules file's tolerances.
+- A primitive where a semantic token covers the job.
+- A list or value filled from memory after a failed read.
+- A public system's token names, Geist's included, standing in for the team's list.
+- Any change to the repo.
+
+The result is a report that lands raw values (hex codes, pixel values, shadows) on a token list someone else owns. With no token set, it hands back groundwork for building one.
 
 ## Start from whatever the ask gives
 
@@ -17,17 +34,7 @@ A report that lands raw values (hex codes, pixel values, shadows) on a token lis
 
 ## When a coordinator calls it
 
-Take the values and the list in the brief as given and run to the end without asking. Questions go under For a person to decide, which the caller turns into gates. Start with a status line, `Status: complete`, `Status: not actionable (gap threshold)` or `Status: stopped: <condition>`, then `Commit: none`. Return the report, or the stop shape below, as your final message.
-
-## Steps
-
-1. **Load the rules.** Read `references/mapping-rules.md`, any AGENTS.md or CLAUDE.md, and `docs/system/decisions.md`. Done when overrides and any precedence rule are noted.
-2. **Load the list.** Done when Source has its name, format, location, read method and time.
-3. **Resolve it.** Follow every alias to its final value in each mode, and compare any second source. Done when every alias resolves and every disagreement is written down.
-4. **Collect the groundwork.** One row per property (a `border` shorthand is two rows), each with its location (`file:line`, or URL plus selector), category and job, sorted per `mapping-rules.md` (What counts as the team's list). Done when every raw and palette value in scope has a row.
-5. **Normalize** both sides per the rules file, converting colors with code.
-6. **Classify.** List the candidate tokens whose stated purpose covers the row's job, semantic before primitive, and give one class per row per mode. Done when every row has a class and a reason, and every semantic row states its difference in numbers.
-7. **Count and close.** Apply the gap threshold, write Consistency by role when the rules call for it, then the Summary and Source.
+Take the values and the list in the brief as given and run to the end without asking. Questions go under For a person to decide, each with a default, which the caller turns into gates. Start with a status line, `Status: complete`, `Status: not actionable (gap threshold)` or `Status: stopped: <condition>`, then `Commit: none`. Return the report, or the stop shape below, as your final message.
 
 ## Output
 
@@ -52,10 +59,3 @@ Stop and report on these only.
 - Two sources disagree and no project rule says which wins. Report both sides.
 
 A stopped run returns the condition, the groundwork from step 4 (grouped per `mapping-rules.md`, When the repo has no token file), and the shortest message that unblocks it, such as "Paste `tokens.json` or give its path." Gaps are never a stop.
-
-## Hard limits
-
-- Name only tokens in the list that was read. A gap never gets a new token name.
-- Match on purpose before value, and on value only within the rules file's tolerances.
-- Read the list and the values fresh each run and record the read time. A failed read is reported, never filled from memory.
-- A public system's token names, Geist's included, are never the team's list.

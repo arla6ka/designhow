@@ -205,10 +205,10 @@ The system keeps working only when someone owns it. On a full footprint, the han
 
 - An owner per system folder (tokens, components, docs), as a CODEOWNERS line when the repo uses them, named in the Frame.
 - Registry fields `owner`, `since` and `deprecated: {by, removeBy}`. A deprecated import warns until `removeBy`, then fails `rule/deprecated-import`.
-- A CI step that fails when the allowlist total grows against the merge base, and the warn step for changed lines (`checks.md`, Warnings on a pull request).
+- Both CI tiers, with the ratchet file committed (`checks.md`, CI tiers).
 - The contribution path. The AGENTS.md block's "open a gate" line names the repo's real path, an issue or PR label named in the Frame.
 
-`check-system.mjs` fails a deprecated import at once today. The warn-until-date form and the allowlist total are team additions to the check, each with a fixture pair.
+`check-system.mjs` fails a deprecated import at once today, and warns on an allowlist row whose `removeBy` date has passed (`checks.md`, The allowlist). A registry warn-until-date form is a team addition to the check, with a fixture pair.
 
 ## Rules and coverage gaps
 
@@ -227,6 +227,8 @@ Two short pages every system gets, both listed in `llms.txt`.
 ```
 
 An agent that finds its task in this list follows the row's Meanwhile and names the gap in its final message.
+
+In every mode, phase 7 documents the shared state patterns: loading, error, empty, no permission and partial failure, each with its width, component and state order. Each rests on app evidence, or is a row here with its Meanwhile, beside a row for every other open gate.
 
 ## Markdown twins
 
@@ -306,11 +308,11 @@ Before you add or change a component, a screen, a style, a token, or copy in the
 2. If the task is in public/system/coverage-gaps.md, follow that row's Meanwhile and name the gap in your final message.
 3. Use a registry component and the tokens in styles/globals.css. If none fits, open a gate before writing one.
 Before you finish: run `npm run check`, and capture the changed screens at 390 and 1280.
-CI warns on changed lines that bypass the system. Fix each warning, or say in the PR why it stays.
+CI warns on changed lines that bypass the system. `node scripts/check-system.mjs --explain <rule-id>` gives the fix. Fix each warning, or say in the PR why it stays.
 These rules win over the color and component rules in .cursor/rules/ui.mdc and docs/brand-guide.md.
 ```
 
-Name real paths, the real check command and the Frame's viewports. Before the docs exist, the block names the token file and the check, and phase 7 adds the docs lines. Delete a line when the repo has no such thing.
+Name real paths, the real check command and the Frame's viewports. Below the block, `node scripts/gen-docs.mjs` writes a compressed index between `<!-- ds-index:start -->` and `<!-- ds-index:end -->`: token names by role, components with import path and one-line job, the rule ids and the commands. It appends the markers to AGENTS.md when they are missing and creates the file when there is none. It also writes `docs/system/changelog.md` from the git log of `docs/system/` and the token source. `--check` covers the index but not the changelog, since the commit that writes the changelog changes the log. Never edit either by hand. Before the docs exist, the block names the token file and the check, and phase 7 adds the docs lines. Delete a line when the repo has no such thing.
 
 In phase 3, find the other agent-instruction files and brand guides (AGENTS.md, CLAUDE.md, editor rule files, copilot instructions) whose color, type or component rules contradict the new system. The precedence line names each. Edit those files only when the person asks.
 
@@ -341,7 +343,7 @@ Add these to the phase 5 check. The first three run on every system. The rest ap
 | Rules and coverage gaps | `rules.md` is fresh, every coverage gap names what to do meanwhile |
 | Decisions | `docs/system/decisions.md` is committed, opens with its precedence, and every page and component each decision names says or does it |
 | Twins and `llms.txt` | `gen-docs.mjs --check` exits 0, every `llms.txt` link loads |
-| AGENTS.md | The load-conditions block names real paths and the real check command |
+| AGENTS.md | The load-conditions block names real paths and the real check command, and the generated index sits between its markers |
 | HTML docs site, optional | The Done line under Component pages holds, and `check-docs-leak.mjs` exits 0 |
 | Live showcase, when the person reviews in a browser | One page per component and foundation, a navigator-only sidebar, the rules rendered on every page, and the agent view passing its tests |
 | Project skills, on a full footprint | Use, maintain, review and migrate exist in the repo, every command they name ran once, and the agent-instructions block names them |

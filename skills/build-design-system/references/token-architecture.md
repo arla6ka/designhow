@@ -20,7 +20,7 @@ Contents
 
 Three layers, stored as W3C Design Tokens (DTCG) JSON, generating CSS custom properties and whatever theme mapping the styling framework reads.
 
-Each output has a different reader. People read the JSON with its descriptions. Browsers read the CSS variables. A utility framework turns its theme mapping into classes. Agents read the generated Markdown tables.
+Each output has its own reader: people read the JSON descriptions, browsers the CSS variables, a utility framework its theme mapping, and agents the Markdown tables.
 
 Choose a lighter setup when the system is small: one theme, no utility framework, and few distinct values across all categories (default cutoff about 40, the point where a hand-kept file stops being easy to scan). Then a single hand-written CSS file of semantic variables, with a role comment per variable, is enough. The role comment does the job of `$description`. The docs generator reads it, and a variable without one fails the Done list. Record the choice. The naming rules below still apply.
 
@@ -121,19 +121,27 @@ Requirements:
 
 ## Motion presets
 
-A system with overlays, toasts, loaders or toggles always makes motion decisions, so motion is a foundation even when the app barely animates. Name the presets in the token source before the first component, by job: `instant` (press), `micro` (hover), `enter`, `exit`, `overlay`, `sheet`, `collapse` and `loader`. Each has a duration, an easing, the properties it animates and its reduced-motion form. Components read presets through named utilities or variants, never their own durations, and the motion page lists each preset with the components that use it.
+A system with overlays, toasts, loaders or toggles always makes motion decisions, so motion is a foundation even when the app barely animates. Name the presets in the token source before the first component, by job: `instant` (press), `micro` (hover), `enter`, `exit`, `overlay`, `sheet`, `collapse`, `loader` and `follow` (drag). Each has a duration, an easing, the properties it animates and its reduced-motion form. Components read presets through named utilities or variants, never their own durations, and the motion page lists each preset with the components that use it.
+
+Classify every motion before picking its preset:
+
+| Kind | When | How it moves |
+|---|---|---|
+| `input` | The element follows a pointer, drag or scroll | On `follow`: no curve and no duration. It tracks the input each frame and carries the release velocity (`trap/motion-input-lag`) |
+| `announce` | The UI tells the person something changed | On a job preset. Enter eases out, and exit is shorter than enter (`trap/motion-ease-in-enter`, `trap/motion-exit-slower`) |
 
 The app's own durations and easings are the source, clustered like any value. When the app has no motion for a job, the gate default is `instant`, no animation, because that is reversible and adds no direction. Under reduced motion the default is an opacity fade in place of movement.
 
 Settle these with the presets, since every animated component depends on them:
 
-- **Reason.** A preset exists for feedback, to show where something came from, to show a change of state, or to cover a jump. A surface with none of these, or an action people repeat all day and learn nothing from, such as opening a context menu, gets `instant` or animates out only.
-- **Speed.** Feedback presets take the app's fastest durations, and presets for what the user waits on anyway, such as a sheet, take its longer ones. Exit speed against enter comes from the app, else a gate.
+- **Reason.** Announce motion exists for feedback, to show where something came from, to show a change of state, or to cover a jump. A surface with none of these gets `instant` or animates out only.
+- **Frequency.** The surface's tier in `surfaces.tsv` caps its announce motion. `high` surfaces (nav, list rows, primary actions, menus) get `instant`, or motion on first open only (`trap/motion-frequent`). `mid` surfaces get the short presets, and `low` ones (settings, onboarding, empty states) may use any.
+- **Speed.** Press uses `instant`, so feedback shows from pointer-down (`trap/press-delayed`). Other feedback takes the app's fastest durations, and what the user waits on anyway, such as a sheet, takes its longer ones.
 - **Size.** A surface enters from the start scale the app uses, else a gate whose default is no scale, and never from 0. A pressed control scales to the app's value, else a gate with the same default. Anchored surfaces grow from their trigger, centered ones from the center, and exit reverses entry (`trap/motion-origin`).
 - **Visibility.** Loops pause when off screen or in a hidden tab (`trap/loop-offscreen`), and a theme switch changes colors without transitions (`trap/theme-transition`).
-- **Curve.** The job sets the shape and the app sets the values. When the app animates a job with no curve of its own, the gate default starts fast for a response to the user, is symmetric for movement between two points, and is linear for progress.
+- **Curve.** The job sets the shape and the app sets the values. Enters ease out, movement between two points is symmetric, and only progress and loops are linear (`trap/motion-linear`). A routine change never bounces or overshoots (`trap/motion-overshoot`). An app majority that breaks this is a gate defaulting to the fix (`traps.md`, Motion).
 - **Interruption.** Each preset continues from the current value on a retrigger (`trap/motion-restart`).
-- **Cost.** Presets animate transform and opacity only, driven by CSS or the Web Animations API, and name any exception (`trap/motion-layout-property`).
+- **Cost.** Presets animate transform and opacity only, through CSS or the Web Animations API, name each property, and name any exception (`trap/motion-layout-property`, `trap/motion-transition-all`).
 
 Fix a motion finding with the first of these that clears it: delete the animation, shorten or shrink it, fix its curve or origin, make it interruptible, move it to transform and opacity.
 

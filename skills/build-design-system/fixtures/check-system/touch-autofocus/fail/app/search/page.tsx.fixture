@@ -1,0 +1,8 @@
+export default function Page() {
+  return (
+    <form>
+      <input type="search" name="q" autoFocus />
+      <Input name="city" autoFocus={true} />
+    </form>
+  );
+}

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // gen-docs.mjs: specs and foundation pages in docs/system/*.md become Markdown twins,
-// a rules page, llms.txt and a plain HTML index. Node 18+, no dependencies.
+// a rules page, llms.txt, a plain HTML index, the compressed index in AGENTS.md and
+// docs/system/changelog.md. Node 18+, no dependencies.
 // Run `node scripts/gen-docs.mjs --help` for usage.
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -21,6 +22,19 @@ and writes, under --out:
   index.md      the overview: what to read first, every page with a one-line note
   index.html    one plain HTML page rendering the overview and every twin
 and --llms (llms.txt) linking every twin. Output is byte-stable: no dates.
+
+It also writes:
+  AGENTS.md     a compressed index between <!-- ds-index:start --> and
+                <!-- ds-index:end -->: token names by role (from the token
+                sources in scripts/check-system.config.json), components with
+                import path and one-line job, the rule ids, and the commands.
+                The markers are appended to the end of AGENTS.md when missing,
+                and the file is created when there is none. Text outside the
+                markers is never touched
+  <src>/changelog.md  commits that touched --src or the token sources, newest
+                first, from git log. --check skips it, since the commit that
+                writes it changes the log. A changelog.md this script did not
+                write is left alone
 
 A component page's Props section gets a table generated from its source file's
 types (scripts/props-table.mjs), found through the registry. The source file keeps
@@ -136,7 +150,7 @@ const walk = (d, prefix) => {
   for (const e of readdirSync(d).sort()) {
     const p = join(d, e);
     if (statSync(p).isDirectory()) { if (!e.startsWith(".") && !e.startsWith("_") && !(d === srcDir && e === "rule-tests") && p !== examplesAbs) walk(p, `${prefix}${e}/`); continue; }
-    if (!e.endsWith(".md") || e.startsWith("_") || e === "spec-template.md" || e === "README.md") continue;
+    if (!e.endsWith(".md") || e.startsWith("_") || e === "spec-template.md" || e === "README.md" || (d === srcDir && e === "changelog.md")) continue;
     const slug = prefix + e.replace(/\.md$/, "");
     pages.push({ slug, file: p, text: readFileSync(p, "utf8").replace(/\r\n/g, "\n") });
   }
@@ -312,6 +326,8 @@ function groundsOf(text) {
 }
 const checkOf = (text) => { const c = text.indexOf("Check: ", Math.max(0, text.indexOf("Evidence: "))); return c < 0 ? "" : text.slice(c + 7).trim().replace(/\.$/, ""); };
 const hasRules = pages.some((p) => p.slug === "rules");
+// Every rule and trap id the docs cite or the checks enforce, for the AGENTS.md index.
+let ruleIds = new Set(pages.flatMap((p) => [...stripFences(p.text).matchAll(/`((?:trap|rule)\/[a-z0-9-]+)`/g)].map((m) => m[1])));
 if (!hasRules) {
   const listRules = (script) => {
     const m = new Map();
@@ -343,6 +359,7 @@ if (!hasRules) {
   for (const id of enforced.keys()) entry(id);
   // copy-check runs once a writing page exists, so its rules join the page then.
   if (pages.some((p) => p.slug.split("/").pop() === "writing")) for (const id of copyRules.keys()) entry(id);
+  ruleIds = new Set(cited.keys());
   const rows = [...cited.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([id, c]) => {
     const rule = c.text || (enforced.get(id) || copyRules.get(id) || "").split(". Fix:")[0] || "See the page";
     const where = [...c.pages].sort().map((s) => `[${s}](${base}/${s}.md)`).join(", ") || "none yet";
@@ -460,6 +477,101 @@ ${all.map((p) => `<section id="${p.slug.replace(/\//g, "-")}">\n${render(p.twin,
 `;
 outputs.set(join(outDir, "index.html"), html);
 
+// ---------- AGENTS.md index ----------
+// A compressed index an agent reads first: tokens by role, components, rule ids and commands. Aim: 60 lines or fewer.
+const csCfg = (() => { try { return JSON.parse(readFileSync(join(root, "scripts/check-system.config.json"), "utf8")); } catch { return {}; } })();
+const tokenFiles = (csCfg.tokenSources || []).filter((f) => existsSync(join(root, f)) && /\.(css|scss|pcss)$/.test(f));
+// Custom properties outside dark-theme blocks, in source order.
+function tokenNames(files) {
+  const out = new Map();
+  for (const f of files) {
+    const code = readFileSync(join(root, f), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const stack = [];
+    let start = 0;
+    for (let i = 0; i < code.length; i++) {
+      const c = code[i];
+      if (c === "{") { stack.push(code.slice(start, i).trim()); start = i + 1; }
+      else if (c === "}" || c === ";") {
+        const m = /^\s*(--[\w-]+)\s*:\s*([\s\S]*)$/.exec(code.slice(start, i));
+        if (m && !stack.some((p) => /\.dark\b|\[data-(?:theme|mode)=["']?dark|prefers-color-scheme:\s*dark|@keyframes/.test(p)) && !out.has(m[1])) out.set(m[1], m[2].trim());
+        if (c === "}") stack.pop();
+        start = i + 1;
+      }
+    }
+  }
+  return out;
+}
+const ROLES = [
+  ["color", (n, v) => /^--color-/.test(n) || /^(?:#[0-9a-f]{3,8}|(?:rgba?|hsla?|oklch|oklab|lab|lch|color-mix|color)\(|-?[\d.]+(?:deg)?\s+[\d.]+%\s+[\d.]+%)/i.test(v)],
+  ["type", (n) => /font|^--text-|leading|tracking|line-height|letter/.test(n)],
+  ["space", (n) => /space|spacing|gap|gutter|inset|pad|margin/.test(n)],
+  ["radius", (n) => /radius|rounded/.test(n)],
+  ["shadow", (n) => /shadow|elevation/.test(n)],
+  ["motion", (n) => /duration|ease|motion|delay|transition|animate/.test(n)],
+  ["size", (n) => /size|height|width|control|breakpoint|container/.test(n)],
+  ["layer", (n) => /^--z|layer/.test(n)],
+];
+function agentsIndex() {
+  const L = [];
+  const docs = rel(outDir);
+  L.push("## Design system", "", `Before writing UI, read the page for what you touch in \`${docs}/\` and the rules in \`${docs}/rules.md\`. Use a listed component or token. If none fits, ask before adding one.`);
+  const toks = tokenNames(tokenFiles);
+  if (toks.size) {
+    const by = new Map();
+    for (const [n, v] of toks) { const role = (ROLES.find(([, t]) => t(n, v)) || ["other"])[0]; if (!by.has(role)) by.set(role, []); by.get(role).push(n); }
+    L.push("", `Tokens by role (${tokenFiles.join(", ")}):`);
+    for (const role of [...ROLES.map(([r]) => r), "other"]) if (by.has(role)) { const ns = by.get(role); L.push(`- ${role}: ${ns.slice(0, 24).join(", ")}${ns.length > 24 ? `, and ${ns.length - 24} more` : ""}`); }
+  }
+  const comps = [];
+  const seen = new Set();
+  if (existsSync(regPath)) {
+    const reg = JSON.parse(readFileSync(regPath, "utf8"));
+    for (const it of [...(reg.components || []), ...(reg.items || [])]) {
+      const id = String(it.id || it.name || "").toLowerCase(); if (!id || seen.has(id)) continue; seen.add(id);
+      const page = pages.find((p) => p.slug.split("/").pop() === id && p.kind === "Components");
+      const imp = it.import || it.meta?.import || sources.get(id) || "";
+      const job = (page && page.note) || it.description || it.meta?.description || "";
+      comps.push(`- ${page ? page.title : it.name || pascal(id)}${imp ? ` \`${imp}\`` : ""}${job ? `: ${job}` : ""}`);
+    }
+  }
+  for (const p of pages.filter((x) => x.kind === "Components" && !seen.has(x.slug.split("/").pop()))) comps.push(`- ${p.title}${sources.get(p.slug.split("/").pop()) ? ` \`${sources.get(p.slug.split("/").pop())}\`` : ""}${p.note ? `: ${p.note}` : ""}`);
+  if (comps.length) L.push("", "Components (import, job):", ...comps.sort());
+  const ids = [...ruleIds].sort();
+  for (const [kind, label] of [["rule/", "Rule ids"], ["trap/", "Trap ids"]]) { const list = ids.filter((x) => x.startsWith(kind)); if (list.length) L.push("", `${label}: ${list.join(", ")}`); }
+  const cmds = [[checkCommand, "the check. Run it before you finish"]];
+  const has = (f) => existsSync(join(root, "scripts", f));
+  if (has("check-system.mjs")) cmds.push(["node scripts/check-system.mjs --explain <rule-id>", "what a rule means and its fix"]);
+  if (has("check-spec.mjs")) cmds.push([`node scripts/check-spec.mjs ${rel(srcDir)}`, "a spec leaves no question open"]);
+  cmds.push(["node scripts/gen-docs.mjs", "regenerate the docs and this index after editing a page"]);
+  L.push("", "Commands:", ...cmds.map(([c, w]) => `- \`${c}\`: ${w}`));
+  return `<!-- ds-index:start -->\n<!-- generated by scripts/gen-docs.mjs from ${rel(srcDir)}, the registry and the token sources. Edit those and rerun. -->\n${L.join("\n")}\n<!-- ds-index:end -->`;
+}
+const agentsPath = join(root, "AGENTS.md");
+{
+  const block = agentsIndex();
+  const cur = existsSync(agentsPath) ? readFileSync(agentsPath, "utf8") : "";
+  const re = /<!-- ds-index:start -->[\s\S]*?<!-- ds-index:end -->/;
+  outputs.set(agentsPath, re.test(cur) ? cur.replace(re, () => block) : `${cur}${cur && !cur.endsWith("\n") ? "\n" : ""}${cur ? "\n" : ""}${block}\n`);
+}
+
+// ---------- changelog ----------
+// Commits that touched the docs sources or the token sources, newest first. Written, never compared by --check.
+const changelogPath = join(srcDir, "changelog.md");
+let changelog = null;
+{
+  const CL_MARK = "<!-- generated by scripts/gen-docs.mjs from git log";
+  const own = !existsSync(changelogPath) || readFileSync(changelogPath, "utf8").startsWith(CL_MARK);
+  const paths = [rel(srcDir), ...tokenFiles];
+  let log = null;
+  try { log = execSync(`git log -n 300 --date=short --format=%h%x09%ad%x09%s -- ${paths.map((p) => `'${p.replace(/'/g, "")}'`).join(" ")} ':(exclude)${rel(changelogPath)}'`, { cwd: root, stdio: ["ignore", "pipe", "ignore"], maxBuffer: 16 << 20 }).toString(); } catch {}
+  if (!own) console.log(`changelog: ${rel(changelogPath)} was not written by this script, so it is left as it is`);
+  else if (log && log.trim()) {
+    const byDay = new Map();
+    for (const l of log.trim().split("\n")) { const [h, d, ...subj] = l.split("\t"); if (!byDay.has(d)) byDay.set(d, []); byDay.get(d).push(`- ${subj.join("\t").trim()} (\`${h}\`)`); }
+    changelog = `${CL_MARK} of ${paths.join(", ")}. Rerun after a commit. -->\n# Changelog\n\nChanges to the design system docs and tokens, newest first.\n\n${[...byDay].map(([d, ls]) => `## ${d}\n\n${ls.join("\n")}\n`).join("\n")}`;
+  }
+}
+
 // ---------- write or check ----------
 let drift = 0;
 for (const [p, content] of [...outputs].sort()) {
@@ -469,6 +581,7 @@ for (const [p, content] of [...outputs].sort()) {
     else if (cur !== content) { console.log(`stale: ${rel(p)} (differs from a fresh generation)`); drift++; }
   } else if (cur !== content) { mkdirSync(dirname(p), { recursive: true }); writeFileSync(p, content); }
 }
+if (!checkOnly && changelog !== null && (!existsSync(changelogPath) || readFileSync(changelogPath, "utf8") !== changelog)) writeFileSync(changelogPath, changelog);
 // generated files whose source is gone
 if (existsSync(outDir)) {
   const orphans = [];
@@ -489,6 +602,8 @@ process.exit(drift ? 1 : 0);
 // are read under their inner name. case.json: { "rule", "match", "count", "failExit", "contains" }. The run writes
 // the docs, then runs --check. fail/ must print exactly count --check lines holding match and exit failExit
 // (default 1). pass/ must print none and exit 0. contains maps an output path to strings it must hold, in pass/.
+// In both folders, once maps a path to strings it must hold exactly once, and twice lists paths a second write must
+// leave byte for byte as the first wrote them.
 function selfTest(dirArg) {
   const here = dirname(fileURLToPath(import.meta.url));
   const dir = dirArg ? resolve(dirArg) : ((p) => existsSync(p) ? p : join(here, "..", "fixtures", "gen-docs"))(join(here, "fixtures", "gen-docs"));
@@ -508,14 +623,21 @@ function selfTest(dirArg) {
       unfix(tmp);
       const w = spawnSync(process.execPath, [me, "--root", tmp], { cwd: tmp, encoding: "utf8" });
       const r = spawnSync(process.execPath, [me, "--root", tmp, "--check"], { cwd: tmp, encoding: "utf8" });
+      const read = (f) => (existsSync(join(tmp, f)) ? readFileSync(join(tmp, f), "utf8") : "");
       const hits = (r.stdout || "").split("\n").filter((l) => l.includes(spec.match));
       const missing = [];
       if (kind === "pass") for (const [f, want] of Object.entries(spec.contains || {})) {
         const text = existsSync(join(tmp, f)) ? readFileSync(join(tmp, f), "utf8") : "";
         for (const x of want) if (!text.includes(x)) missing.push(`${f} lacks ${JSON.stringify(x)}`);
       }
+      for (const [f, want] of Object.entries(spec.once || {})) for (const x of want) { const k = read(f).split(x).length - 1; if (k !== 1) missing.push(`${f} holds ${JSON.stringify(x)} ${k} times, want once`); }
+      if (spec.twice) {
+        const first = spec.twice.map(read);
+        spawnSync(process.execPath, [me, "--root", tmp], { cwd: tmp, encoding: "utf8" });
+        spec.twice.forEach((f, k) => { if (read(f) !== first[k]) missing.push(`${f} changed on a second write`); });
+      }
       rmSync(tmp, { recursive: true, force: true });
-      const good = kind === "fail" ? hits.length === spec.count && r.status === (spec.failExit ?? 1) : !hits.length && r.status === 0 && !missing.length;
+      const good = kind === "fail" ? hits.length === spec.count && r.status === (spec.failExit ?? 1) && !missing.some((x) => !/lacks/.test(x)) : !hits.length && r.status === 0 && !missing.length;
       if (!good) ok = false; n++;
       console.log(`self-test ${good ? "ok  " : "FAIL"} ${spec.rule} ${c}/${kind}: ${hits.length}/${kind === "fail" ? spec.count : 0}, exit ${r.status}${good ? "" : `  ${[...hits, ...missing, (r.stderr || w.stderr || "").trim()].filter(Boolean).join(" | ").slice(0, 600)}`}`);
     }

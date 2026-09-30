@@ -17,7 +17,7 @@ Contents
 
 ## Read the project first
 
-Read `components.json` and the installed files in the ui folder, and save what they say in the run folder. When the `shadcn` package is already installed locally, also run `npx shadcn info --json` and trust it over anything inferred. Never download it for this, matching triage's no-download default. The fields that matter are `base` (`radix` or `base`), `style`, `tailwindCss`, `resolvedPaths.ui`, `iconLibrary`, `registries` and the installed `components`. `base` decides how triggers compose (`asChild` on Radix, `render` on Base UI), so every brief that writes a trigger pastes it. Moving from Radix to Base UI is its own job, run with shadcn's `migrate-radix-to-base` skill, not inside a build.
+Read `components.json` and the installed files in the ui folder, and save what they say in the run folder. Also run `npx shadcn@latest info --json` and trust it over anything inferred. Read-only CLI commands (`info`, `view`, `add --dry-run`, `add --diff`) may fetch the CLI through `npx`, since they write nothing to the repo. A command that writes, such as `add`, `apply`, `init` or `migrate` without `--dry-run`, runs only as "Changing a component" and "Seed" say. The fields that matter are `base` (`radix` or `base`), `style`, `tailwindCss`, `resolvedPaths.ui`, `iconLibrary`, `registries` and the installed `components`. `base` decides how triggers compose (`asChild` on Radix, `render` on Base UI), so every brief that writes a trigger pastes it. Moving from Radix to Base UI is its own job, run with shadcn's `migrate-radix-to-base` skill, not inside a build.
 
 ## Where tokens live
 

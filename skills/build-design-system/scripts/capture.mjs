@@ -24,8 +24,9 @@ Routes
                        /settings/billing is settings-billing. --routes captures the
                        load state only. States need --surfaces
   --surfaces <tsv>     a TSV with a header row holding surface, route (or path or url),
-                       and optionally states (comma separated) and status (the HTTP
-                       code the route should answer, 200 when blank). It is the only
+                       and optionally states (comma separated), status (the HTTP
+                       code the route should answer, 200 when blank) and tier (high,
+                       mid or low, read by other steps and ignored here). It is the only
                        way to capture states. List them here, then pass --states. Build keeps
                        it at .design-system/review/surfaces.tsv, and montage.mjs reads it too
   --expect-status <s=code>...  a surface or route that should answer another code,

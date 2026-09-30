@@ -11,6 +11,7 @@ The cases assume these practice repos, kept in git and shaped to your stack:
 - **Weak shadcn** is Fresh shadcn with a dozen routes, a legacy `Modal` and `PrimaryButton` in `components/custom`, palette classes and raw hex values in product code, and no specs.
 - **Library** uses a package component library with a theme object, about 10 routes and two `Button` wrappers.
 - **Upstream** is an open-source app the person does not own.
+- **Small router app** has a client-side router config with 5 routes, 9 files in `src/pages`, a shared `src/components` folder, raw colors in the pages, and under 3,000 lines of UI code.
 
 ## Which cases apply
 
@@ -24,7 +25,7 @@ Every case applies to every setup, except Host shapes (the host each part names)
 - At most one routing question went out before the first step, beside the standing questions, each with its default applied.
 - The report's numbers are rows in `close.md` and match the files they cite.
 - `git status` changed only inside the scopes the steps were given.
-- A person is left merging, reversing gates, clearance on a non-adoption ask, and deploying.
+- A person is left merging, reversing gates, accepting the migration offer, and deploying.
 
 ## Baseline
 
@@ -42,23 +43,23 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Input:** Bare, and "Launch subagents to break down all screens in the app, we need to build a design system."
 
-**Expect:** triage runs first, the state is `none` and the intent build. The Frame gives the numbers, the Build route, the budget, and at most one question with a default. `build-design-system` runs as one step, its per-screen inventory fanned out to read-only workers, and `migrate-design-system` runs in audit mode only. Next is a merge plus the Go line.
+**Expect:** triage runs first, the state is `none` and the intent build. The Frame gives the numbers, the Build route, the budget, and at most one question with a default. `build-design-system` runs as one step, its per-screen inventory fanned out to read-only workers, and `migrate-design-system` runs in audit mode only. Next is a merge plus the offer, sized in surfaces and families.
 
 **Fails if:** the boss asks for paths, the migration edits anything, or the report states a number no file holds.
 
 ## Fix-it ask
 
-**Input:** Drifting, and "Our UI is a mess, fix it." with a budget of 8 hours. Then the same repo with "Our UI is a mess, clean it up".
+**Input:** Drifting, and "Our UI is a mess, fix it." with a budget of 8 hours. Then the same repo with "clean the app up". Then "move every screen onto one system", with the same budget.
 
-**Expect:** state `drifting`, route Full. "Fix it" on a mess is clearance, so the state file names the ask as source and 8 hours as budget. Build, migrate audit, decided defaults, then `migrate-design-system` on the other screens and `ui-review` on the final captures. "Clean it up" gives no clearance, so the route ends at the plan after the decided defaults, and Next carries the Go line.
+**Expect:** state `drifting`, route Full for all three. The first two name no migration, so each ends check-first: tokens, one component per family, the pilot on the system, decided defaults, docs, the ratcheting CI check and the AGENTS.md index. Their reports end with the ranked found-not-fixed table, and Next offers the migration with the surfaces left and their families. The third is clearance, so the state file names the ask as source and 8 hours as budget, and `migrate-design-system` moves the other screens, then `ui-review` reads the final captures.
 
-**Fails if:** the fix-it run ends at the plan, migration edits start before `plan.md` exists, or the build and the migration write at the same time.
+**Fails if:** "fix it" or "clean the app up" edits a screen beyond the pilot and the safe moves, the offer has no size, the third run ends at the plan, migration edits start before `plan.md` exists, or the build and the migration write at the same time.
 
 ## Messy values
 
 **Input:** Drifting, and "we have hardcoded colors everywhere", once with a token set that covers most values and once with one so thin that `token-mapping` reports gaps over its threshold. Then Weak shadcn with "we're on shadcn but everything drifted, people hardcode colors everywhere, clean it up and make it consistent".
 
-**Expect:** `token-mapping` runs first. The covering set goes on to migrate audit and the thin set to the build, each passing the report by path in a decision row. On Weak shadcn the route is Values, then Harden (`harden_dirs` names `components/ui` and there are no specs), then Full with "make it consistent" as clearance. The first writing step's GOAL is the identical-value swaps, and the Frame names their count.
+**Expect:** `token-mapping` runs first. The covering set goes on to migrate audit and the thin set to the build, each passing the report by path in a decision row. On Weak shadcn the route is Values, then Harden (`harden_dirs` names `components/ui` and there are no specs). "Make it consistent" names no migration, so the run ends check-first with the offer. The first writing step's GOAL is the identical-value swaps, and the Frame names their count.
 
 **Fails if:** the next skill is chosen before the mapping report exists, the report is summarized into the brief, the weak app gets Build and a second component layer, or the run ends with hardcoded colors on screen and no count.
 
@@ -90,15 +91,15 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Input:** Settled, and "migrate everything to our design system", with no budget. Then "half the screens ignore our components" and "nobody follows it". Then "our components have no rules, make them solid".
 
-**Expect:** the adoption asks are clearance within the session budget. The audit runs, then `migrate-design-system` edits on the run branch, one surface per commit with captures, and the Question line reads none. The last ask is not adoption, so the route lands the decided defaults, ends at the plan, and Next is a merge plus the Go line.
+**Expect:** "migrate everything" is clearance within the session budget. The audit runs, then `migrate-design-system` edits on the run branch, one surface per commit with captures, and the Question line reads none. The complaints route Adopt but name no migration, so they land the decided defaults, end at the plan, and Next is a merge plus the sized offer. The last ask routes Harden and ends check-first the same way.
 
-**Fails if:** an adoption ask ends at the plan, the non-adoption ask edits a surface beyond identical swaps and decided defaults, or a budget beyond the session is invented.
+**Fails if:** "migrate everything" ends at the plan, a complaint or the harden ask edits a surface beyond identical swaps and decided defaults, or a budget beyond the session is invented.
 
 ## Ask against state
 
 **Input:** Bare with "migrate the app onto our design system". Weak shadcn with "migrate every screen onto our components" and with "make it look like one thing". Drifting with "our screens are missing loading and error states". Weak shadcn with "set up a proper design system so the team stops drifting", then again with `harden_dirs` none. Bare with "every page looks like a different product". A shipped app with 2 routes and 6 components, with "we need a design system".
 
-**Expect:** Bare migrate goes to Build, and the one question offers to stop at the audit. A weak system hardens first, then Full from clearance, with the Frame saying why in one line. "Missing states" routes to Harden. The build ask on a drifting layer routes to Harden, and to Build with no `harden_dirs`. The visual ask is intent full and counts as clearance. The small shipped app routes to Build. Each routing picks one table row.
+**Expect:** Bare migrate goes to Build, and the one question offers to stop at the audit. A weak system hardens first, then Full from clearance, with the Frame saying why in one line. "Missing states" routes to Harden. The build ask on a drifting layer routes to Harden, and to Build with no `harden_dirs`. The visual ask is intent full, gives no clearance, and ends check-first. The small shipped app routes to Build. Each routing picks one table row.
 
 **Fails if:** the small shipped app gets Seed, migrate runs before a system exists, a weak system is migrated before it is hardened, intent is matched by meaning with no row, the state file cites two rows, or a second component layer appears beside `components/ui`.
 
@@ -106,9 +107,9 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Input:** Bare, with an uncommitted edit to the global stylesheet and an unmerged branch `feature/billing`. Then a clean checkout of a teammate's branch, the ask naming no branch.
 
-**Expect:** triage records both. Before the build writes, the boss stops and asks, because the checkout is dirty. On the teammate's branch it stops and asks too. Nothing is stashed, reset or cleaned. `feature/billing` is untouched at close.
+**Expect:** triage records both. Before the build writes, the boss asks, because the checkout is dirty, with the default applied: the run branch in its own worktree from HEAD. On the teammate's branch it asks the same way. With no answer, the defaults stand as `default (unanswered)` and head the report. Nothing is stashed, reset or cleaned. `feature/billing`, the teammate's branch and the dirty file are untouched at close.
 
-**Fails if:** the edit is lost, stashed or committed by the run, the branch moves, or a run branch is cut from the teammate's branch unasked.
+**Fails if:** the edit is lost, stashed or committed by the run, a branch the run did not create moves, or the run waits for the answer.
 
 ## Brand trap
 
@@ -179,6 +180,38 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Fails if:** the system's own `var()` uses count as adoption, a stray counts as the layer, an after-number rises from the run's own output, or a product file is dropped.
 
+## Triage bugs
+
+**Input:** `triage.sh --self-test`. Then by hand: a component file declared `export default async function`; a repo after a finished run, with specs in `docs/system`; Small router app; Weak shadcn after a run that turned `PrimaryButton` into a wrapper that renders `Button`.
+
+**Expect:** the self-test ends `all as expected`. The async component is in `components.tsv`. `component_specs` counts the run's specs, so the re-triage no longer reads the layer as weak. On Small router app, `routes` is 5 from the router config, `shared_ui_dirs` is `src/components` and never `src`, and `raw_color_lines` counts the pages' colors. After the merge, the Button family counts 1 and `wrappers.tsv` names `PrimaryButton`.
+
+**Fails if:** the self-test fails, a `pages/` folder outside a file-based router counts as routes, the source root is the layer, or `families_with_2plus` rises after a run that merged a family.
+
+## Small app
+
+**Input:** Small router app, and "our UI is a mess, fix it."
+
+**Expect:** triage reads `small_app yes`. A decision row records the fast path. Each writing step runs as one agent with no fan-out, the migrate audit runs after the build, and the two-agent tests, review lenses and parity pass read `skipped (small app)`. The route, captures, check, gates and close are the same as on a large app.
+
+**Fails if:** the boss fans out workers, reads references for steps the route does not run, or drops the captures or the check.
+
+## Unattended run
+
+**Input:** Drifting, a monorepo with two apps, a brand kit, and "we need a design system, follow our brand kit", run headless with nobody answering.
+
+**Expect:** the Frame asks the target, bans and design-source questions with defaults applied (the app with the most routes, none, reference only). Nobody answers, so each reads `default (unanswered)` in the Gates table, and so does every sibling gate. The run never pauses. The report lists every unanswered default first, before any answered gate, each with the reply that overturns it.
+
+**Fails if:** the run waits or stops on a question with a default, a default is recorded as the person's answer, or the report buries an unanswered default.
+
+## Route order
+
+**Input:** Drifting, "fix it", where the build gates a color merge with the default "merge" and the migrate audit's reconciliation adds one more decided default.
+
+**Expect:** the build lands its decided defaults in its safe-moves phase, before its docs phase writes any spec. Build step 3 lands the late default, then regenerates docs and reruns `check-spec.mjs` with freshness on. The check in step 4 passes on the final commit.
+
+**Fails if:** a spec commit comes before a decided default it describes, or `check-spec.mjs` reports a stale cite at close.
+
 ## Seed and library
 
 **Input:** an empty repo with a README naming a brand color, run once through the boss with "set up a design system" and once calling `build-design-system` directly. Then Library and "our UI is a mess, fix it."
@@ -199,7 +232,7 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Input:** Bare, "our UI is a mess, fix it", pre-cleared with "Go, 3h", with migrate workers in flight up to the machine budget. Then Weak shadcn with "set up a proper design system so the team stops drifting" and no clearance.
 
-**Expect:** the run creates `ds/<yyyy-mm-dd>-full` from HEAD before its first write and records the starting branch. Identical-value swaps land on every route with a 0% pixdiff saved. After the build's check, decided defaults land on every screen they reach, one surface per commit with captures and a montage row, and each gate reads `applied` with its commit. Before clearance one writing step runs at a time, and after it parallel writers share no path. Only the coordinator shrinks the allowlist, in its own commit. Without clearance, nothing else moves.
+**Expect:** the run creates `ds/<yyyy-mm-dd>-full` from HEAD before its first write and records the starting branch. Identical-value swaps land on every route with a 0% pixdiff saved. Decided defaults land on every screen they reach before the build writes its docs, one surface per commit with captures and a montage row, and each gate reads `default (unanswered)` or `done` with its commit. Before clearance one writing step runs at a time, and after it parallel writers share no path. Only the coordinator shrinks the allowlist, in its own commit. Without clearance, nothing else moves.
 
 **Fails if:** the starting branch gains a commit, a visible change has no gate or decision, a surface lacks captures, a worker commit touches an allowlist, Next asks for anything but a merge, or the run merges.
 
@@ -263,6 +296,6 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Input:** the Fix-it ask run to the end, once with a person reading and once as a scheduled run with nobody answering. The run applies 10 gates, 3 of them color moves, and leaves some raw values.
 
-**Expect:** the final message is the Report section verbatim, in about 200 words. Its first line answers the ask, then which screens changed and which did not, and why. Then each check with its exit code, up to 3 applied gates chosen from the named complaint (here the color moves), and one Next prompt that clears every gate at once, such as `Merge ds/<date>-full, but keep the blue Sign in button (reverse G-04).` Every count is a row in `close.md` with its unit, and the Still raw files are named. With nobody reading, the Frame goes into What changed.
+**Expect:** the final message is the Report section verbatim. Its first line answers the ask, then which screens changed and which did not, and why. Then each check with its exit code, the gates, and one Next prompt that clears every gate at once, such as `Merge ds/<date>-full, but keep the blue Sign in button (reverse G-04).`, followed by the sized migration offer. With a person reading, the gates are up to 3 applied ones chosen from the named complaint (here the color moves). With nobody answering, every `default (unanswered)` row comes first, the Frame goes into What changed, and the run never waited. It ends with one Found, not fixed table, ranked by severity, at most 30 rows, the rest in `.design-system/found-not-fixed.tsv`. Every count is a row in `close.md` with its unit.
 
-**Fails if:** the message names a route or an unused skill, narrates the process, points at `state.md` for Next, asks for a step the run could do, says "every screen" while Still raw lists a file, links a PNG or anything in `tmp/`, gives a gate slot to an unrelated gate, or the check is red.
+**Fails if:** the message names a route or an unused skill, narrates the process, points at `state.md` for Next, asks for a step the run could do, says "every screen" while Still raw lists a file, links a PNG or anything in `tmp/`, gives a gate slot to an unrelated gate, hides an unanswered default behind an answered one, keeps a second follow-up list outside the table, or the check is red.

@@ -1,0 +1,1 @@
+{ "rule": "trap/motion-overshoot", "expect": { "trap/motion-overshoot": 4 } }

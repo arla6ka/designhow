@@ -12,12 +12,13 @@ Look before asking. With repo access and a browser:
 4. With no diff, as on main, take 5 top routes by default, the routes with the most call sites: count the links and navigations to each route path in product code, and break ties by nav order. Write "Default scope: 5 top routes, no branch diff" in the Review record with the routes and counts, so the reader can widen it.
 5. A route is a URL the router serves. Leave out folders the router never serves, such as private or colocated component folders, and drop grouping folders that do not appear in the URL. The foundation reference for the app's stack says how its router marks these. Confirm each default route answers 200 before capturing it.
 6. A screen named in words ("the settings page") maps to the route whose path or title matches.
+7. Viewports are the widths of supplied images, else the narrowest and widest the app supports, default 390 and 1280 px.
 
 Ask for screenshots or a URL only when none of this reaches a rendered screen. Under a coordinator, record the gap instead of asking.
 
 ## Inferring the purpose
 
-Read the page title, the main heading, the primary action and the route. Write one sentence, such as "Assumed: lets an admin invite teammates by email." If those disagree with each other or say nothing, stop and ask.
+Read the page title, the main heading, the primary action and the route. Write one sentence, such as "Assumed: lets an admin invite teammates by email." Stop and ask if those disagree or say nothing, if two versions arrived with nothing marking the current one, or if the criteria contradict AGENTS.md or CLAUDE.md with no rule on which wins.
 
 ## What counts as evidence
 
@@ -30,7 +31,7 @@ Read the page title, the main heading, the primary action and the route. Write o
 
 An automated accessibility scan against WCAG A and AA runs at each viewport whenever a browser tool runs (`browser.md`, Evidence for a review). Sort its results like any accessibility observation (`SKILL.md` step 6). With pasted screenshots only, the record says the scan did not run.
 
-Captures follow the three rules in `browser.md`: absolute paths, every command spelled out, and one session per run, named after the flow (`review-invite`) so parallel runs never share a browser. A sweep of more than 5 routes runs headless through `capture.mjs`, since a shared browser pane is for showing the person. Reset any emulation you set and close your tab at the end. A hover check run in a background tab is recorded as `hover not verified`. Stop any wait loop when its server stops. Refs number across a whole session, so a ref is valid only with the capture it came from. Cite it that way: `@e34 (home-1280.png)`. On the Playwright path, cite the selector where agent-browser would cite a ref.
+Captures follow `browser.md` (Before the first check, and the three rules under Tool how-to), with one session per run named after the flow (`review-invite`). Cite a ref with its capture, `@e34 (home-1280.png)`, or the selector on the Playwright path.
 
 "On mobile" or a named device class means one capture at the phone width with touch emulation on (`capture.mjs --mobile --widths <the app's narrowest width, default 390>`, which sets isMobile and hasTouch).
 
@@ -48,13 +49,7 @@ If the dev server or URL stops answering partway, finish the review on what was 
 
 On any host, open, hover, focus, scroll and resize freely.
 
-On a local build (`localhost`, `127.0.0.1` or a `.test` host that this repo serves), also type, press Enter, Escape and Tab, click Cancel and submit forms. First intercept every outgoing request that is not a same-origin GET or HEAD, so nothing leaves the page unrecorded. For each one that fires, record the method, URL and body, then abort it or stub it. A stub that answers late shows pending (default 3 seconds, long enough to capture and measure). A 503 stub shows failure. A 200 stub shows success. A server action or server-component route expects a framework payload, so use only the fail stub there and mark success not shown. `browser.md` (Holding, failing and scanning requests) has the full block. Without it, this Playwright hold records every request, answers after 3 seconds, and fails with 503 (change the status for success):
-
-```js
-const sent = []; // run after the page loads, before the first interaction
-await page.route('**/*', async (r) => { const q = r.request(); if (['GET', 'HEAD'].includes(q.method()) && new URL(q.url()).origin === new URL(page.url()).origin) return r.continue();
-  sent.push({ method: q.method(), url: q.url(), body: q.postData() }); await new Promise((w) => setTimeout(w, 3000)); return r.fulfill({ status: 503, body: '{}' }); });
-```
+On a local build (`localhost`, `127.0.0.1` or a `.test` host that this repo serves), also type, press Enter, Escape and Tab, click Cancel and submit forms. First intercept every outgoing request that is not a same-origin GET or HEAD, so nothing leaves the page unrecorded. For each one that fires, record the method, URL and body, then abort it or stub it. A stub that answers late shows pending (default 3 seconds, long enough to capture and measure). A 503 stub shows failure. A 200 stub shows success. A server action or server-component route expects a framework payload, so use only the fail stub there and mark success not shown. `browser.md` (Holding, failing and scanning requests) has the block. Without it, write a request route that does the same with your browser tool.
 
 These records are measured evidence: "Enter in Email: 0 requests, dialog closed". Never interact this way with a non-local host. There, stop at the state and mark it not shown, with what would reach it ("needs an account with no projects").
 
@@ -69,11 +64,27 @@ Run all of these whenever the flow has a dialog or a form, with valid input unle
 - Enter in the first field. Record which button it triggered (`__clicks` and `__submits`), the requests sent and whether the dialog is still open.
 - Cancel with valid input. Record the requests sent (expect 0) and where focus lands.
 - Cancel with input, then reopen. Read every field's displayed value, submit, and compare the fields with the next request body.
-- Submit while pending. Use the slow stub. Record the button's box idle and pending (`browser.md`, Measuring a loading state), whether it is disabled, where focus sits, and whether a second submit fires a second request. Focus should stay on the control, never drop to the page. A label that changes while pending is `trap/loading-label-swap` in `traps.md`.
-- State order. Run `../build-design-system/scripts/state-timeline.js` (`browser.md`) on the dialog's trigger and each field, and cite the trap it reports, such as `trap/hover-beats-focus` or `trap/open-trigger-unfocused`.
+- Submit while pending. Use the slow stub. Record the button's box idle and pending (`browser.md`, Measuring a loading state), whether it is disabled, where focus sits, and whether a second submit fires a second request. Focus should stay on the control, never drop to the page. A label that changes while pending, unless both labels sit stacked in one grid cell, is `trap/loading-label-swap`, and a box that changes is `trap/loading-layout-shift` (`traps.md`).
 - Failure and retry. Use the 503 stub, then read every field's displayed value and whether the error is visible. Submit again and compare the request body with what the fields show.
 
 A field that shows one value while the request sends another is a measured finding under criterion 8. Its severity follows the shown-versus-sent rule in `review-criteria.md`.
+
+### Trap probes
+
+Run the row for every trap family on the screen, and cite the trap each finds. Commands and thresholds are in `browser.md`. Motion and criterion 13 evidence comes from these, never a screenshot.
+
+| Family | Probe |
+|---|---|
+| Actions | `state-timeline.js --instant <ms>` on a primary button: press, hover, focus, disabled. A pending submit measured idle and pending (Measuring a loading state). `probe.mjs` for wrapped labels and control heights |
+| Text entry, Choice, Forms | The dialog and form probes above. `state-timeline.js` on each field. Computed input font size at the phone width. Each field's `type`, `autocomplete` and label from the tree |
+| Toggles | Press each one. Read its checked or mixed state, and whether it acts before Save |
+| Overlays, Menus | `state-timeline.js --open` on the trigger. Escape with a menu open inside a dialog. A press on the trigger during exit. `--height 320` for tall dialogs. Scroll an inner list to its end |
+| Floating hints | Tab to each trigger, including a disabled one. Move along a toolbar's row |
+| Feedback | Hold pending and fail with 503. Hover and focus a toast, and hide the tab, then read whether its timer ran. Count live-region announcements |
+| Navigation, Data | `probe.mjs` at the narrow width for clipped items and link cues. `aria-current` and table semantics from the tree. Changing numbers for tabular figures |
+| Containers, Media, Foundations | `probe.mjs` for flat surfaces and `trap/text-measure`. Scroll a loop away and read its play state. The type, scroll and first-paint checks |
+| Touch, all interactive | A `--mobile` capture. The source for `:hover` rules outside `@media (hover: hover)` (`trap/hover-unguarded`) |
+| Motion | Measuring motion on every surface that moves: curves, retrigger, input lag (`state-timeline.js --drag <css>`) and dropped frames (`trap/motion-jank`), and `probe.mjs` under reduced motion |
 
 ## Component specs
 

@@ -1,0 +1,1 @@
+{ "rule": "trap/hover-unguarded", "expect": { "trap/hover-unguarded": 4 } }

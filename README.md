@@ -1,6 +1,6 @@
 # Skills for Design Systems
 
-Skills that turn the UI your app already ships into a design system your coding agent can use, then move every screen onto it.
+Skills that turn the UI your app already ships into a design system your coding agent can use, with a check that catches new drift, then move every screen onto it when you ask.
 
 Agents copy whatever is in the repo. If it has three buttons, forty grays and a token file half the code ignores, every new screen picks a different one. More agents spread the mess faster.
 
@@ -24,7 +24,7 @@ Each skill swaps a guess for a step it can prove. It screenshots every route bef
 
 ## Reference
 
-- **[design-system-boss](./skills/design-system-boss/SKILL.md)**. Start here. Say what's wrong in plain words, and it reads the repo, picks a route and runs the other skills in order.
+- **[design-system-boss](./skills/design-system-boss/SKILL.md)**. Start here. Say what's wrong in plain words, and it reads the repo, picks a route and runs the other skills in order. It ends with the system, one flow moved onto it and a CI check, then offers the full migration with its size.
 - **[build-design-system](./skills/build-design-system/SKILL.md)**. Builds tokens, one canonical component per family, docs and checks from the app you have, and proves them on one real flow.
 - **[migrate-design-system](./skills/migrate-design-system/SKILL.md)**. Moves every screen onto the system with parallel workers, each checked against its before screenshot. Start with audit mode, which changes nothing.
 - **[token-mapping](./skills/token-mapping/SKILL.md)**. Maps hex codes and pixel values to your tokens by purpose, so an 8px radius never stands in for an 8px gap. It never edits.

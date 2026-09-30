@@ -9,7 +9,7 @@ A new coordinator resumes from these files alone, so write each fact here before
   frame.md                    coordinator
   standing-orders.md          coordinator
   queue.tsv                   coordinator
-  allowlist.tsv               coordinator, only after a gate that is no longer `open`, or a logged decision
+  allowlist.tsv               coordinator, only after a gate that no longer reads `gate`, or a logged decision
   forbidden-paths.txt         coordinator, matches the do-not-edit standing order
   agents.tsv                  coordinator
   gates.md                    coordinator
@@ -19,6 +19,7 @@ A new coordinator resumes from these files alone, so write each fact here before
   RESUME.md                   coordinator, on pause
   plan.md                     coordinator, audit mode only
   close.md                    coordinator at Close, the one source of every count in the final message
+  found-not-fixed.tsv         coordinator, found-not-fixed rows past the 30 that plan.md or the handoff shows
   inventory/                  the inventory script
   mapping/<surface>.md        the token-mapping run for that surface
   parity.tsv                  the parity agent during Parity, the coordinator afterward
@@ -52,7 +53,7 @@ Written once in Frame. It changes only through a logged decision. A dirty checko
 Done when:
 - `node scripts/migration-inventory.mjs --check` exits 0 on the final commit
   (legacy imports 0, raw values outside allowlist 0, palette uses 0 when frame.md includes them, legacy files 0)
-- all 38 rows in queue.tsv are `landed` with a `verified` ledger row at the final commit
+- all 38 rows in queue.tsv are `done` with a `verified` ledger row at the final commit
 - `lint:legacy` runs in CI at error level
 
 Scope: every route under app/. Out: app/admin/ (separate team).
@@ -84,13 +85,13 @@ The file holds, word for word, the numbered standing orders in `build-design-sys
 One row per surface, tab separated, updated in place.
 
 ```
-surface	kind	paths	states	depends_on	state	attempt	branch	head	brief	last_report	note
-shared	shared	packages/ui-bridge/**	-	-	landed	1	migrate/shared	a91c04e2d7b0	briefs/shared.1.md	inbox/shared.1.md	-
-billing-invoices	route	app/billing/invoices/**	empty,list,error,loading	shared	in-flight	2	migrate/billing-invoices	-	briefs/billing-invoices.2.md	inbox/billing-invoices.1.md	retry: timeout, split out export modal
-settings-profile	route	app/settings/profile/**	default,invalid,saving,saved	shared	gated	0	-	-	-	-	G-04
+surface	kind	paths	states	depends_on	status	stage	attempt	branch	head	brief	last_report	note
+shared	shared	packages/ui-bridge/**	-	-	done	landed	1	migrate/shared	a91c04e2d7b0	briefs/shared.1.md	inbox/shared.1.md	-
+billing-invoices	route	app/billing/invoices/**	empty,list,error,loading	shared	doing	in-flight	2	migrate/billing-invoices	-	briefs/billing-invoices.2.md	inbox/billing-invoices.1.md	retry: timeout, split out export modal
+settings-profile	route	app/settings/profile/**	default,invalid,saving,saved	shared	gate	-	0	-	-	-	-	G-04
 ```
 
-States, in order: `queued`, `gated`, `ready`, `in-flight`, `reported`, `verifying`, `verified`, `landed`. Side exits are `failed` (gets its one retry), `abandoned` (the retry failed and the surface could not split, with a reason), and `deferred` (out of scope by decision). Only the coordinator moves a row, and only at a drain.
+`status` uses the words in `build-design-system/references/run-record.md` (Terms, Status): `todo`, `doing`, `done` (landed), `gate` (waits on a gate), `blocked (<reason>)` (the retry failed and the surface could not split) and `skipped (<reason>)` (out of scope by decision). `stage` tracks a `todo` or `doing` row through the pipeline: `queued`, `ready`, `in-flight`, `reported`, `verifying`, `verified`, then `landed` once `done`. A failed attempt stays `doing` at stage `failed` until its one retry. Only the coordinator moves a row, and only at a drain.
 
 This is the migration's work queue, a different file from `.design-system/review/surfaces.tsv` (`build-design-system/references/run-record.md`, Terms), which capture and the montage read. The coordinator writes that file's `surface`, `route` and `states` columns from this one at Frame and keeps them in step at each drain. For one surface's capture, the worker copies that row under the header to `.design-system/tmp/<worker id>/<surface>.surfaces.tsv`.
 
@@ -113,13 +114,15 @@ A new commit that touches a surface's `paths` voids its earlier rows and gets a 
 
 ## close.md
 
-First, `node scripts/check-spec.mjs <spec folder>` runs over the system's specs, and a spec that cites a file the run deleted or moved (`spec/stale-cite`) is refreshed in its own commit. Then close.md is written once, at the final integration commit, from `node scripts/migration-inventory.mjs --check` and a tally of `ledger.tsv` and `queue.tsv`. Every count in the final message comes from this file: inventory before and after, allowlisted rows, what is left, surfaces landed of total, verified by an independent agent, self-verified. It lists each montage warning on an open gate with its id, and names each surface and file still carrying raw values or legacy imports, so the message never says "every screen" while that list has a row. A landed surface that still reads `queued` or `in-flight` fails the close. So does a failed close commit, which the message reports first. Every `decided` gate is applied by now, or listed here as not landed with its reason.
+First, `node scripts/check-spec.mjs <spec folder>` runs over the system's specs with freshness on, and a spec that cites a file the run deleted or moved (`spec/stale-cite`) is refreshed in its own commit. Then close.md is written once, at the final integration commit, from `node scripts/migration-inventory.mjs --check` and a tally of `ledger.tsv` and `queue.tsv`. Every count in the final message comes from this file: inventory before and after, allowlisted rows, what is left, surfaces landed of total, verified by an independent agent, self-verified. It lists each montage warning on an open gate with its id. A landed surface whose row is not `done` fails the close. So does a failed close commit, which the message reports first. No gate reads `todo`: each landed, or reads `skipped (<reason>)`. `node <skills>/build-design-system/scripts/check-record.mjs` exits 0 on the run folder's tables.
 
-The final message is the four-part handoff in `build-design-system/references/run-record.md` (Handoff report), with these additions:
+It ends with the Found, not fixed table in the format of `build-design-system/references/run-record.md` (Handoff report): one row per surface still carrying raw values or legacy imports, per surface left `blocked`, `gate` or `skipped`, and per verifier finding left unfixed, so the message never says "every screen" while the table has a row. Rows past 30 go to `found-not-fixed.tsv`.
+
+The final message is the handoff in `build-design-system/references/run-record.md` (Handoff report), with these additions:
 
 - Part 1 carries `Verified: N of M by an independent agent`, the self-verified surfaces on their own line, every non-empty behavior delta, and the montage path.
 - Next adds the budget for surfaces left, such as `Merge ds/2026-03-12-migrate, but keep the blue Sign in button (reverse G-04). 2 hours finishes the 3 surfaces left.` If the close commit failed, Next starts with "First commit the run record (`git add .migration .design-system && git commit`), then merge."
-- In audit mode the result is `plan.md` (`references/inventory.md`), summarized in the same four parts.
+- In audit mode the result is `plan.md` (`references/inventory.md`), summarized in the same parts. Next offers full mode with its size, such as `To migrate the 31 surfaces (7 families, about 6 hours), reply "Go, 6h".`
 
 ```
 commit        8a41c2e07f93
@@ -134,11 +137,11 @@ close commit  ok
 
 ## gates.md
 
-One entry per question that needs a person, written before asking, with work routed around it. Each entry's first line after the heading carries the gate record's columns (ID, question, default, status, commit, from), with status `open`, `decided` or `applied` as `build-design-system/references/run-record.md` (Terms) defines them. IDs are `G-NN`, the form the montage and the Next prompt read. A worker's proposed `G-<surface>-01` gets the next free `G-NN`, and `From` keeps the worker's ID.
+One entry per question that needs a person, written before asking, with work routed around it. Each entry's first line after the heading carries the gate record's columns (ID, question, default, status, commit, from), with status `gate`, `todo`, `default (unanswered)`, `done` or `skipped (<reason>)` as `build-design-system/references/run-record.md` (Terms, Gate) defines them. A gate nobody answers takes its default and never holds the run. IDs are `G-NN`, the form the montage and the Next prompt read. A worker's proposed `G-<surface>-01` gets the next free `G-NN`, and `From` keeps the worker's ID.
 
 ```markdown
 ## G-04. settings-profile uses a date input the system lacks
-Default: B. Status: open. Commit: -. From: w-12 (G-settings-profile-01).
+Default: B. Status: gate. Commit: -. From: w-12 (G-settings-profile-01).
 Opened: 2026-03-12T11:20Z. Asked: system owner.
 Blocks: settings-profile, settings-billing-address. Everything else continues.
 Options:
@@ -165,9 +168,10 @@ Every spawn gets a row at spawn time and a terminal state at close, which proves
 id	role	surface	attempt	spawned	expect_by	last_side_effect	end
 w-17	worker	billing-invoices	2	13:05	14:05	commit 5be1c0a 13:48	done
 v-09	verifier	billing-invoices	1	13:50	14:20	verdicts/billing-invoices.5be1c0a93f21.md	done
+w-12	worker	billing-invoices	1	11:02	12:02	commit 1c9e0d2 11:40	blocked (lost)
 ```
 
-Terminal states are the status the agent returned (`done`, `partial`, `blocked`, `failed`), `lost` (a `.lost.md` was written), and `absorbed` (its scope moved to a named row).
+`end` uses the status words: `done` for a `done` or `partial` return, with the return's word in parentheses when it was `partial`, `blocked (<reason>)` for `blocked`, `failed` or `lost` (a `.lost.md` was written), and `skipped (absorbed into <row>)`.
 
 ## status.md
 
@@ -176,10 +180,10 @@ Generated from `queue.tsv`, `ledger.tsv` and `gates.md` at every drain, never by
 ```sh
 {
   echo "# Status $(date -u +%FT%TZ)"
-  echo; echo "## Surfaces by state"
+  echo; echo "## Surfaces by status"
   awk -F'\t' 'NR>1{c[$6]++} END{for(s in c) print "- " s ": " c[s]}' queue.tsv
   echo; echo "## Open gates"
-  awk '/^## G-/{h=substr($0,4)} /Status: open\./{print "- " h}' gates.md
+  awk '/^## G-/{h=substr($0,4)} /Status: gate\./{print "- " h}' gates.md
   echo; echo "## Inventory"
   cat inventory/counts.txt
 } > status.md

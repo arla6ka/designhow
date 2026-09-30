@@ -20,6 +20,10 @@
 //                    prefers-reduced-motion: reduce, except those whose keyframes change only opacity or color,
 //                    which may stay to explain a state. capture.mjs records them in window.__dsMotion right after
 //                    a state function runs, before it finishes animations, so an enter animation still counts
+//   textMeasure      trap/text-measure: a paragraph in a reading column (a <p> of 120 characters or more, outside
+//                    nav, header, footer, aside, tables, controls and overlays) whose full lines measure over 75ch or
+//                    under 30ch. A line's length is its rendered line box, from the text's client rects, over the
+//                    width of "0" in the paragraph's font. One entry per column, with how many paragraphs share it
 
 // Animations still running or holding their end state under prefers-reduced-motion: reduce. Evaluated in the page.
 // An animation whose keyframes change only opacity or color properties is skipped: it explains a state without movement.
@@ -228,8 +232,42 @@ export const PROBE_SRC = `(() => {
     }
     tallOverlays.push({ key: keyed("dialog " + JSON.stringify(nameOf(el) || clean(el.textContent).slice(0, 30))), h: Math.round(r.height), top: Math.round(r.top), bottom: Math.round(r.bottom), viewportH: innerHeight, maxHeight: s.maxHeight, overflowY: s.overflowY });
   }
+  seen.clear();
+  const textMeasure = [], columns = new Map();
+  const zero = document.createElement("canvas").getContext("2d");
+  for (const el of document.querySelectorAll("p")) {
+    if (columns.size >= 20) break;
+    if (!visible(el) || el.closest("nav,header,footer,aside,table,button,a,label,figcaption,dialog,[role=navigation],[role=dialog],[role=alertdialog],[role=menu],[role=tooltip],[role=banner],[role=contentinfo]")) continue;
+    const text = (el.textContent || "").replace(/\s+/g, " ").trim();
+    if (text.length < 120) continue;
+    const s = getComputedStyle(el);
+    if (/pre|nowrap/.test(s.whiteSpace)) continue;
+    const lh = s.lineHeight === "normal" ? px(s.fontSize) * 1.2 : px(s.lineHeight);
+    const lines = [];
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      if (!n.textContent.trim()) continue;
+      const g = document.createRange(); g.selectNodeContents(n);
+      for (const q of g.getClientRects()) {
+        if (q.width < 1) continue;
+        const line = lines.find((l) => Math.abs(l.top - q.top) < lh / 2);
+        if (line) { line.left = Math.min(line.left, q.left); line.right = Math.max(line.right, q.right); } else lines.push({ top: q.top, left: q.left, right: q.right });
+      }
+    }
+    if (lines.length < 2) continue;
+    lines.sort((a, b) => a.top - b.top);
+    const full = lines.slice(0, -1).map((l) => l.right - l.left).sort((a, b) => a - b);
+    zero.font = s.fontStyle + " " + s.fontWeight + " " + s.fontSize + " " + s.fontFamily;
+    const ch0 = zero.measureText("0").width || px(s.fontSize) * 0.5;
+    const ch = Math.round(full[full.length >> 1] / ch0);
+    if (ch <= 75 && ch >= 30) continue;
+    const col = el.parentElement, prev = columns.get(col);
+    if (prev) { prev.count++; continue; }
+    const t = { key: keyed("p " + JSON.stringify(text.slice(0, 40))), ch, chars: Math.round(text.length / lines.length), lines: lines.length, w: Math.round(el.getBoundingClientRect().width), count: 1 };
+    columns.set(col, t); textMeasure.push(t);
+  }
   const motion = window.__dsMotion !== undefined ? window.__dsMotion : ${MOTION_SRC};
-  return { url: location.pathname + location.search, width: innerWidth, height: innerHeight, controls, headings, texts, links, heightMismatch: rows, wrappedButtons, flatSurfaces, clipped, tallOverlays, reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches, motion };
+  return { url: location.pathname + location.search, width: innerWidth, height: innerHeight, controls, headings, texts, links, heightMismatch: rows, wrappedButtons, flatSurfaces, clipped, tallOverlays, textMeasure, reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches, motion };
 })()`;
 
 
@@ -385,6 +423,11 @@ export function compareProbes(before, after) {
     const text = `${y.key} runs ${y.top}px to ${y.bottom}px in a ${y.viewportH}px viewport and nothing scrolls it (max-height ${y.maxHeight}, overflow-y ${y.overflowY}) (trap/overlay-no-max-height)`;
     if (ob.has(y.key)) deltas.push(`${text} (as before)`); else problems.push(text);
   }
+  const tmb = byKey(before.textMeasure);
+  for (const y of after.textMeasure || []) {
+    const text = `${y.key} lines measure ${y.ch}ch (${y.chars} characters), ${y.lines} lines in a ${y.w}px column${y.count > 1 ? `, and ${y.count - 1} more paragraph(s) there` : ""} (trap/text-measure)`;
+    if (tmb.has(y.key)) deltas.push(`${text} (as before)`); else problems.push(text);
+  }
   const mb = byKey(before.motion);
   for (const y of after.motion || []) {
     const text = `${y.key}, ${y.ms}ms x ${y.iterations}, ${y.state} under prefers-reduced-motion: reduce (trap/reduced-motion-ignored)`;
@@ -401,6 +444,7 @@ export function trapLines(p) {
     ...(p.clipped || []).map((c) => `trap/narrow-hidden-nav\t${c.key}\t${c.by}${c.visibleW ? `, ${c.visibleW}px shown of ${c.scrollW}px` : ""}, ${c.cue ? "mask cue" : "no cue"}, at ${p.width || "?"}px`),
     ...(p.tallOverlays || []).map((o) => `trap/overlay-no-max-height\t${o.key}\t${o.top}px to ${o.bottom}px in a ${o.viewportH}px viewport, max-height ${o.maxHeight}, overflow-y ${o.overflowY}`),
     ...(p.motion || []).map((m) => `trap/reduced-motion-ignored\t${m.key}\t${m.ms}ms x ${m.iterations}, ${m.state}`),
+    ...(p.textMeasure || []).map((t) => `trap/text-measure\t${t.key}\t${t.ch}ch per line, want 30 to 75 (${t.chars} characters), ${t.lines} lines, ${t.w}px wide${t.count > 1 ? `, and ${t.count - 1} more paragraph(s) in the same column` : ""}, at ${p.width || "?"}px`),
   ];
 }
 
@@ -414,7 +458,7 @@ Usage:
       [--item <css>] [--text-target <css>] [--sample <string>] [--max <n>] [--step <n>]
       [--widths 390[,1280]] [--height <px>] [--click <css>] [--watch <css>] [--out <dir>] [--root <dir>]
 
-Prints one line per finding: trap id, element, measurement. It measures five
+Prints one line per finding: trap id, element, measurement. It measures six
 traps from references/traps.md:
   trap/button-label-wrap        a button label on 2 or more lines, with its height
                                 against one line's
@@ -427,6 +471,9 @@ traps from references/traps.md:
                                 nothing to scroll it, or clips its own content
   trap/reduced-motion-ignored   animations over 1ms under prefers-reduced-motion,
                                 except those that change only opacity or color
+  trap/text-measure             a paragraph in a reading column whose full lines
+                                measure over 75ch or under 30ch (rendered line
+                                boxes over the width of "0"), once per column
 capture.mjs writes the same fields into every .probe.json. Live pages load with
 reduced motion on.
 
@@ -564,7 +611,7 @@ if (process.argv[1] && (await import("node:path")).resolve(process.argv[1]) === 
   const flagVals = new Set(["--base", "--widths", "--height", "--click", "--root"].map(val).concat(after("--routes")));
   const files = argv.filter((a) => !a.startsWith("--") && !flagVals.has(a));
   let found = 0, where = "";
-  const NOT = "Not measured: hover, focus and keyboard, contrast over images, pseudo-elements, text past the first 600 elements, more than 50 flat panels or 40 clipped items, and every trap in traps.md this list does not name";
+  const NOT = "Not measured: hover, focus and keyboard, contrast over images, pseudo-elements, text past the first 600 elements, more than 50 flat panels or 40 clipped items, text measure outside <p> or past 20 columns, and every trap in traps.md this list does not name";
   if (files.length) {
     where = `${files.length} probe file(s)`;
     for (const f of files) {
@@ -601,6 +648,6 @@ if (process.argv[1] && (await import("node:path")).resolve(process.argv[1]) === 
     await launched.browser.close();
   }
   console.log(`probe: ${found} finding(s)`);
-  console.log(`Coverage: 5 traps (button-label-wrap, surface-matches-parent, narrow-hidden-nav, overlay-no-max-height, reduced-motion-ignored) on ${where}. ${NOT}`);
+  console.log(`Coverage: 6 traps (button-label-wrap, surface-matches-parent, narrow-hidden-nav, overlay-no-max-height, reduced-motion-ignored, text-measure) on ${where}. ${NOT}`);
   if (process.exitCode !== 2) process.exitCode = found ? 1 : 0;
 }

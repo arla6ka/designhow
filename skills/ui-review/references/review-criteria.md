@@ -1,18 +1,27 @@
 # Review criteria
 
-This is a starting set. Replace it with the criteria your team has agreed on, since the skill treats this file as agreed and an unagreed criterion becomes a finding someone has to defend. Keep the four parts: severity, criteria, edge cases, and what not to report.
+This is a starting set. Replace it with the criteria your team has agreed on, since the skill treats this file as agreed and an unagreed criterion becomes a finding someone has to defend. Keep the five parts: severity, sorting, criteria, edge cases, and what not to report.
 
 ## Severity
 
-**Blocking.** The user cannot finish the task, or is likely to lose data, spend money, or take an irreversible action without meaning to. A user who believes the task finished when it did not cannot finish.
+**`blocking`.** The user cannot finish the task, or is likely to lose data, spend money, or take an irreversible action without meaning to. A user who believes the task finished when it did not cannot finish.
 
-**Should fix.** The user gets there but loses time to confusion or detours, or may end up with an outcome they did not want.
+**`should-fix`.** The user gets there but loses time to confusion or detours, or may end up with an outcome they did not want.
 
-**Note.** A small inconsistency, or a pattern worth settling before other screens copy it.
+**`note`.** A small inconsistency, or a pattern worth settling before other screens copy it.
 
 If a finding could go either of two ways, choose the milder level and say why in one sentence.
 
-Shown versus sent is the exception, and the milder-level rule does not apply to it. When a field shows one value while the request sends another, and the hidden value grants access, spends money or picks a recipient, the finding is Blocking. Otherwise it is Should fix.
+Shown versus sent is the exception, and the milder-level rule does not apply to it. When a field shows one value while the request sends another, and the hidden value grants access, spends money or picks a recipient, the finding is `blocking`. Otherwise it is `should-fix`.
+
+Within a severity, order by the surface's tier in `surfaces.tsv`, `high` before `mid` before `low`, then by how many places the finding hits. Without a tier column, infer it (nav, list rows, primary actions and menus are `high`; settings, onboarding and empty states are `low`) and mark it assumed.
+
+## Sorting
+
+- Merge repeats into one finding with a count. When one finding's recovery lands in another, say so in both and rank them together.
+- Flag a finding `system-caused` when its root cause is a token, preset or component in the system, such as every menu opening on a slow preset. It merges every screen it hits, and its fix goes to the system, not the screen.
+- Contrast, target size and keyboard problems are ranked. A tree change follows `../build-design-system/references/traps.md` (Adds-only accessibility changes).
+- Taste goes to Left out. A deliberate departure, or a problem no criterion covers, goes to For a person to decide.
 
 ## Criteria
 
@@ -44,6 +53,8 @@ For a product with few neighboring screens, Geist's component pages, one page pe
 
 **12. It works at every reviewed width.** Nothing essential is cut off, hidden without a way to reach it, or reordered so the meaning changes. Controls stay reachable at the narrow width, and at the widths in between where the layout switches, such as a sidebar opening.
 
+**13. It answers the hand.** Every press shows feedback within 100ms. Input motion tracks the pointer. Nothing the person triggers waits on an animation before it takes the next input. Focus and selection land where the hand expects. Evidence is measured, from `state-timeline.js` and the trap probes (`sources.md`, Trap probes), never a screenshot. Cite the trap it reports, such as `trap/press-delayed`, `trap/motion-input-lag` or `trap/motion-blocks-input`.
+
 ## Edge cases
 
 Mark each shown or not shown. A case not shown is a question for the designer, not a mistake.
@@ -71,4 +82,4 @@ Mark each shown or not shown. A case not shown is a question for the designer, n
 - Rewritten copy. Flag the unclear text and say what is unclear.
 - The product decision behind a fix. Keep the finding and hand the decision to a person. Keeping the user's input is not a product decision (criterion 8).
 - Code defects in a running build, such as console errors. Mention them once under For a person to decide so they reach QA.
-- Motion that uses a named preset correctly and still looks wrong. Hand it to For a person to decide with a slow-playback capture.
+- Motion that uses a named preset correctly and still looks wrong. Hand it to For a person to decide with a slow-playback capture. A preset that is itself a Motion trap in `traps.md` is a `system-caused` finding.

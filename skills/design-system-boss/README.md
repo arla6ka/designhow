@@ -2,7 +2,7 @@
 
 One entry skill for the other five. Say something vague, like "our UI is a mess, fix it", and it runs a triage script over the repo. The script works out the foundation (shadcn, a package library, the team's own package, or hand-rolled code), whether a system exists, whether it has specs, and whether the code follows it. Then the boss picks a route: seed a new system, build one from the app, harden a weak one, migrate, map values, document, review or audit. It runs each step through the sibling that owns it, with subagents where the host has them, and keeps one state file a new session can resume from. Its final message is a report built from files: one sentence that answers the ask with numbers, which screens changed, each check with its exit code, the gates that matter most, and the next step as a prompt, usually a merge.
 
-It never writes product code when it can spawn subagents, never invents brand values, never commits to a branch you did not name for the work, never pushes unasked, and never migrates past the decided defaults without clearance, which an adoption ask like "nobody uses our components" gives.
+It never writes product code when it can spawn subagents, never invents brand values, never commits to a branch you did not name for the work, never pushes unasked, and never migrates past the decided defaults without clearance. Only an ask that names the migration, such as "move every screen", gives it. "Clean the app up" ends check-first: tokens, one component per family, the pilot, docs, a CI check that warns on new drift, and a ranked list of what it found and left, with the migration offered as the next step.
 
 ## What the scripts touch
 
@@ -42,17 +42,17 @@ It needs file access, a shell and `rg` (ripgrep). A browser and subagents are op
 Change one only when its stated reason doesn't apply to you.
 
 - Triage by script. A route chosen from the prompt's wording alone sends a "fix it" ask to whichever skill's description sounded closest.
-- One routing question, with a default, and the standing questions answered by defaults until you reply. Work starts under the defaults, so no answer blocks it.
+- One routing question, with a default, and the standing questions answered by defaults until you reply. Work starts under the defaults, so no answer blocks it. A run nobody answers records each as `default (unanswered)` and lists them first in the report.
 - The boss never writes product code when it can spawn subagents. Once it starts editing, it stops reading returns, and every step behind it waits. On a host without subagents it takes a sibling's seat and follows that sibling's rules.
 - No worker outlives the boss. A worker left running keeps writing into a repo nobody checks.
 - One writing step at a time. Build and migrate touching the same files at once produce two versions of each.
-- Every writing run works on its own branch, or on the one you named for the work, and merging it is the person's call. Every decided gate default lands there with captures, so the next step is a merge. Migration beyond those defaults needs clearance, a budget from a person or an ask that is itself about adoption.
+- Every writing run works on its own branch, or on the one you named for the work, and merging it is the person's call. Every decided gate default lands there with captures, so the next step is a merge. Migration beyond those defaults needs clearance, a budget from a person or an ask that names the migration.
 - Verdicts from files. A sibling's summary is a claim until its check command runs again.
 - One state file, one writer. The boss's context will be lost, and the next agent has only the file.
 
 ## Check after changing
 
-Run `TESTS.md`. At minimum, run Vague build ask to confirm triage comes first, Migration clearance to confirm no editing starts without a reply, and Unrelated work to confirm a dirty tree is left alone. Then run `scripts/triage.sh` on your own repo twice and confirm the output does not change. If you use shadcn, also run it on a fresh project with every stock component added, and confirm `families_with_2plus` is 0.
+Run `TESTS.md`. At minimum, run Vague build ask to confirm triage comes first, Migration clearance to confirm no editing starts without a reply, and Unrelated work to confirm a dirty tree is left alone. Then run `scripts/triage.sh --self-test`, which must end `all as expected`, and run the script on your own repo twice and confirm the output does not change. If you use shadcn, also run it on a fresh project with every stock component added, and confirm `families_with_2plus` is 0.
 
 ## Adapt this skill
 

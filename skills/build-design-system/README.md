@@ -2,7 +2,7 @@
 
 Turns an app's UI into a design system that people and agents can use. It has three modes. Build extracts a system from an app that has none. Harden fills in components that exist without states or rules. Seed starts a system for a new app from brand material or a stock preset. Each mode reads a base reference for the app's foundation: a copy-in component registry such as shadcn, a package library, the team's own package, or hand-rolled code.
 
-It inventories the real routes, components and values with scripts and captures every screen before touching anything. Then it writes semantic tokens in the format the foundation reads, picks one canonical component per family with a spec answered from the app's own evidence, and generates docs with Markdown twins and `llms.txt`. The check it copies into the repo keeps the system enforced after the run (`references/checks.md`). Everything lands on a run branch, one surface per commit with before and after captures, and the merge is yours.
+It inventories the real routes, components and values with scripts and captures every screen before touching anything. Then it writes semantic tokens in the format the foundation reads, picks one canonical component per family with a spec answered from the app's own evidence, and generates docs with Markdown twins and `llms.txt`. The check it copies into the repo keeps the system enforced after the run (`references/checks.md`). Everything lands on a run branch, one surface per commit with before and after captures, and the merge is yours. A run ends check-first: tokens, one component per family, the pilot on the system, docs, a ratcheting CI check and an AGENTS.md index, with a ranked list of what it found and did not fix. Migrating every other screen is a separate ask.
 
 It uses three sibling skills: `token-mapping` to fold existing values into the new tokens, `component-docs` for each component page, and `ui-review` for the pilot. Install all four together.
 
@@ -31,7 +31,7 @@ Change one only when its stated reason doesn't apply to you.
 - Screenshots before the first edit. Without them, nobody can tell an intended change from a regression.
 - Scripts produce every count so the handoff can rerun them. Counts read by eye miss re-exports and aliases.
 - No new visual direction unless you chose one. The system describes the app you have. A new look lands only when you picked it in the design-source question, in place or in a new folder.
-- Gates with defaults, not questions that stop work. A run that waits on a naming answer for a day produces nothing.
+- Gates with defaults, not questions that stop work. A run that waits on a naming answer for a day produces nothing, so an unanswered gate takes its default and the handoff lists it first.
 - One writer per shared file. The token source belongs to the one writer `references/coordinator-path.md` names, and the registry, barrel and migration map to the coordinator. Workers report requests.
 - Generated docs. A hand-written twin drifts on the first change, and agents trust it anyway.
 - The repo works after the run. Scripts, config, allowlist, specs and docs live in the repo. A check that reads from `.design-system/` or a skill folder breaks the day either is gone.
@@ -39,7 +39,7 @@ Change one only when its stated reason doesn't apply to you.
 - Specs answered from the app. A spec copied from a reference system describes someone else's product, and the rules it carries are their taste.
 - The foundation's files stay the foundation's. A generator that owns the foundation's token file, or a rewrite of a stock component, breaks the next upstream update.
 - Every check is seen failing once, and the full check exits 0 at handoff. A check that never failed may not check anything, and a red one teaches every later agent to ignore it.
-- One pilot, then only cleared surfaces, one per commit, on the run branch. Nothing lands on your branch until you merge, and an unexplained diff becomes a gate instead of a commit.
+- One pilot, then only safe token moves and cleared surfaces, one per commit, on the run branch. Nothing lands on your branch until you merge, and an unexplained diff becomes a gate instead of a commit.
 
 ## Optional tools
 
@@ -52,14 +52,14 @@ Change one only when its stated reason doesn't apply to you.
 
 Read these before you install. No script sends data anywhere except to the app URL you give it.
 
-- `check-system.mjs`, `check-spec.mjs`, `copy-check.mjs`, `gen-docs.mjs` and `props-table.mjs` read the repo. The check writes only its config, allowlist, drift list and stock copies under `scripts/`, when you pass a flag that says so. `gen-docs.mjs` writes the twins and indexes under `public/` and its own config, and `copy-check.mjs --extract` writes `docs/system/copy-inventory.tsv`. They run `git` to find the repo root and changed lines, and self-tests run Node on temp copies of fixtures.
-- `capture.mjs`, `probe.mjs`, `pixdiff.mjs`, `montage.mjs`, `state-timeline.js` and `check-docs-leak.mjs` launch a local Chromium through Playwright (`find-chromium.mjs` finds it, and runs `npm root -g` to look for a global install) and load only the URL or fixtures you pass. They write captures, JSON results and a review page where `--out` or `--json` points, and `capture.mjs --eval` writes one JSON file per capture. `capture.mjs --via` and `check-docs-leak.mjs` shell out to `agent-browser`.
+- `check-system.mjs`, `check-spec.mjs`, `copy-check.mjs`, `gen-docs.mjs`, `props-table.mjs` and `check-record.mjs` read the repo. The check writes only its config, allowlist, ratchet file, drift list and stock copies under `scripts/`, when you pass a flag that says so. `gen-docs.mjs` writes the twins and indexes under `public/`, its own config, the index region in AGENTS.md and `docs/system/changelog.md`, and `copy-check.mjs --extract` writes `docs/system/copy-inventory.tsv`. They run `git` to find the repo root and changed lines, and self-tests run Node on temp copies of fixtures.
+- `capture.mjs`, `probe.mjs`, `pixdiff.mjs`, `montage.mjs`, `stress.mjs`, `state-timeline.js` and `check-docs-leak.mjs` launch a local Chromium through Playwright (`find-chromium.mjs` finds it, and runs `npm root -g` to look for a global install) and load only the URL or fixtures you pass. They write captures, JSON results and a review page where `--out` or `--json` points, and `capture.mjs --eval` writes one JSON file per capture. `capture.mjs --via` and `check-docs-leak.mjs` shell out to `agent-browser`.
 - `oklch.mjs` and `optical.js` compute only. `optical.js` runs inside a page you open.
 
 ## Check after changing
 
-From the skill folder, run `--self-test` on `check-system.mjs`, `check-spec.mjs`, `gen-docs.mjs`, `copy-check.mjs` and `oklch.mjs`, and `--self-test --root <playwright root>` on `probe.mjs` and `state-timeline.js`, then the cases in `TESTS.md` per `../TESTING.md`. At minimum, run Missing required input, Enforcement proves itself and Scope creep.
+From the skill folder, run `--self-test` on `check-system.mjs`, `check-spec.mjs`, `check-record.mjs`, `gen-docs.mjs`, `copy-check.mjs` and `oklch.mjs`, and `--self-test --root <playwright root>` on `probe.mjs` and `state-timeline.js`, then the cases in `TESTS.md` per `../TESTING.md`. At minimum, run Missing required input, Enforcement proves itself and Scope creep.
 
 ## Adapt this skill
 
-Use the interview prompt in `../ADAPTING.md` with this folder attached. Topics for this skill: where shared UI lives, with the framework, styling method and router; any token file or theme config other tools read; the docs site and the URL shape for system pages; the words for token roles and variants; the behavior library and test runner; the viewports and themes you ship; which source wins when two token files disagree; and who confirms gates, and how fast.
+Use the interview prompt in `../ADAPTING.md` with this folder attached. Topics for this skill: where shared UI lives, with the framework, styling method and router; any token file or theme config other tools read; the docs site and the URL shape for system pages; the words for token roles and variants; the behavior library and test runner; the viewports and themes you ship; the screens you consider the app's best; which source wins when two token files disagree; and who confirms gates, and how fast.

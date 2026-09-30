@@ -55,7 +55,7 @@ Copy rules never override a trap in `traps.md`. When a slot's majority is a trap
 
 ## Pending and status text
 
-An action's label stays the same while the action runs. Pending feedback, such as "Sending…" or "Uploading 3 of 5", goes in the `status` slot, shown in a status or live region or as text next to the control. It never replaces the label (`trap/loading-label-swap`), so a `button` rule never has a pending template. Pending wording is a `status` rule, derived like any other slot.
+An action's label stays in place while the action runs, and the control keeps its box (`component-contract.md`, Variants and states). Pending feedback, such as "Uploading 3 of 5", goes in the `status` slot, shown in a status or live region or as text next to the control. When the copy wants a pending verb ("Saving"), it sits stacked with the idle label in one grid cell, so the box never changes (`trap/loading-label-swap`). Pending wording is a `status` rule, derived like any other slot.
 
 ## Localized apps
 

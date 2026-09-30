@@ -13,7 +13,7 @@ Contents
 - Passing a rule by hiding from it
 - What the check can't see
 - The check has to run
-- Warnings on a pull request
+- CI tiers
 - Proving each rule
 - At handoff
 
@@ -29,10 +29,13 @@ node scripts/check-system.mjs --rehash components/ui/dialog.tsx --note "G-04: cl
 node scripts/check-system.mjs --self-test --fixtures <skills>/build-design-system/fixtures/check-system   # every rule fails its bad fixture, passes its good one
 node scripts/check-system.mjs --init-allowlist    # once, to record today's violations
 node scripts/check-system.mjs                     # the repo against the allowlist
-node scripts/check-system.mjs --files app/team/invite/page.tsx   # the pilot, no allowlist
+node scripts/check-system.mjs --files app/team/invite/page.tsx   # the pilot; the allowlist applies, and --no-allowlist shows everything the file holds
 node scripts/check-system.mjs --prune-allowlist   # at close: drop entries that no longer match a finding
 node scripts/check-system.mjs --no-self-test --left   # at close: what the allowlist still holds, by file and rule
-node scripts/check-system.mjs --changed origin/main --warn   # in CI: warn on what a pull request adds, exit 0
+node scripts/check-system.mjs --changed origin/main --warn --summary "$GITHUB_STEP_SUMMARY"   # CI tier 1: warn on what a pull request adds, exit 0
+node scripts/check-system.mjs --ratchet scripts/check-ratchet.json   # fail only when a rule's count rises; writes the file when missing
+node scripts/check-system.mjs --ratchet scripts/check-ratchet.json --ratchet-update   # lower the file after a count falls, never raise it
+node scripts/check-system.mjs --explain trap/button-div   # the rule, why, and the fix
 node /abs/skills/build-design-system/scripts/check-system.mjs --root /abs/app --no-self-test   # from any folder
 ```
 
@@ -60,7 +63,15 @@ One command, such as `npm run check`, runs every rule below and exits nonzero on
 | `trap/link-as-button` | An `<a>`, `Link` or system link component (an export ending in `Link`) whose own style or classes set both a background and padding, tokens included. Also a `variant` prop on `<a>` or `Link`, the Button's class names, 4 or more of its classes plus a height, or an app-CSS button class. The Button's style helper and single-element composition (`render`, `asChild`) pass. A `block`, `flex` or `grid` link is a card or row link and passes, and so does a background shown only on hover or focus | yes |
 | `trap/button-clone` | Any other element carrying the Button's class names, 4 or more of its classes plus a height, or an app-CSS button class. An app-CSS button class is one whose rule sets a background and padding, and whose name says btn, button or cta or which sits on a `<button>` somewhere | yes |
 | `trap/link-wraps-button` | A link with a `<button>` or `Button` inside it, or a button with a link inside it. Single-element composition (`asChild`, `render`) passes | yes |
-| `trap/loading-label-swap` | A `<button>` or Button whose children hold a ternary with a string label on a state the same tag gets as `disabled`, `loading`, `pending` or `aria-busy`, or on a state named like a loading one (`saving`, `pending`, `isSubmitting`). `{open ? "Hide" : "Show"}` on a toggle passes | yes |
+| `trap/loading-label-swap` | A `<button>` or Button whose children hold a ternary with a string label on a state the same tag gets as `disabled`, `loading`, `pending` or `aria-busy`, or on a state named like a loading one (`saving`, `pending`, `isSubmitting`). `{open ? "Hide" : "Show"}` on a toggle passes, and so do both labels rendered in one grid cell with the inactive one hidden, which is the fix (`component-contract.md`, Variants and states) | yes |
+| `trap/motion-transition-all` | `transition: all` or the `transition-all` utility | yes |
+| `trap/motion-ease-in-enter` | An ease-in easing on the same rule or element as an enter keyframe or enter class | yes |
+| `trap/motion-overshoot` | A `cubic-bezier()` or a motion library `ease` array whose second or fourth value falls outside 0 to 1 | yes |
+| `trap/hover-unguarded` | A CSS `:hover` rule outside `@media (hover: hover)` that changes `display`, `visibility` or `opacity` | yes |
+| `trap/zoom-disabled` | `user-scalable=no` or `maximum-scale=1` in the viewport meta | yes |
+| `trap/viewport-height` | `100vh` or `h-screen` on a full-height shell | yes |
+| `trap/touch-autofocus` | `autoFocus` or `autofocus` on a field in a page, outside a dialog | yes |
+| `trap/touch-tap-highlight` | `-webkit-tap-highlight-color: transparent` with no press style to replace it | yes |
 | `rule/component-override` | A `className` or `style` on a registry component that sets padding, radius, shadow or background: a utility (`p-0`, `rounded-full`), an inline style key, or an app-CSS class whose rule sets one. Layout (margin, width, grid or flex placement, overflow) passes. The names come from the registry's ids and its source files' exports | yes |
 | `trap/label-unbound` | A `<label>` or `<Label>` with no `htmlFor` and no control inside it, outside the ui folder. A spread (`{...props}`) passes | yes |
 | `trap/overlay-conditional-render` | `{open && <Dialog>}` or `{open ? <Dialog> : null}`, for the components in `overlayComponents` | yes |
@@ -99,9 +110,9 @@ Utilities built from the project's own semantic names (`bg-muted`, `text-muted-f
 
 ## The allowlist
 
-Existing violations outside the pilot go in `scripts/check-allowlist.json`, written once by `--init-allowlist` and committed with the check. It is keyed by file, rule and literal value, with a count for each: `{"app/billing/page.tsx": {"rule/raw-value": {"#111827": 1}}}`. The check fails when a literal's count grows, or when a literal it has no entry for appears, so swapping an allowed hex for a new one fails. `--shrink-allowlist` writes dropped counts back and never raises one. `--prune-allowlist` only removes entries that match no finding now, such as a fixed literal or a deleted file. The close runs it, so a fix never leaves a stale entry that would let the literal come back.
+Existing violations outside the pilot go in `scripts/check-allowlist.json`, written once by `--init-allowlist` and committed with the check. It is keyed by file, rule and literal value, with a count for each: `{"app/billing/page.tsx": {"rule/raw-value": {"#111827": 1}}}`. A count may instead be `{"count": 1, "removeBy": "2026-06-30"}`, and the check warns, never fails, once the date has passed, so an old debt resurfaces. The check fails when a literal's count grows, or when a literal it has no entry for appears, so swapping an allowed hex for a new one fails. `--shrink-allowlist` writes dropped counts back and never raises one. `--prune-allowlist` only removes entries that match no finding now, such as a fixed literal or a deleted file. The close runs it, so a fix never leaves a stale entry that would let the literal come back.
 
-The allowlist has one writer, the coordinator. Workers never edit it, since parallel edits drift the counts. A worker lists shrink candidates in its report (file, rule, literal, the count its `--files` run finds), and the coordinator runs `--shrink-allowlist` after landing each surface and commits the allowlist on its own. The allowlist never holds violations in the pilot or in lines this run wrote. Upstream's lines in a customized ui file are exempt through its stock copy. Lines the team wrote there before the run go in the allowlist like any product code.
+The allowlist has one writer, the coordinator. Workers never edit it, since parallel edits drift the counts. A worker lists shrink candidates in its report (file, rule, literal, the count its `--files` run finds), and the coordinator runs `--shrink-allowlist` after landing each surface and commits the allowlist on its own. The allowlist never holds violations in lines this run wrote. In the pilot's files it holds only a one-off value a decision row names, so `--files <pilot files>` exits 0 and `--left` lists nothing else there. Upstream's lines in a customized ui file are exempt through its stock copy. Lines the team wrote there before the run go in the allowlist like any product code.
 
 A check that points at an allowlist file that does not exist fails every finding, and says so.
 
@@ -121,7 +132,7 @@ Every report ends with "The check cannot see", from `--list-blind-spots` (`blind
 
 ## The check has to run
 
-- The command is one line in `package.json` (or the repo's task runner), for example `node scripts/check-system.mjs && node scripts/check-spec.mjs docs/system && node scripts/gen-docs.mjs --check`, plus the repo's typecheck and lint. Include any step those need to pass on a clean clone, such as generating types first. The base references give stack examples.
+- The command is one line in `package.json` (or the repo's task runner), for example `node scripts/check-system.mjs --ratchet scripts/check-ratchet.json && node scripts/check-spec.mjs docs/system && node scripts/gen-docs.mjs --check`, plus the repo's typecheck and lint. Include any step those need to pass on a clean clone, such as generating types first. The base references give stack examples.
 - Run it yourself and read its exit code. Before handoff, run it again on a clean clone: a fresh `git clone` of the branch with its dependencies installed, and no `.design-system/` or skill folder.
 - If the check uses a linter, a linter crash fails the check. Never drop the linter from the command to get a green result. Fix its config, or remove the rules that depend on it, and say so in a decision row.
 - A rule the repo's own linter can already express may live there instead, with the same rule ID in its message. For example, ESLint's `no-restricted-imports` with the deprecated import paths, or Stylelint's `color-no-hex` for CSS.
@@ -129,19 +140,26 @@ Every report ends with "The check cannot see", from `--list-blind-spots` (`blind
 - List generated output in the formatter's ignore file, or format it in the generator with the repo's formatter and config, before writing or comparing. Otherwise the first formatter run makes `--check` fail for good. Run the formatter from the repo root with the repo's own binary, since one run inside a container or another folder may pick up another config. Formatters can move backticks in inline code that holds backticks, so write such examples as fenced blocks, and rerun the docs check after formatting.
 - If CI exists, read its config and confirm the command is in it. With no CI, say "runs locally, not in CI". Claiming the check blocks merges needs the CI config.
 
-## Warnings on a pull request
+## CI tiers
 
-The built system ships a second CI step that warns, and never fails, when a pull request adds UI outside the system: raw values, palette classes, hand-rolled copies of system components and deprecated imports. `--changed <base ref>` keeps only findings on lines the pull request added or changed, and an allowlisted literal warns only past its count, so existing violations stay quiet. `--warn` prints each finding with its rule ID and the system's alternative, as a GitHub annotation on the changed line when `GITHUB_ACTIONS` is set and as `file:line warning ...` elsewhere, and exits 0. It skips the self-test. The blocking check above stays as it is. A minimal GitHub Actions step:
+The handoff sets up two tiers, so a pull request gets fast warnings and the slow checks still run.
+
+- Tier 1, every pull request: the blocking check command above, then `node scripts/check-system.mjs --changed <base ref> --warn --summary "$GITHUB_STEP_SUMMARY"` and `node scripts/check-spec.mjs docs/system --no-fresh`.
+- Tier 2, nightly, or on pull requests that touch `docs/system/` or the token source: the full `check-spec.mjs` and `stress.mjs --base <url> --routes .design-system/review/surfaces.tsv`, whose `stress/` findings `stress-test.md` lists.
+
+`--changed` keeps only findings on lines the pull request added or changed, and an allowlisted literal warns only past its count, so existing violations stay quiet. `--warn` prints each finding with its rule ID and the system's alternative, as a GitHub annotation on the changed line when `GITHUB_ACTIONS` is set and as `file:line warning ...` elsewhere, and exits 0. It skips the self-test. `--summary <file>` appends every warning to the file as a Markdown table, so nothing is lost past the host's annotation cap. The ratchet in the blocking command fails only when a rule's count rises (`--ratchet` alone reads `scripts/check-ratchet.json`), so drift cannot grow while the allowlist shrinks. After a fix lands, `--ratchet-update` lowers the file in the same commit. A minimal GitHub Actions tier 1:
 
 ```yaml
 - uses: actions/checkout@v4
   with:
     fetch-depth: 0
-- run: node scripts/check-system.mjs --changed origin/${{ github.base_ref }} --warn
+- run: npm run check
+- run: node scripts/check-system.mjs --changed origin/${{ github.base_ref }} --warn --summary "$GITHUB_STEP_SUMMARY"
   if: github.event_name == 'pull_request'
+- run: node scripts/check-spec.mjs docs/system --no-fresh
 ```
 
-Other CI hosts pass the base branch the same way, or pipe their own diff with `--diff -`. A shallow clone has no merge base, so the step prints one warning saying so and exits 0. The AGENTS.md block says the warnings exist (`system-structure.md`, Load conditions in AGENTS.md). The fixture `fixtures/check-system/changed-lines/` proves the scoping.
+Other CI hosts pass the base branch the same way, or pipe their own diff with `--diff -`. A shallow clone has no merge base, so the warn step prints one warning saying so and exits 0. The AGENTS.md block says the warnings exist, and `--explain <rule-id>` gives an agent the rule, why and the fix (`system-structure.md`, Load conditions in AGENTS.md). The fixture `fixtures/check-system/changed-lines/` proves the scoping.
 
 ## Proving each rule
 
@@ -153,8 +171,8 @@ Every rule gets a failing and a passing fixture under `fixtures/check-system/<ru
 
 The normal scan skips `scripts/` entirely.
 
-`check-spec.mjs --self-test`, `gen-docs.mjs --self-test`, `copy-check.mjs --self-test`, `probe.mjs --self-test` and `state-timeline.js --self-test --root <playwright root>` prove the other scripts the same way, from `fixtures/check-spec/`, `fixtures/gen-docs/`, `fixtures/copy-check/`, `fixtures/probe/` and `fixtures/state-timeline/` in the skill folder. These fixtures never go into the repo.
+`check-spec.mjs --self-test`, `gen-docs.mjs --self-test`, `copy-check.mjs --self-test`, `check-record.mjs --self-test`, `stress.mjs --self-test`, `probe.mjs --self-test` and `state-timeline.js --self-test --root <playwright root>` prove the other scripts the same way, from `fixtures/check-spec/`, `fixtures/gen-docs/`, `fixtures/copy-check/`, `fixtures/probe/` and `fixtures/state-timeline/` in the skill folder. These fixtures never go into the repo.
 
 ## At handoff
 
-Run the full check on a clean clone and paste the command and its exit code into the final message: `npm run check exit 0 (clean clone)`. The allowlisted and left counts come from `--left`, saved in `.design-system/close.md` (`coordinator-path.md`), and the message names the files still listed. The run record's handoff copies the blind spots. A red check at handoff is a failed run, never a footnote. When a rule cannot be made green in time, move its existing hits into the allowlist with a count, and say so.
+Run the full check on a clean clone and paste the command and its exit code into the final message: `npm run check exit 0 (clean clone)`. Name the CI file that runs both tiers, or say "runs locally, not in CI". The allowlisted and left counts come from `--left`, saved in `.design-system/close.md` (`coordinator-path.md`), and the message names the files still listed. The run record's handoff copies the blind spots. A red check at handoff is a failed run, never a footnote. When a rule cannot be made green in time, move its existing hits into the allowlist with a count, and say so.

@@ -1,0 +1,1 @@
+{ "rule": "trap/zoom-disabled", "expect": { "trap/zoom-disabled": 4 } }

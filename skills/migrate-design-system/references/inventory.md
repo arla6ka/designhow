@@ -152,7 +152,7 @@ app/checkout/payment-frame.tsx	#32325d	the payment provider's appearance API nee
 app/settings/profile/date.tsx	~/ui/DatePicker	G-04 option B	design-systems	2026-12-01
 ```
 
-Every entry has a reason and an owner. The check fails on an entry that matches no finding, so the list shrinks as work lands. Adding an entry needs a gate that is no longer `open`, or a logged decision. The script reads `allowlist.tsv` from day one, even when empty, because without it one documented exception makes a zero count impossible.
+Every entry has a reason and an owner. The check fails on an entry that matches no finding, so the list shrinks as work lands. Adding an entry needs a gate that no longer reads `gate`, or a logged decision. The script reads `allowlist.tsv` from day one, even when empty, because without it one documented exception makes a zero count impossible.
 
 ## Blocking new legacy usage
 
@@ -230,7 +230,7 @@ The run re-pins the plan itself before handoff, never the person. On the run bra
 ```markdown
 # Migration plan: <app> to <system version>
 
-System: <package or folder> at <commit>, <landed | in progress>
+System: <package or folder> at <commit>, <done | doing>
 Counts: imports 214, raw 1307, palette 388, files 46, unassigned 0 (inventory/counts.txt, run twice with identical output)
 Blind spots: <places static search cannot see>
 
@@ -259,5 +259,12 @@ Blind spots: <places static search cannot see>
 <each question for a person, with options and a default>
 
 ## Estimate
-<surfaces, window size, and expected wall clock, based on stated assumptions>
+<surfaces, families, window size, and expected wall clock, based on stated assumptions>
+
+## Found, not fixed
+<the table in build-design-system/references/run-record.md (Handoff report): one row per surface with findings (`no clearance`), per blocking or degrading parity gap and per gap for the system owner (`out of scope`), and per gate (`gate`). A blocking parity gap is `blocking`, a surface with legacy imports or raw values `should-fix`, palette-only and blind spots `note`. Rows past 30 go to found-not-fixed.tsv.>
+
+Next: To migrate the <N> surfaces (<M> families, about <budget>), reply "Go, <budget>".
 ```
+
+The offer's size comes from this plan: surfaces from the Surfaces table, families from the system components the mapping names, and the budget from Estimate. Full mode starts only on that reply or an ask that names the migration.

@@ -1,0 +1,3 @@
+export default function Page() {
+  return <div style={{ color: "#fafafa", background: "#0a0a0a" }} />;
+}

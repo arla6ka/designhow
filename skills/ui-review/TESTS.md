@@ -18,14 +18,12 @@ Every case runs on every setup except these:
 | Browser evidence | A browser tool is installed |
 | Component specs | The repo has specs |
 | Fixed means measured again | A follow-up pass |
-| Interaction on a local build | A live build |
+| Interaction on a local build, Answers the hand, Motion curve | A live build |
 | Dialog and form probes, Lost or mismatched input | The flow has a dialog or form |
 
 ## Done means
 
 The readiness list under Output in `SKILL.md`.
-
-With the skill off, watch for criteria made up on the spot, opinions written as problems, one issue listed per screen, a confident accessibility ruling, and findings with no location.
 
 ## Normal case
 
@@ -85,7 +83,7 @@ With the skill off, watch for criteria made up on the spot, opinions written as 
 
 **Fails if:** the color choice gets a severity or is dropped silently, a criterion is invented for the layout, or the gray text goes to a person unranked or is ranked with no ratio.
 
-**Empty version:** a clean screen that meets every criterion. The report says "None" under Blocking and Should fix, and no Note is promoted to fill them.
+**Empty version:** a clean screen that meets every criterion. The report says "None" under `blocking` and `should-fix`, and no `note` is promoted to fill them.
 
 **Viewport version:** the same screen at 390 and 1280 px, with a problem only at 390. The finding names 390 px only.
 
@@ -93,7 +91,7 @@ With the skill off, watch for criteria made up on the spot, opinions written as 
 
 **Input:** after-captures of one route at 390 and 1280 px from a coordinator brief, with the system's criteria file and no purpose.
 
-**Expect:** no questions. It infers the purpose and marks it assumed, and the report opens with `Status: complete (Blocking n, Should fix n, Note n)` whose counts match the findings, then `Commit: none`. The scan and probes read `not run: captures only`, and the report still counts as ready.
+**Expect:** no questions. It infers the purpose and marks it assumed, and the report opens with `Status: complete (blocking n, should-fix n, note n)` whose counts match the findings, then `Commit: none`. The scan and probes read `not run: captures only`, and the report still counts as ready.
 
 **Fails if:** it stops to ask for a purpose, or the counts in the status line disagree with the findings.
 
@@ -125,7 +123,7 @@ With the skill off, watch for criteria made up on the spot, opinions written as 
 
 **Expect:** the record names the tool, the widths and the accessibility scan. The target-size finding cites the button by role and name with its `@eN` ref, and gives the measured box. Captures use absolute paths under `.ui-review/<date>-<flow>/`, the session is named after the flow, and a file listing follows each capture.
 
-**Fails if:** the size is estimated from a screenshot, an automated scan result is ranked as Blocking on its own, a capture path starts with `.`, or a session is named plain `review`.
+**Fails if:** the size is estimated from a screenshot, an automated scan result is ranked `blocking` on its own, a capture path starts with `.`, or a session is named plain `review`.
 
 **Fallback tool version:** remove the preferred tool so the next one in `browser.md` (Pick the tool) runs. The scan still runs at every width. A record with no scan, or "low contrast" without a measured value, fails. With no browser tool at all, it asks for screenshots.
 
@@ -147,9 +145,9 @@ With the skill off, watch for criteria made up on the spot, opinions written as 
 
 ## Ship line
 
-**Input:** three runs on the same route. First with one Blocking finding (the submit button does nothing at 390). Then with that fixed and two Should fix left. Then with only Notes.
+**Input:** three runs on the same route. First with one `blocking` finding (the submit button does nothing at 390). Then with that fixed and two `should-fix` left. Then with only notes.
 
-**Expect:** the ship line, right after the plain answer line (and the status line under a coordinator), reads `Ready to ship: no`, then `yes, with fixes`, then `yes`, each with a one-clause reason and the count of accessibility questions for a person. With a Blocking finding the first line starts with "No" or "Not yet". With Should fix only, it never says "Not yet".
+**Expect:** the ship line, right after the plain answer line (and the status line under a coordinator), reads `Ready to ship: no`, then `yes, with fixes`, then `yes`, each with a one-clause reason and the count of accessibility questions for a person. With a `blocking` finding the first line starts with "No" or "Not yet". With `should-fix` only, it never says "Not yet".
 
 **Fails if:** the verdict comes after the Review record, disagrees with the severities or with the first line, or an accessibility question sets it.
 
@@ -191,7 +189,7 @@ With the skill off, watch for criteria made up on the spot, opinions written as 
 
 **Fails if:** any probe is missing without a reason, focus return is marked "not checked" while the closed state was reached, or Enter in the first field is never pressed.
 
-**Silent non-completion version:** Enter in Email with valid input closes the dialog with 0 requests. Expect Blocking, because the user believes the invite went out and it did not, with `__clicks` reading `["Cancel"]` as evidence. A finding that names the button without the listener output, or drops to Should fix because Send is still reachable, fails.
+**Silent non-completion version:** Enter in Email with valid input closes the dialog with 0 requests. Expect `blocking`, because the user believes the invite went out and it did not, with `__clicks` reading `["Cancel"]` as evidence. A finding that names the button without the listener output, or drops to `should-fix` because Send is still reachable, fails.
 
 ## Lost or mismatched input
 
@@ -201,7 +199,7 @@ With the skill off, watch for criteria made up on the spot, opinions written as 
 
 **Fails if:** it lands under For a person to decide as a product question, or has no severity.
 
-**Access grant version:** pick Admin, click Cancel, reopen, and press Send invite with a 200 stub. The select shows "Choose a role" while the body carries `"role":"admin"`. Expect Blocking under criterion 8, because the hidden value grants access, found by the Cancel then reopen probe. Should fix with "the user chose it earlier" fails. If the hidden value is a display preference, such as a sort order, expect Should fix.
+**Access grant version:** pick Admin, click Cancel, reopen, and press Send invite with a 200 stub. The select shows "Choose a role" while the body carries `"role":"admin"`. Expect `blocking` under criterion 8, because the hidden value grants access, found by the Cancel then reopen probe. `should-fix` with "the user chose it earlier" fails. If the hidden value is a display preference, such as a sort order, expect `should-fix`.
 
 ## Chained findings and a full Next
 
@@ -246,3 +244,29 @@ With the skill off, watch for criteria made up on the spot, opinions written as 
 **Expect:** the stand-in content edge case reads not shown, naming the avatar slots and the names, with a capture.
 
 **Fails if:** the edge case is marked shown, or the review ranks the photos as a taste call under Left out.
+
+## Answers the hand
+
+**Input:** a local build where a primary button shows its pressed state only after a 200ms transition, and a list row that ignores clicks until its enter animation ends.
+
+**Expect:** findings under criterion 13, citing `trap/press-delayed` and `trap/motion-blocks-input`, each with the measured time from `state-timeline.js` or the probe that found it.
+
+**Fails if:** either finding rests on a screenshot, has no measured time, or lands under criterion 7.
+
+**Screenshots only version:** criterion 13 reads n/a with the reason that it needs a live build, and no finding or pass is written for it.
+
+## System-caused finding
+
+**Input:** three screens whose menus all open on the same system preset, and that preset eases in and runs longer than the menus' tier allows.
+
+**Expect:** one finding flagged `system-caused`, naming the preset, with a count of 3 and the screens. Its fix and `Next:` prompt point at the token source or preset, not the screens.
+
+**Fails if:** it becomes three findings, the fix edits each screen, or the flag names no token, preset or component.
+
+## Motion curve
+
+**Input:** a local build where a popover enters with a linear curve and exits slower than it enters, on a surface of tier `high`.
+
+**Expect:** a finding citing `trap/motion-linear` and `trap/motion-exit-slower` with durations and easings read from `getAnimations()`, plus `trap/motion-frequent` for the tier. It ranks above an equal-severity finding on a `low` surface.
+
+**Fails if:** the curve is judged from a capture, the finding goes to Left out as taste, or the tier does not change its order.

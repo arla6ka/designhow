@@ -1,0 +1,2 @@
+.shell { height: 100vh; }
+.sheet { max-height: calc(100vh - 2rem); }

@@ -23,7 +23,7 @@ Every spec answers each of these, or marks it `Not applicable: <reason>` or `NOT
 
 1. What job does it do, what does it render on, and what did the foundation give versus what did the team add?
 2. Which variant axes exist, which values does each take, and which call sites use each value?
-3. Which states exist? For each one, what triggers it, what can the user do, what shows it besides color, and how is it checked?
+3. Which states exist? For each one, what triggers it, what can the user do, what shows it besides color, and how is it checked? Which state changes move, and on which preset?
 4. When two states hold at once, which wins? Every pair that can co-occur has an answer.
 5. Which keys do what, and where does focus go after open, close, select, submit and error?
 6. What role, accessible name, ARIA states and announcements does it expose, in every variant?
@@ -77,6 +77,11 @@ Real uses, <n> call sites (<the rg command that counted them>):
 
 ### State precedence
 - <State A> and <State B>: <winning state> wins. <What the user sees.>
+
+### Motion
+| Trigger | Kind | Preset | Properties | Reduced motion |
+|---|---|---|---|---|
+| <state change, such as closed to open> | <input or announce> | `<preset>` | <transform, opacity> | <what shows instead> |
 
 ## Props
 <Notes only. gen-docs writes the table from the types into the twin. Purpose text goes in JSDoc on the props type.>
@@ -136,7 +141,8 @@ Rests on <native element or library primitive>.
 
 - **Foundation.** Name what the foundation shipped, then list only real differences from its stock source, found by diffing against it. The foundation's reference (`base-shadcn.md`, `base-library.md`, `base-raw.md`) says how. A stock file has one row: "Stock. No team changes." On a package library, the left column is the library's component and the right is the wrapper. Raw code writes `Not applicable: hand-rolled` under the H3.
 - **States.** Start from the list in `component-contract.md`, drop what does not apply with a reason, and add product states the code has, such as `syncing` or `locked`. A row with an empty cell fails. "Hover" whose only cue is color is still a row: its cue says "pointer only, color change", and precedence says what beats it. A pending state keeps the action's label and focus (`traps.md`, `trap/loading-label-swap`).
-- **Precedence.** Write one line per pair of states that can hold at once. The usual ones are pending with invalid, disabled with focus, open with disabled, read-only with invalid and selected with disabled. Each line says which state "wins", or "both show" when the two stack without conflict. A line that asks a question, says TBD, or has no winner fails. When only one state can hold at a time, write `Not applicable: <why the states exclude each other>`, as the whole list or on one pair's line, such as `- Filled and empty: Not applicable: a field is one or the other`. `NEEDS REVIEW` still fails, because the question is open. It is how a draft waits for a person.
+- **Precedence.** Write one line per pair of states that can hold at once, such as pending with invalid or disabled with focus. Each line says which state "wins", or "both show" when the two stack without conflict. A line that asks a question, says TBD, or has no winner fails. When only one state can hold at a time, write `Not applicable: <why the states exclude each other>`, as the whole list or on one pair's line, such as `- Filled and empty: Not applicable: a field is one or the other`. `NEEDS REVIEW` still fails, because the question is open. It is how a draft waits for a person.
+- **Motion.** One row per state change that moves, from the component's code. Kind and preset follow `token-architecture.md` (Motion presets), and the rows answer the Motion traps in `traps.md`. A component with no transition or animation writes `Not applicable: no motion` under the H3.
 - **Checked by.** Use `test`, `lint`, `screenshot`, `a11y scan`, `snapshot` or `by hand`. `by hand` puts the row on the verifier's list. A blank cell fails.
 - **Traps.** Every trap id in `traps.md` for the component's family appears on the Description line, and the section that answers it says so. A trap that does not apply is listed with `n/a` and the reason.
 - **Usage.** Follow `rule-method.md`. When to use and When not to use hold situations, not rules, and every When not to use line names a registry component or a coverage-gaps row with "instead". Rules, Content, Anti-slop and Limits hold rule lines only, plus citation lines such as ``- Follows `rule/writing-verb-chain`.`` for rules another page owns, and gated lines (below). Every rule carries a `Don't:` and a `Do:` line as a nested list, Don't first, each one line of real code against the system's import path, or real copy. The Don't is the falsify snippet. The exemplar spec sets the count per H3. A spec with under half the exemplar's rules in an H3 names the reason in its report. An H3 with nothing to say reads `Not applicable: <reason>`. Every rule has a row in `docs/system/rule-tests/<component>.tsv`.
@@ -186,6 +192,7 @@ Older `component-docs` headings land here:
 | `spec/traps` | Description has no `Traps checked:` line |
 | `spec/states-table` | States has no table with State, Trigger and Checked by columns |
 | `spec/states-empty` | A States row has an empty or `?` cell |
+| `spec/motion` | The component's code has a transition or animation and the spec has no `### Motion` table, or a row leaves Kind, Preset or Reduced motion empty |
 | `spec/precedence` | `### State precedence` is missing, empty, or has a line that asks a question, says TBD, or has none of "wins", "both show" or "Not applicable" with a reason |
 | `spec/keyboard` | Accessibility lacks a `### Keyboard` table with at least one row |
 | `spec/aria` | Accessibility lacks a `### ARIA` table with at least one row |

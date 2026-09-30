@@ -13,7 +13,8 @@ A result only means something next to the setup that produced it. Record before 
 - The skill's files, unedited or with your changes named, and its scripts with fixtures
 - Sibling skills installed, with versions or commits, and any missing
 - Project instructions loaded (AGENTS.md, CLAUDE.md or none), and any precedence rule they hold
-- Host: subagents, nesting, worktrees, a browser tool and a shell, each yes or no
+- Host: subagents, nesting, worktrees, a browser tool and a shell, each yes or no, and the memory pressure reading at the start
+- Whether a person answered during the run, or it ran unattended on its defaults
 - Repo, commit, and whether `git status` was clean
 - The model for the coordinator, and for workers if different
 

@@ -26,7 +26,7 @@ edit nothing until I say go.
 
 Each README repeats its own list. They are collected here so a team adapting several skills asks each question once.
 
-- `build-design-system`: where shared UI lives, with the framework, styling method and router; any token file or theme config other tools read; the docs site and URL shape; the words for token roles and variants; the behavior library and test runner; viewports and themes; which token source wins; who confirms gates.
+- `build-design-system`: where shared UI lives, with the framework, styling method and router; any token file or theme config other tools read; the docs site and URL shape; the words for token roles and variants; the behavior library and test runner; viewports and themes; the screens you consider the app's best; which token source wins; who confirms gates.
 - `design-system-boss`: how the team describes design system work, so the intent table matches; what adoption counts as settled and how many duplicate families it tolerates; where tokens, components and docs live, so `triage.sh` searches the right folders; how much time and how many agents a run may use; who clears a migration and how fast; what the agent host can do.
 - `migrate-design-system`: where the system lives, its version and owner; the app's structure and what a surface is; what counts as legacy and which raw values may stay; which files never go to a worker; how the app and tests run in CI, with widths and themes; exact or mapped migration; the agent platform and how many agents at once; who answers gates.
 - `token-mapping`: where tokens live and in what format; categories; base unit and tolerances; modes; the gap threshold; which token source wins; agreed exceptions.

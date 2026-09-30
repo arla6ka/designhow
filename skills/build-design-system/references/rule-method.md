@@ -50,7 +50,7 @@ Ask every question for every primitive. An answer becomes a rule, a table row, o
 3. **Where it breaks.** Grow each dimension until something fails: content length, item count, nesting, viewport width, input method, locale (longer strings, right to left), and data states (empty, one, many, slow, failed, stale). Goes in Limits and Rules.
 4. **Limits.** At each break, what number does the alternative take over at? Goes in Limits, measured.
 5. **Copy slots.** Which text does it render (label, title, body, action, placeholder, helper, error, empty, tooltip, status)? For each, what casing, grammar template, length and forbidden words hold? Goes in Content.
-6. **States over time.** Idle, pending, success, failure and recovery. What does the user see and do in each, and how long does feedback stay? Does anything persist, time out, undo, or survive a reload? What happens to a second press while pending, and where is focus? Does each state change animate, and for what job? Goes in Rules, with the mechanics in the States table.
+6. **States over time.** Idle, pending, success, failure and recovery. What does the user see and do in each, and how long does feedback stay? Does anything persist, time out, undo, or survive a reload? What happens to a second press while pending, and where is focus? Pending follows the one fix in `component-contract.md` (Variants and states). The label and box stay, a spinner sits inside, and repeats are blocked. Does each state change animate, and for what job? Goes in Rules, with the mechanics in the States table.
 7. **Input methods.** Walk the full task with pointer, touch, keyboard and a screen reader. What can one method not reach (hover-only, right-click-only, drag-only), and what is its other path? Goes in Rules and Keyboard.
 8. **Accessibility contract.** Role, accessible name in every variant, announcements and their timing, focus after each transition, contrast as drawn, target size, motion. Goes in Accessibility.
 9. **Composition.** What may it contain, and what may it sit inside? Which pairings break focus, nesting or semantics? Goes in Rules, and one example file shows the main pairing.
@@ -68,10 +68,11 @@ Every rule rests on at least one ground, cited after `Evidence:`. A rule with no
 | Measurement | `measured <value>, <evidence path or command>` | A probe, script or computed style on this app, saved under `.design-system/evidence/<component>/` and cited by path |
 | Principle | `principle <kind>: <name and mechanism>` | `wcag` with the criterion number, `platform` with the native element or OS convention, `heuristic` with the named usability heuristic, `input` with the input model. Say how it applies here |
 | Person | `person D<n>` | A ban or preference the person stated, recorded as row D<n> in `docs/system/decisions.md`. Shipped docs cite the row and never quote the person. It outranks the app's majority (`modes.md`, What decides a question) and needs no second ground |
+| Exemplar | `exemplar E<n> <file:line>, <what the screen does>` | A screen the person named in the Frame as one of the app's best (`run-record.md`, Questions). Where the majority differs, the rule is a gate whose default is the exemplar's pattern, and the majority goes on the stray list |
 
 A principle sets a direction. A number comes from the app or a measurement, unless the principle states one, as a WCAG criterion does.
 
-A majority that is itself a trap from `traps.md` never becomes a rule. It becomes a gate whose default is the trap's fix. That includes copy rules from `writing-method.md`.
+A majority that is itself a trap from `traps.md` never becomes a rule. It becomes a gate whose default is the trap's fix. That includes copy rules from `writing-method.md`. A trap also outranks an exemplar that falls into it.
 
 ## Rule shape
 

@@ -13,6 +13,7 @@ Contents
 - Measuring a loading state
 - Measuring motion
 - Measuring state order
+- Measuring type, scroll and first paint
 - Measuring optical alignment
 - Evidence for a review
 - Review captures on the run branch
@@ -71,11 +72,11 @@ On Next.js with Turbopack, for example, restart the dev server after editing `@t
 node <skills>/build-design-system/scripts/capture.mjs --base http://localhost:3000 --kind before --out /abs/repo/.design-system/review --surfaces /abs/repo/.design-system/review/surfaces.tsv --widths 390,1280 --themes light,dark --states /abs/repo/.design-system/scripts/states.mjs
 ```
 
-`surfaces.tsv` has a header row and one row per route: `surface`, `route` and `states`, such as `settings	/settings	saving,error`. A worker capturing one surface passes a one-row copy at `.design-system/tmp/<worker id>/<surface>.surfaces.tsv`. `capture.mjs --help` gives the file names. The states module maps a state to a Playwright function that reaches it. A state it cannot reach safely goes in `not-captured.tsv` with the reason.
+`surfaces.tsv` has a header row and one row per route: `surface`, `route`, `states` and `tier`, such as `settings	/settings	saving,error	low`. The tier is `high` (used many times a session: nav, list rows, primary actions, menus), `mid` or `low` (settings, onboarding, empty states). A worker capturing one surface passes a one-row copy at `.design-system/tmp/<worker id>/<surface>.surfaces.tsv`. `capture.mjs --help` gives the file names. The states module maps a state to a Playwright function that reaches it. A state it cannot reach safely goes in `not-captured.tsv` with the reason.
 
 Beside each capture it writes a `.probe.json`: each control's role, name and states, headings, rendered text contrast, link cues, and the measurements `traps.md` names (control heights, wrapped labels, flat panels, clipped nav, unscrollable dialogs, motion under reduced motion). `montage.mjs` compares them, and `probe.mjs <file.probe.json>...` lists the measured traps from any capture.
 
-Read the router's rules before listing surfaces. On the Next.js App Router, for example, a route is a folder with a `page` file, private folders (`app/**/_*`) never route, and `app/(shop)/cart/page.tsx` is `/cart`.
+Read the router's rules before listing surfaces, since private and grouping folders do not route as named.
 
 `--eval <skills>/build-design-system/scripts/optical.js` runs an in-page audit in every capture after animations settle and writes what it returns beside the screenshot, such as `settings-before-390-dark.optical.json`. Any script that returns JSON works, so one command runs an audit over every surface, width and theme.
 
@@ -107,7 +108,7 @@ Sort accessibility-tree changes by `traps.md` (Adds-only accessibility changes).
 
 ## Measuring a loading state
 
-`trap/loading-layout-shift` and `trap/loading-label-swap` need numbers, not a look. Measure the control's box idle. Hold the request pending so the state stays on screen, trigger the action, and measure the box again. Record both boxes, the accessible name and where focus sits, before and after. Any change in the box fails the shift trap, a changed name fails the label trap, and focus that falls to the page fails `trap/loading-label-swap`'s focus rule.
+`trap/loading-layout-shift` and `trap/loading-label-swap` need numbers, not a look. Measure the control's box idle. Hold the request pending so the state stays on screen, trigger the action, and measure the box again. Record both boxes, the accessible name and where focus sits, before and after. Any change in the box fails both traps. A changed name fails the label trap unless both labels sit stacked in one grid cell (`component-contract.md`, Variants and states). Focus that falls to the page fails `trap/loading-label-swap`'s focus rule.
 
 Take the box by a selector or ref fixed before the action, never by the accessible name, which a label swap changes. Wait for the page to be interactive first. When the submit cannot be held pending from the page, measure the component's idle and loading example files instead.
 
@@ -116,21 +117,34 @@ Take the box by a selector or ref fixed before the action, never by the accessib
 A capture settles every animation, so motion needs its own evidence. Run these with reduced motion off, from files under `.design-system/tmp/<worker>/`:
 
 - Within one duration of each trigger, before any animation finishes, list `document.getAnimations()` with target, duration, easing and animated properties. The list holds CSS animations, CSS transitions and Web Animations only. For motion driven from script, read the element's computed transform and opacity each frame.
+- Read the curve traps off that list. An enter eased in is `trap/motion-ease-in-enter`, linear easing outside progress and loops is `trap/motion-linear`, a cubic-bezier with a y value outside 0 to 1 or a spring with bounce is `trap/motion-overshoot`, and an exit longer than its surface's enter is `trap/motion-exit-slower`. A list on a tier `high` surface's open is `trap/motion-frequent`.
 - To test a retrigger, trigger the element twice within one duration and sample its `getBoundingClientRect()` each frame. A jump back is `trap/motion-restart`.
-- Throttle the CPU, state the rate in the run record, and record frame times through the animation. A frame over 50ms during the animation is a finding by default, the browser's long-task threshold.
+- For input motion, move the pointer one step per frame through a drag and read the element's position each frame. Trailing the pointer by a frame or more, or closing the gap on a curve, is `trap/motion-input-lag`. `state-timeline.js --drag <css>` runs this drag for you.
+- Jank. Throttle the CPU and state the rate in the run record. Take the median `requestAnimationFrame` interval at rest, then log every frame through the motion. A frame whose gap exceeds 1.5 times that interval is dropped. Report dropped over total and the longest gap. More than 1 dropped frame in a motion under 300ms, or more than 5% in a longer one, is `trap/motion-jank`. `state-timeline.js` counts it on every motion it records.
 - For a person's check by eye, set each animation's `playbackRate` to 0.1, record the screen, and hand them the recording.
 
-Matching before and after lists prove a motion value swap (`run-record.md`, Terms). A changed duration, easing, animated property or trigger is a decision.
+Matching before and after lists prove a motion value swap (`run-record.md`, Terms). Any other change to them is a decision.
 
 ## Measuring state order
 
-`state-timeline.js` records one control's border, outline, shadow, fill and focus every frame while real input runs: hover, keyboard focus, press, open, close by the trigger, Escape, and a click outside. It reports `trap/hover-beats-focus`, `trap/disabled-still-hovers`, `trap/open-trigger-unfocused`, `trap/overlay-focus-return` and `trap/disabled-drops-focus`, and prints how long each press and state takes to settle.
+`state-timeline.js` records one control's border, outline, shadow, fill and focus every frame while real input runs: hover, keyboard focus, press, open, close by the trigger, Escape, and a click outside. It reports `trap/hover-beats-focus`, `trap/disabled-still-hovers`, `trap/open-trigger-unfocused`, `trap/overlay-focus-return`, `trap/disabled-drops-focus`, `trap/press-delayed` (first visible change more than 100ms after pointer-down, or, with `--instant <ms>`, a press that settles later than the `instant` preset) and `trap/motion-jank` (Measuring motion). With `--drag <css>` it drags the target instead and reports `trap/motion-input-lag` when `<css>` trails the pointer.
 
 ```sh
 node <skills>/build-design-system/scripts/state-timeline.js --base http://localhost:3000 --route /settings --target '[data-slot=select-trigger]' --open '[role=listbox]' --root /abs/repo
 ```
 
 Run it on one control per family and state (a trigger, a field, a disabled button, a pending submit), in each theme. With agent-browser, eval the file, call `__dsTimeline.start(selector, { open })`, drive the input with the tool's own commands, then eval `__dsTimeline.stop()`. Keep the tab at the front, since a background tab runs no hover or frames. Two traps need a hand check. For `trap/exit-eats-input`, close the overlay and press the trigger and the content under it within the exit's duration. For `trap/escape-nested`, open a menu inside a dialog and press Escape once.
+
+## Measuring type, scroll and first paint
+
+- `probe.mjs` reports `trap/text-measure`: characters per line of each reading column, at each width.
+- Select text on each surface in each theme. The `::selection` colors meet text contrast.
+- Open an in-page anchor. The heading lands clear of any sticky header (`scroll-margin-top`).
+- Scroll each nested scroller to its end (`trap/scroll-chain`).
+- Open a modal, and grow a page past the viewport. Nothing moves sideways when the scrollbar comes or goes (`scrollbar-gutter: stable`, or a scroll lock that pads for the bar).
+- Load each route cold with each theme preference and capture the first frame. The wrong theme for even one frame is a finding, fixed by setting the theme before first paint.
+- Load cold with the cache off and observe `layout-shift` entries. A shift when the web font swaps in needs a fallback matched by `size-adjust` and its metric overrides.
+- A skeleton's box equals the loaded content's box, measured like a loading state.
 
 ## Measuring optical alignment
 

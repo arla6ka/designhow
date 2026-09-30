@@ -72,6 +72,13 @@ Real uses, 11 call sites (`rg -n "<Combobox\b" src components`, outside `compone
 - Selected item and disabled item: disabled item wins in the list. An archived customer that is still the value shows "Archived", cannot be picked again, and the input turns invalid.
 (6 more lines)
 
+### Motion
+| Trigger | Kind | Preset | Properties | Reduced motion |
+|---|---|---|---|---|
+| Closed to open | announce | `overlay` | opacity, transform | opacity only |
+| Open to closed | announce | `exit` | opacity | none |
+| Active item moves | announce | `instant` | background | same |
+
 ## Props
 gen-docs writes the table from the root and `ComboboxInput` prop types. `showClear` defaults to `false` in the stock wrapper, and `CustomerPicker` always passes it, so the stock default never reaches a screen.
 

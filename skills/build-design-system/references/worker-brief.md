@@ -9,6 +9,7 @@ Contents
 - The template
 - The spec-worker variant
 - Filling it in
+- Orders by role
 - Parallel workers in one checkout
 - Reviewing a report
 - Retries and dropouts
@@ -22,7 +23,7 @@ Delegate a family when its files do not overlap with any other open family, and 
 - a family whose canonical pick waits on a gate
 - work that edits the token source, generated files, barrel export, registry or migration map
 
-Size the fan-out first. In a small layer, by default under 15 component files and one theme, the coordinator writes the components and only specs fan out, because a brief costs more than the code. Otherwise families fan out too, one per worker. The window starts at the browser row of `coordinator-path.md` (Machine budget) and never exceeds the budget. Refill a slot only when no report waits for review, and never wait for a whole batch.
+Size the fan-out first. A small app fans out nothing (`coordinator-path.md`, Small app). In a small layer, by default under 15 component files and one theme, the coordinator writes the components and only specs fan out, because a brief costs more than the code. Otherwise families fan out too, one per worker. The window starts at the browser row of `coordinator-path.md` (Machine budget) and never exceeds the budget. Refill a slot only when no report waits for review, and never wait for a whole batch.
 
 Name roles in briefs, not models. The cheapest model that can read the whole scope runs read-only surveys. The strongest runs code, rules and the second review.
 
@@ -120,6 +121,7 @@ FORBIDDEN
 - Changing call sites outside your examples and tests
 - New dependencies
 - New colors, fonts, shadows or motion
+- Examples that send a request on mount, charge money or delete anything
 - Editing a test, fixture or check so it passes
 - Writing a report file anywhere. The report is your final message
 - Starting a dev server, browser or container the brief does not name
@@ -148,7 +150,8 @@ Gaps against the contract:
 Anything you decided that the brief did not cover:
 
 STANDING
-<paste the run's one standing-order list from run.md, word for word>
+<paste the run's one standing-order list from run.md, word for word,
+then this role's lines from Orders by role>
 ```
 
 ## The spec-worker variant
@@ -242,7 +245,8 @@ Requests for the coordinator:
 Anything you decided that the brief did not cover:
 
 STANDING
-<paste the run's one standing-order list from run.md, word for word>
+<paste the run's one standing-order list from run.md, word for word,
+then this role's lines from Orders by role>
 ```
 
 Review a spec report like a family report, minus the code steps: rerun `check-spec.mjs` yourself, open two evidence files the spec cites, and confirm the worker changed only files in its SCOPE. A defect it reports is the coordinator's to fix, as a decision when it is broken behavior, and the spec is rechecked at HEAD after the fix.
@@ -254,6 +258,15 @@ Review a spec report like a family report, minus the code steps: rerun `check-sp
 - One family per brief. Two families mean two sets of files and a report nobody can grade in one pass.
 - The standing orders go in every brief, including retries, because instructions only in the first message get lost when a worker restarts.
 - Ask for a report under 300 words that leads with what the coordinator must act on: a shared-file change, a conflict with a decision, a failing command. The report is the final message itself, never a pointer to one.
+
+## Orders by role
+
+The standing orders in `run-record.md` bind every role. Paste this role's lines under them, in STANDING, and no other role's.
+
+- Code worker (family, fix or surface): Examples use inert data, with no request on mount. Scripts a rerun needs go in .design-system/scripts/, committed; the check never reads .design-system/. What the team needs after the run (scripts, config, specs, generated docs) goes in the repo; on a minimal footprint nothing is vendored. An unexplained diff stays out of the commit and becomes a gate. The dev server follows coordinator-path.md (Dev server and retries); in a shared checkout start none and return `blocked: server down` when the brief's port does not answer. Browser commands use absolute paths and your own session name on every line. The brief's Person's calls are values the person set, each with its file; never normalize one to a pattern.
+- Surface worker, on top of the code worker's lines: Swap a raw literal for a token of exactly the same value once pixdiff at tolerance 0 shows 0% on every width and theme capture of the route, or matching animation lists for a motion value. Merges inside tolerance and decided gate defaults land wherever they reach. Other changes land only on cleared surfaces. Each is one surface per commit, with before and after captures in .design-system/review/ and a traces.tsv row.
+- Spec worker: Examples use inert data. Browser commands use absolute paths and your own session name on every line. The brief's Person's calls are values the person set; never normalize one to a pattern. A script that applies drafts takes an explicit list of your own files.
+- Read-only worker: nothing added.
 
 ## Parallel workers in one checkout
 

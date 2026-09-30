@@ -17,7 +17,7 @@ How one coordinator keeps tens of workers moving without losing any. Read it bef
 
 ## Roles
 
-**Coordinator.** One agent for the whole run. It frames, writes briefs, saves each return's status line and file list (never the whole text), runs drains, keeps the tables current, lands clean merges, and decides. It alone starts the shared dev server and browser (`build-design-system/references/coordinator-path.md`, Dev server and retries), and never ends its turn with workers in flight (standing order 16). It never edits tests, baselines or the system. With subagents, any code change, a conflicted merge included, becomes a unit with a brief (the coordinator rule in `SKILL.md`), because while the coordinator fixes code, no worker return gets processed.
+**Coordinator.** One agent for the whole run. It frames, writes briefs, saves each return's status line and file list (never the whole text), runs drains, keeps the tables current, lands clean merges, and decides. It alone starts the shared dev server and browser (`build-design-system/references/coordinator-path.md`, Dev server and retries), and never ends its turn with workers in flight (`SKILL.md`, the foreground rule). It never edits tests, baselines or the system. With subagents, any code change, a conflicted merge included, becomes a unit with a brief (the coordinator rule in `SKILL.md`), because while the coordinator fixes code, no worker return gets processed.
 
 **Shared-layer owner.** One agent, during the Shared layer phase only. A shared gap reported later becomes a new shared unit that runs alone while the surfaces that depend on it wait.
 
@@ -39,13 +39,11 @@ After the pilot, the window starts at the browser row of the machine budget in `
 
 When a worker finishes, start the next ready surface at the next drain. Do not run fixed batches. A batch waits for its slowest member, while a window refills as soon as a slot opens.
 
-A surface is ready when its dependencies are `landed`, it has no open gate, its mapping has no unresolved rows, and every brief field can be filled. No surface is ready while a `gap: blocking` parity row is open (`references/inventory.md`, Functional parity). When the surfaces are near-identical and the codemod covers them, the pilot can run as an ordinary unit with its checks inline, and the window opens as soon as it lands.
+A surface is ready when its dependencies are `done`, it has no gate still reading `gate`, its mapping has no unresolved rows, and every brief field can be filled. No surface is ready while a `gap: blocking` parity row is open (`references/inventory.md`, Functional parity). When the surfaces are near-identical and the codemod covers them, the pilot can run as an ordinary unit with its checks inline, and the window opens as soon as it lands.
 
 Two surfaces that share a file cannot run at the same time. Either one surface takes the file and the other waits, or the file moves to the shared layer.
 
 Under `design-system-boss`, only one step that writes to the repo runs at a time before migration clearance. After clearance, this window governs: parallel workers on disjoint surfaces and paths, each verified. A migration unit may then run beside another step's writers, such as the build's spec workers, when their file lists share no path. Log the overlap in `decisions.tsv` with both lists.
-
-As a step agent under another coordinator, this skill is a nested coordinator. It never ends its turn with a background worker live (standing order 16), because the host orphans or kills that worker when the step agent hands back. Spawn each wave as foreground calls in one message, so its workers still run side by side and the drain comes after the whole wave returns.
 
 ## Drains
 
@@ -98,7 +96,7 @@ A failed worker gets one retry with a sharper brief, then its surface splits or 
 | A shared gap | Park the surface behind a shared unit or a gate. It is not a retry. |
 | Unknown | Once |
 
-When the retry fails, split the surface, or mark it `abandoned` with the reason and defer it through a gate that carries the last attempt.
+When the retry fails, split the surface, or mark it `blocked (<reason>)` and defer it through a gate that carries the last attempt. It goes on the found-not-fixed list.
 
 The same limit applies to your own tooling. After three tool failures in a row, write `RESUME.md` and stop rather than loop.
 

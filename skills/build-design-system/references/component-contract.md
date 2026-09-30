@@ -72,7 +72,7 @@ When states overlap, say which wins, in the spec's State precedence list. `scrip
 
 Derive the interaction-state order from the app: for each pair the code lets hold at once, read which style the app applies last, and keep the majority. When the app has none, the default is disabled, then open or focused, then invalid, then hover, then rest. An open trigger shows focus while open (`trap/open-trigger-unfocused`). Hover never overrides focus or invalid (`trap/hover-beats-focus`), and a disabled control never hovers (`trap/disabled-still-hovers`). `scripts/state-timeline.js` measures each pair frame by frame (`browser.md`). Border and halo changes may ease. Press feedback is instant, and a latency allowance never applies to visual feedback.
 
-A pending action keeps its label, its width and its focus (`traps.md`, `trap/loading-label-swap`). Pending text goes in a status or live region or next to the control, never in place of the label. While pending, the control stays focusable: prefer `aria-disabled="true"` or a focusable disabled state over native `disabled`, which can drop keyboard focus to the page. It sets `aria-busy="true"`, and its handler returns early, which blocks repeat activation.
+A pending action has one fix, for `trap/loading-label-swap` and `trap/loading-layout-shift` alike. The idle label stays in place and the control keeps its box. Pending adds a spinner inside the box and sets `aria-busy="true"`, and the control is disabled against repeat submits: `aria-disabled="true"` and an early return in the handler, since native `disabled` can drop keyboard focus to the page. When the copy wants a pending verb ("Saving"), both labels sit stacked in one grid cell, the inactive one `visibility: hidden`, so the box is always the longer label's width.
 
 A pending submit beats dismissal in a dialog by default (`traps.md`, `trap/overlay-pending-dismiss`). The Dialog spec's State precedence says so, and its example has a pending state.
 
@@ -117,7 +117,7 @@ Test what the user can observe, not how the component is built.
 
 - It renders the right role and accessible name for each variant.
 - Keyboard: the documented keys do the documented thing.
-- States: disabled blocks activation, pending blocks repeat activation and keeps focus on the control, invalid exposes the error text to assistive tech.
+- States: disabled blocks activation, pending blocks repeat activation, keeps focus on the control and keeps its box, invalid exposes the error text to assistive tech.
 - A form inside it: cancel does not submit, submit submits once.
 
 Every behavior claim in the spec (keyboard, focus, open state, timers, copy feedback) has an interaction test that fails when the behavior breaks. `check-spec.mjs` warns when a row says "test" and no test file for the component exists. Skip tests that restate a constant, such as a token's value or a class name, since they pass when the component is broken. With no testing library, write a small render-and-query helper in the system folder instead of adding a dependency, and record that.

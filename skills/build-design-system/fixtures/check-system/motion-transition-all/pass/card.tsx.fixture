@@ -1,0 +1,3 @@
+export function Card() {
+  return <div className="all-caps transition-transform duration-200" style={{ transition: "opacity 0.2s" }} />;
+}

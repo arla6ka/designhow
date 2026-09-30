@@ -15,7 +15,9 @@ Every case applies to every setup, except these.
 | Case | Applies |
 |---|---|
 | Called by a coordinator | When a router skill is installed |
-| Worker scope | When subagents are available |
+| Worker scope, Memory pressure | When subagents are available |
+| Foreground workers | Hosts where a subagent can start subagents |
+| Exemplar | Runs where the person names exemplar screens |
 | Harden mode | Apps with a weak component layer |
 | Seed mode | Empty repos and new apps |
 | Foundation owns its tokens | Copy-in registry and package-library apps |
@@ -36,7 +38,7 @@ Prompt: "Build a design system for this app." Fill the table for Normal and Vagu
 
 **Input:** an app with about 20 routes, three button implementations (one a `div` with a click handler), two inputs with 6px and 8px radius, about 40 text grays, a CSS variables file half the code ignores, light and dark themes, and an invite form with an invalid-email state. The app runs and a browser is connected.
 
-**Expect:** the run record exists before any edit. Inventory TSVs come from scripts saved under `.design-system/scripts/`. Baselines cover every reachable route at the narrow and wide widths and both themes. The `div` button loses the canonical pick with the reason recorded. Grays collapse into a few semantic roles. Merges inside tolerance are decisions, and each other cluster is a gate defaulting to merge, already applied. Each canonical component has a page, a generated twin and a registry entry. Checks fail on seeded raw values and deprecated imports. The invite flow is the pilot, reviewed by `ui-review` on its after screenshots. The handoff names `migrate-design-system` with counts by route.
+**Expect:** the run record exists before any edit. Inventory TSVs come from scripts saved under `.design-system/scripts/`. Baselines cover every reachable route at the narrow and wide widths and both themes. The `div` button loses the canonical pick with the reason recorded. Grays collapse into a few semantic roles. Merges inside tolerance are decisions, and each other cluster is a gate defaulting to merge, already applied. Each canonical component has a page, a generated twin and a registry entry. Checks fail on seeded raw values and deprecated imports. The invite flow is the pilot, reviewed by `ui-review` on its after screenshots. The handoff names `migrate-design-system` with counts by route and ends with the found-not-fixed table.
 
 **Fails if:** a count has no script behind it, a new color or font appears, the codemod touches files outside the pilot and cleared surfaces, a commit lands on the starting branch, a twin was written by hand, or the predicate is reported met with a number not measured in phase 8.
 
@@ -52,7 +54,7 @@ Prompt: "Build a design system for this app." Fill the table for Normal and Vagu
 
 **Input:** a router skill starts this one with a target app and a two-hour budget, once on a host where agents can start agents and once on a flat host.
 
-**Expect:** it uses the target and budget as given, defaults the pilot, writes every open question to the Gates table, and ends with the handoff report. On the flat host the boss's rule governs, and the one worker the boss names writes the token source and the first family alone before any fan-out. The codemod runs only on the pilot, and the root layout's token import is the only import change outside it.
+**Expect:** it uses the target and budget as given, defaults the pilot, writes every open question to the Gates table, and ends with the handoff report. On the nested host its workers run as foreground calls, and no worker is live when it returns. On the flat host the boss's rule governs, and the one worker the boss names writes the token source and the first family alone before any fan-out. The codemod runs only on the pilot, and the root layout's token import is the only import change outside it.
 
 **Fails if:** it asks the router a question mid-run, ignores the budget, ends on anything but the handoff report, applies both skills' seat rules at once, or fans out the first family.
 
@@ -110,7 +112,7 @@ Prompt: "Build a design system for this app." Fill the table for Normal and Vagu
 
 **Input:** a writing run started on the default branch with a clean tree. Run it with "make every page look like one thing", then with "set up a proper design system so the team stops drifting", where the build decides a Button codemod and a color move as gate defaults. Nobody answers during the run.
 
-**Expect:** the first git action creates the run branch from HEAD, and the starting branch's log is unchanged at the end. The visual ask counts as clearance, and off-brand buttons move to the primary under their gates. Decided defaults land on every screen they reach. Each changed surface has before and after captures, a trace row naming its gate and one commit. A surface whose diff nothing explains is reverted and gated. Adding semantics, such as `aria-current` or a field label, is a decision, and removing a heading is a gate (`references/traps.md`, Adds-only accessibility changes). Next is a merge, or a merge with named reversals.
+**Expect:** the first git action creates the run branch from HEAD, and the starting branch's log is unchanged at the end. Every gate reads `default (unanswered)` with its commit. The visual ask counts as clearance, and off-brand buttons move to the primary under their gates. Decided defaults land on every screen they reach. Each changed surface has before and after captures, a trace row naming its gate and one commit. A surface whose diff nothing explains is reverted and gated. Adding semantics, such as `aria-current` or a field label, is a decision, and removing a heading is a gate (`references/traps.md`, Adds-only accessibility changes). Next is a merge, or a merge with named reversals.
 
 **Fails if:** a commit lands on the starting branch, a gate default exists only as a table row, every route captures at 0% after a visual ask, the Next prompt asks for a step the run decided, a semantics removal lands as a decision, or the run merges its own branch.
 
@@ -122,7 +124,7 @@ Prompt: "Build a design system for this app." Fill the table for Normal and Vagu
 
 **Input:** a copy-in registry app where 16 lines use raw hex, 8 identical in value to an existing token, and "people hardcode colors everywhere, clean it up". A design review names an overflow at the narrow width that existing tokens can fix, and the shared layout overflows at the narrow width.
 
-**Expect:** harden mode, with the complaint in the person's words in the Frame. `token-mapping` runs before specs, and the 8 identical-value swaps land on every screen with no gate, each route at 0% by `pixdiff.mjs` over every width and theme capture. Every other raw color within tolerance maps to its role, one beyond tolerance becomes a new pair under a gate, and only `graphic` values stay raw. Both overflow fixes land as decisions with captures and `scrollWidth` before and after. The final message leads with how many hardcoded colors are gone and names what is left.
+**Expect:** harden mode, with the complaint in the person's words in the Frame. `token-mapping` runs before specs, and the 8 identical-value swaps land on every screen with no gate, each route at 0% by `pixdiff.mjs` over every width and theme capture. Every other raw color within tolerance maps to its role as a decision, one beyond tolerance is a gate whose default is the merge, and only `graphic` values stay raw. Both overflow fixes land as decisions with captures and `scrollWidth` before and after. The final message leads with how many hardcoded colors are gone and names what is left.
 
 **Fails if:** specs or docs come before any raw color moves, identical-value swaps wait on a gate, a status color defaults to "keep raw", or a cheap review fix lands only under follow-ups.
 
@@ -130,9 +132,9 @@ Prompt: "Build a design system for this app." Fill the table for Normal and Vagu
 
 **Input:** a shadcn app with every stock component installed, two team wrappers around Button, three edited ui files, no specs, and "our components are missing loading and error states, sort them out". The phase cap cuts Table and Card.
 
-**Expect:** `base-shadcn.md` loaded and `components.json` read. `scripts/ui-drift.tsv` marks every ui file stock, customized or forked, each with a hash. `harden/gaps.tsv` lists missing states, precedence and keyboard paths. Every component gains its missing states, not only the pilot's. Loading keeps the label, sets `aria-busy`, keeps focus on the control, and blocks a second press (`trap/loading-label-swap`). The wrappers merge by the contract with map entries. Table and Card leave with their states built or a gate naming each one, and a removed prop is a gate listing its call sites. `strays.tsv` exists. No stock file is deprecated or rewritten.
+**Expect:** `base-shadcn.md` loaded and `components.json` read. `scripts/ui-drift.tsv` marks every ui file stock, customized or forked, each with a hash. `harden/gaps.tsv` lists missing states, precedence and keyboard paths. Every component gains its missing states, not only the pilot's. Loading follows the one fix in `references/component-contract.md`: the label and box stay, a spinner sits inside, `aria-busy` is set, focus stays on the control, and a second press does nothing. The wrappers merge by the contract with map entries. Table and Card leave with their states built or a gate naming each one, and a removed prop is a gate listing its call sites. `strays.tsv` exists. No stock file is deprecated or rewritten.
 
-**Fails if:** only the pilot's components gain states, loading swaps the label or drops focus, a family leaves with neither states nor a gate, a prop vanishes with no gate, or an overwrite of a customized file runs without a gate.
+**Fails if:** only the pilot's components gain states, loading changes the box or drops focus, a family leaves with neither states nor a gate, a prop vanishes with no gate, or an overwrite of a customized file runs without a gate.
 
 ## Seed mode
 
@@ -206,7 +208,7 @@ Prompt: "Build a design system for this app." Fill the table for Normal and Vagu
 
 **Expect:** the writing page names each slot's sources, and `copy-check.mjs --extract` writes `docs/system/copy-inventory.tsv`. Slot rules carry counts from the inventory, with the 3 title-case buttons on the stray list. The delete flow is a declared verb chain, and `copy-check.mjs` fails it on "Remove" until the verb matches, or it is a gate. The apology word goes on the banned list only because the app's majority avoids it, with an Instead. The pending swap is the majority but a trap, so it becomes a gate defaulting to the trap's fix, and its wording becomes a `status` rule. Component specs cite `rule/writing-*` IDs under Content.
 
-**Fails if:** a slot rule has no count, a voice rule or banned word comes from outside the app with no principle and gate, the inventory is hand-written, a confirmation belongs to no chain and no exempt row, or any rule tells a button to swap its label while pending.
+**Fails if:** a slot rule has no count, a voice rule or banned word comes from outside the app with no principle and gate, the inventory is hand-written, a confirmation belongs to no chain and no exempt row, or any rule lets a pending label change the button's box.
 
 ## Document everything
 
@@ -308,7 +310,7 @@ Prompt: "Build a design system for this app." Fill the table for Normal and Vagu
 
 **Input:** a run with a two-hour budget, then the same run with none named.
 
-**Expect:** the Frame's Budget line cites the caps in `references/coordinator-path.md`. A phase at its cap records what is left and the run moves on. Worker spawning stops at the cutoff `coordinator-path.md` sets, except for landing decided defaults. The coordinator opens each reference only as its phase starts.
+**Expect:** the Frame's Budget line cites the caps in `references/coordinator-path.md`. A phase at its cap records what is left and the run moves on. Worker spawning stops at the cutoff `coordinator-path.md` sets, except for landing the safe moves. The coordinator opens each reference only as its phase starts.
 
 **Fails if:** on a direct run, the run record carries a minutes estimate per phase, one phase eats the next one's share, or the coordinator reads every reference before phase 1.
 
@@ -316,6 +318,54 @@ Prompt: "Build a design system for this app." Fill the table for Normal and Vagu
 
 **Input:** any finished run that ends with an allowlist.
 
-**Expect:** the Trial block names the fresh agent's check result, Blocking count, twins opened and gaps named. The final message has four parts in order: one plain sentence answering the ask, then which screens changed and which did not, with the review page's path; each check command with its exit code; the gates that change a screen, each with its applied default, within the cap in `run-record.md`; and one Next prompt that clears every gate at once, such as "Merge the run branch, but keep the blue Sign in button (reverse G-04)." Every count appears in `.design-system/close.md`, and the message names the files still listed.
+**Expect:** the Trial block names the fresh agent's check result, Blocking count, twins opened and gaps named. The final message follows `references/run-record.md`: one plain sentence answering the ask, then which screens changed and which did not, with the review page's path; each check command with its exit code; the gates that change a screen, unanswered defaults first, within the cap; one Next prompt that clears every gate at once, such as "Merge the run branch, but keep the blue Sign in button (reverse G-04)", and offers the migration with its size when there was no clearance; and the found-not-fixed table last. Every count appears in `.design-system/close.md`, and the message names the files still listed.
 
-**Fails if:** the first line reads as a visible fix when nothing changed, unchanged screens go unmentioned, Next points at a file or asks for a step the run could do, more gates appear than the cap, a red check is left out, a count is missing from `close.md`, or the message says "every screen" while `--left` lists anything.
+**Fails if:** the first line reads as a visible fix when nothing changed, the found-not-fixed list is split across sections or unranked, unchanged screens go unmentioned, Next points at a file or asks for a step the run could do, more gates appear than the cap, a red check is left out, a count is missing from `close.md`, or the message says "every screen" while `--left` lists anything.
+
+## Memory pressure
+
+**Input:** a host with subagents, where the free percentage reads below 10%, with swap near full. Then the same run with free memory above 10% and swap still full.
+
+**Expect:** the Frame records the reading and the window as a decision. Below 10%, one worker runs at a time and work still delegates. Above it, the windows in `references/coordinator-path.md` (Machine budget) apply, whatever swap reads.
+
+**Fails if:** the run starts no worker at all, waits for swap to drop, or runs more than one worker below 10%.
+
+## Foreground workers
+
+**Input:** a coordinator starts this skill as a subagent, and the build fans out three families.
+
+**Expect:** the three workers start as foreground calls in one message, and the build returns only after all three report.
+
+**Fails if:** any worker runs in the background, or the build hands back with a worker live.
+
+## Unattended defaults
+
+**Input:** a headless run with a brand-color conflict, a product-word name and a merge past tolerance, and nobody to answer.
+
+**Expect:** each gate takes its stated default, reads `default (unanswered)` with its commit, and the run finishes. The handoff and the final message list the three unanswered defaults before any other gate.
+
+**Fails if:** the run waits, stops on a gate, or buries an unanswered default below answered ones.
+
+## Check-first landing
+
+**Input:** "make it consistent" on an app with 12 routes, identical-value swaps on 9 of them, raw colors inside tolerance on 5, one merge past tolerance, and off-system buttons on every route.
+
+**Expect:** no clearance. Outside the pilot, the swaps, the in-tolerance merges and the past-tolerance merge under its gate land, one surface per commit with captures and trace rows. The buttons outside the pilot stay, each route a found-not-fixed row with `no clearance`. Next offers the migration with its route and value counts. With "migrate everything" instead, the buttons move too.
+
+**Fails if:** a button moves outside the pilot without clearance, a safe move waits for clearance, or Next omits the migration's size.
+
+## Exemplar
+
+**Input:** the person names one settings screen as the app's best. It uses a 16px field gap, while 9 of 12 other forms use 12px.
+
+**Expect:** the Frame lists the screen as E1. The field-gap rule cites `exemplar E1` and the app count, as a gate whose default is 16px, and the 9 forms go on the stray list. With no exemplar named, the rule follows the 12px majority and nothing else changes.
+
+**Fails if:** the majority wins with no gate while an exemplar exists, the exemplar wins over a trap, or the run asks about exemplars twice.
+
+## Loading label
+
+**Input:** a Save button whose label switches to "Saving" while pending, and another that appends a spinner outside its box.
+
+**Expect:** both end with the idle label in place, the box measured the same idle and pending, a spinner inside the box, `aria-busy`, and a second press blocked with focus kept. Where the copy keeps "Saving", both labels sit stacked in one grid cell at the longer label's width. `check-system.mjs` flags the first button and passes the stacked form.
+
+**Fails if:** the box changes width, focus drops to the page, or native `disabled` replaces the focusable block.

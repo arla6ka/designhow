@@ -9,7 +9,7 @@ Say "check this screen before I ship." With repo access and a browser, the skill
 ## Replace first
 
 1. **Criteria** in `references/review-criteria.md`. Cut every criterion your team would not stand behind.
-2. **Severity levels.** Match the names and meanings your tracker already uses.
+2. **Severity levels.** Keep the ids `blocking`, `should-fix` and `note`, which the other skills read, and match their meanings to your tracker.
 3. **Exclusions.** Edit "What not to report" to match what your team leaves to other reviews.
 4. **Reference system.** Criterion 10 names Geist as a comparison for products with few screens. Swap in your own system once it exists.
 5. **Viewports.** URLs get the narrowest and widest widths your product supports. The default is 390 and 1280 px, the widths the build and migrate skills capture.
@@ -32,7 +32,7 @@ Each rule prevents a specific failure. Change one only when its stated reason do
 This skill ships no scripts. With `build-design-system` installed beside it, it runs these from there:
 
 - `capture.mjs` opens the app's local or given URL in a headless browser and writes PNG and JSON captures under `.ui-review/<date>-<flow>/`, or the folder a coordinator names.
-- `state-timeline.js` runs inside the open page and only reads computed styles.
+- `state-timeline.js` runs inside the open page and only reads computed styles. `probe.mjs` reads the captures.
 - `check-spec.mjs` reads `docs/system/` and runs read-only `git` commands.
 - The accessibility scan installs `axe-core` from npm into `.design-system/tmp/`. That install, and `agent-browser` if you use that tool, are the only network calls besides the page under review.
 - A direct run writes its report to `.ui-review/<date>-<flow>.md`. Under a coordinator it writes no report file.

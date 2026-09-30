@@ -19,7 +19,7 @@ Triage runs one script and a few reads, with no browser or subagent. It decides 
 bash <skills>/design-system-boss/scripts/triage.sh <repo> <repo>/.design-system/boss/triage
 ```
 
-It prints `signal<TAB>value` lines and writes them to `signals.tsv`, with match lists beside it (`raw-colors.txt`, `components.tsv`, `components-layer.tsv`, `families.tsv`, `raw-families.tsv`, `layer-dirs.tsv`, `harden-dirs.tsv`, `stray-dirs.tsv`, `tw-semantic.txt`, `routes.txt`, `token-files.txt`, and `shadcn-info.json` when it ran). It also writes `tw-arbitrary.txt`, `tw-palette.txt` and `inline-styles.txt`, the match lists behind `tw_arbitrary`, `tw_palette` and `inline_styles`. It reads only files git tracks or would track, writes only into the output folder, and needs `rg`, plus `node` when a `components.json` exists.
+It prints `signal<TAB>value` lines and writes them to `signals.tsv`, with match lists beside it (`raw-colors.txt`, `components.tsv`, `components-layer.tsv`, `families.tsv`, `wrappers.tsv`, `raw-families.tsv`, `layer-dirs.tsv`, `harden-dirs.tsv`, `stray-dirs.tsv`, `tw-semantic.txt`, `routes.txt`, `route-files.txt`, `token-files.txt`, and `shadcn-info.json` when it ran). It also writes `tw-arbitrary.txt`, `tw-palette.txt` and `inline-styles.txt`, the match lists behind `tw_arbitrary`, `tw_palette` and `inline_styles`. It reads only files git tracks or would track, writes only into the output folder, and needs `rg`, plus `node` when a `components.json` exists.
 
 When `components.json` exists, the script asks the shadcn CLI from `node_modules/.bin` for the project's config and never downloads it on its own. `TRIAGE_SHADCN_INFO=npx` allows the download, and `0` skips the call. Without the CLI, the script reads `components.json` directly and says so in `shadcn_info`. Where they differ, trust the CLI over the file and over anything inferred.
 
@@ -36,7 +36,7 @@ find . -name '*.tokens.json' -o -name 'tailwind.config.*' -o -path '*/tokens/*.j
 cat components.json package.json   # foundation: shadcn config, or a UI library dependency
 ```
 
-In a monorepo, run it per app folder, each into its own subfolder of `triage/`.
+In a monorepo, run it per app folder, each into its own subfolder of `triage/`. After editing the script, run `triage.sh --self-test`. It ends `all as expected`.
 
 ## Signals
 
@@ -44,7 +44,7 @@ Two units. A **line** signal counts source lines, so a line holding three hex va
 
 Every count leaves out the paths in `build-design-system/references/inventory.md` (Excluded paths), build output included, so a route folder named `build` is listed by hand. The script adds `scripts/`, `fixtures/` and `static/system/`, because the build copies its check scripts and fixtures into `scripts/`, check fixtures also sit in plain `fixtures/` folders, and some frameworks serve generated twins from `static/`. Without the rule the build's own fixtures and generated HTML would count as drift. `scaffold_files_skipped` says how many files that left out. Presence signals such as `llms_txt` still see `public/llms.txt`.
 
-Adoption also leaves out the component layer, the token source, examples, docs, tests and stories, or a system's own `var()` uses would make a weak system read as settled. Component and family counts leave out the same examples, docs and check folders, so planted fixtures never read as duplicate families. `component_specs` leaves out twins and `spec-template.md`.
+Adoption also leaves out the component layer, the token source, examples, docs, tests and stories, or a system's own `var()` uses would make a weak system read as settled. Component and family counts leave out the same examples, docs and check folders, so planted fixtures never read as duplicate families. `component_specs` is the one count that reads `docs/system`, where specs live, so a triage after a run sees the specs it wrote. It leaves out twins and `spec-template.md`.
 
 | Signal | Unit | Measures | Feeds |
 |---|---|---|---|
@@ -60,7 +60,7 @@ Adoption also leaves out the component layer, the token source, examples, docs, 
 | `palette_pct` | percent of mixed units | `tw_palette` as a share of token uses plus raw values plus palette classes | how much color has no stated purpose |
 | `component_defs`, `same_name_defs` | definitions | exported capitalized components, and names defined in more than one file | duplicates |
 | `product_component_defs`, `stock_ui_defs` | definitions | definitions outside stock shadcn files, and inside them | empty, and duplicates |
-| `families_with_2plus` | families | families (Button, Input, Dialog and so on) with two or more members. A member is a definition matched on name suffix, or a raw copy. Stock shadcn files count as one member per family | drifting or settled |
+| `families_with_2plus` | families | families (Button, Input, Dialog and so on) with two or more canonical members. A member is a definition matched on name suffix, or a raw copy. Stock shadcn files count as one member per family. A wrapper is not a member: a definition that renders another member of its family, aliases one, or is marked `@deprecated`, so merging a copy into the canonical component lowers the count. `wrappers.tsv` gives each reason | drifting or settled |
 | `raw_family_copies` | elements | raw `<button>`, `<input>`, `<textarea>`, `<select>` and `<a>` elements sharing 3 or more static classes with the same element in another file. The family's component file holds the canonical copy and never counts. `raw-families.tsv` lists each copy and its match | duplicates the name suffix misses, and the Named families edit list |
 | `foundation` | name | `shadcn`, `shadcn+registry`, `library:<package>`, `package:<name>`, `raw`, or `none (default: shadcn)` on an empty app (the **empty** rule in The app's state) | which base reference the steps load |
 | `ui_library`, `own_package` | names | a UI library dependency, and the team's own UI package | `foundation` |
@@ -68,14 +68,15 @@ Adoption also leaves out the component layer, the token source, examples, docs, 
 | `shadcn_base`, `shadcn_style`, `tailwind_css_file`, `shadcn_ui_dir`, `shadcn_registries` | names | from the shadcn CLI, or `components.json` | base-shadcn.md |
 | `ui_raw_lines` | lines | raw colors and palette classes inside the component layer, upstream's own on shadcn | reported apart. Raw work across the app is this plus `raw_color_lines` |
 | `component_specs` | files | Markdown files with a `### State precedence` section, the mark of a filled spec template | weak or hardened |
-| `shared_ui_dirs` | folders | the component layer. A folder counts by name (`components/ui`, `packages/ui`, `packages/*/src`, `ui/`, `src/ui/`, `src/components/`, `design-system`, `ui-kit`), by a barrel (`index.ts` re-exporting 3 or more components), or because 3 or more route files import components from it. Folders inside the route tree do not count by imports, and neither do strays. `layer-dirs.tsv` gives each folder's reason | where a system lives, and what adoption leaves out |
+| `shared_ui_dirs` | folders | the component layer, always a folder of shared components and never the source root: a folder that holds a route file is dropped, with its reason in `layer-dirs.tsv`. A folder counts by name (`components/ui`, `packages/ui`, `packages/*/src`, `ui/`, `src/ui/`, `src/components/`, `design-system`, `ui-kit`), by a barrel (`index.ts` re-exporting 3 or more components), or because 3 or more route files import a component file from it. Folders inside the route tree do not count by imports, and neither do strays. `layer-dirs.tsv` gives each folder's reason | where a system lives, and what adoption leaves out |
 | `harden_dirs` | folders | layer folders with 5 or more components that 3 or more routes import. `harden-dirs.tsv` gives both counts | Harden or Build |
 | `stray_dirs` | folders | layer folders that duplicate a family already in a harden dir, such as `components/custom/Button.tsx` beside `components/ui/button.tsx`. A stray is not the layer, so its raw values count as product code before and after, even inside a layer folder. The shadcn ui folder and harden dirs are never strays. `stray-dirs.tsv` names the duplicate | stable before-and-after counts, and harden's stray-code list |
 | `system_docs_routes`, `llms_txt`, `registry_json`, `stories` | files | docs a person or agent can read. `registry_json` is `shadcn` (an `items` list), `designhow` (a `components` list), `other` or `no` | settled or documented |
 | `build_record`, `migration_runs`, `boss_state` | paths | earlier runs | resume |
-| `run_script`, `routes`, `source_lines`, `families_present` | route files, lines, families | whether the app can start, and how big it is. `routes` leaves out folders the router treats as private | which steps can verify visually, and the default flows for a review |
+| `run_script`, `routes`, `source_lines`, `families_present` | routes, lines, families | whether the app can start, and how big it is. A file-based router (Next, Nuxt, SvelteKit, Astro, Remix) gives route files, private folders left out. Any other app gives the distinct paths in its router config (`path:`, `<Route path=`), `*` left out, so a `pages/` folder there is not a route list. `routes.txt` has one route per line, `route-files.txt` the files they render | which steps can verify visually, and the default flows for a review |
+| `ui_lines`, `small_app` | lines, yes or no | lines of markup and style files, and whether `routes` is 8 or fewer with `ui_lines` under 3,000 | the small-app fast path (`routes.md`, Small app) |
 | `scaffold_files_skipped` | files | source files left out as scaffolding | reading a before-and-after, where a rise here is the build's own output, not drift |
-| `git_uncommitted` | files | uncommitted files outside skill and run folders | the stop on unrelated work. Above 0 on a writing route, the boss asks the person and never stashes. So does a starting branch whose recent commits are another author's, unless the person named it |
+| `git_uncommitted` | files | uncommitted files outside skill and run folders | the question on unrelated work. Above 0 on a writing route, the boss asks the person and never stashes. So does a starting branch whose recent commits are another author's, unless the person named it. Unanswered, the default cuts the run branch from HEAD in its own worktree, so the checkout and its branch stay as found |
 
 ## The foundation
 
@@ -116,7 +117,7 @@ Before routing on `documented`, compare one component page and its `.md` twin wi
 
 ## The ask's intent
 
-Read the ask for these words. The rows run from named complaints to generic verbs, and the first match wins, so a named complaint beats a generic verb. "Clean it up, people hardcode colors everywhere" is values, not full. "Clean it up and make it consistent" with hardcoded colors is values too, and "make it consistent" still counts as clearance. On a weak system that routes Values, then Harden, then Full from clearance, per `routes.md` Values step 2. Otherwise the generic route's later steps can follow in Next.
+Read the ask for these words. The rows run from named complaints to generic verbs, and the first match wins, so a named complaint beats a generic verb. "Clean it up, people hardcode colors everywhere" is values, not full. "Clean it up and make it consistent" with hardcoded colors is values too. Neither names a migration, so both end check-first (`routes.md`, the rules at the top), and the handoff offers the migration with its size.
 
 | The ask says | Intent |
 |---|---|
@@ -125,20 +126,22 @@ Read the ask for these words. The rows run from named complaints to generic verb
 | "before we ship", "before I ship", "review this screen", "is this ready", "handoff", "is it consistent", "are we consistent", "check" as the main verb | review |
 | "how bad", "audit", "where do we stand", "don't change anything" | audit |
 | "hardcoded", "raw values", "use our tokens", "colors are everywhere" | values |
-| "looks like a different product", "make it look like one thing", "every page looks different", "make every page consistent" | full, and the ask counts as clearance |
-| "consistent" or "consistency" with a verb that means change: "make it consistent", "fix the inconsistency", "clean up the inconsistent X" | full, and the ask counts as clearance. With hardcoded values named too, the values row wins |
+| "every page", "every screen" or "the whole app" with a verb that means change: "make every page consistent", "clean up every page", "migrate everything" | full, and the ask counts as clearance |
+| "looks like a different product", "make it look like one thing", "every page looks different" | full |
+| "consistent" or "consistency" with a verb that means change: "make it consistent", "fix the inconsistency", "clean up the inconsistent X" | full. With hardcoded values named too, the values row wins |
 | "consistent", "consistency", "colors" with no verb that means change | review, plus `token-mapping` on the same files, which answers by role |
 | "missing states", or "missing" with a kind of state: "missing loading and error states", "no error state", "no empty state" | harden |
 | "harden", "fill the states", "our components have no rules", "tighten the system", "make it solid", "stops drifting" | harden |
 | "docs", "document the system", "agents can't read our components", "document all our components", "full design system docs" | docs. "All", "every", "full" or "complete" means every family |
-| "fix it", "fix this", "clean it all up", "clean it up", "mess", "sort out our UI" | full. "Fix it" or "fix this" aimed at a mess or an inconsistency counts as clearance |
-| "migrate", "move every screen", "roll out", "adopt", "nobody uses it", "nobody follows it", "the screens ignore it" | adopt, and the ask counts as clearance |
+| "fix it", "fix this", "clean it all up", "clean it up", "clean the app up", "mess", "sort out our UI" | full |
+| "migrate", "move every screen", "roll out", "adopt", "use it everywhere" | adopt, and the ask counts as clearance |
+| "nobody uses it", "nobody follows it", "the screens ignore it" | adopt |
 | "start a design system", "new app", "from scratch", "from our brand" | seed |
 | "build", "set up", "extract", "break down the screens", "consolidate", "we need a design system" | build |
 
 An ask that matches nothing is **seed** when the state is `empty`, **full** when it is `none` or `drifting`, and **adopt** when it is `settled`. A fallback intent never counts as clearance.
 
-The clearance words are listed in `build-design-system/references/run-record.md` (Terms), and the rows above marked "counts as clearance" follow that list. They clear migration within the session budget, on the run branch. When an ask names two complaints, such as missing states and nobody using the system, the first row still picks the route and the adoption words still give clearance.
+The clearance words are listed in `build-design-system/references/run-record.md` (Terms), and the rows above marked "counts as clearance" follow that list. Only an ask that names the migration clears it. A complaint ("fix it", "make it consistent", "nobody uses it") routes the same way without clearance, which ends check-first with the offer. Clearance holds within the session budget, on the run branch. When an ask names two things, such as missing states and "move every screen", the first row still picks the route and the migration words still give clearance.
 
 "Launch subagents" is a delegation request, not an intent. Honor it in the step that fans out.
 
@@ -146,20 +149,22 @@ The clearance words are listed in `build-design-system/references/run-record.md`
 
 Ask at most one, and only for one of these:
 
-- A monorepo target nobody named. Name the candidates with their route counts.
+- A monorepo target nobody named. Name the candidates with their route counts. The default is the app with the most routes.
 - An intent that fits two routes differing by a whole phase, such as build only against build then migrate. The default is the route that answers the complaint the person named.
-- A read-only repo on a route that writes.
+- A read-only repo on a route that writes. The default is Audit.
 - A package component library as the foundation, which the team may be keeping or leaving. The default is to keep it and wrap it, per `base-library.md`.
 
-Put it in the Frame with the default already applied, and ask it through the host's question tool when there is one, per `build-design-system/references/run-record.md` (Questions). The run goes on under the default until someone answers, and read-only steps start without waiting. When screens will stay unchanged on this route, the Frame says so and why.
+Put it in the Frame with the default already applied, and ask it through the host's question tool when there is one, per `build-design-system/references/run-record.md` (Questions). The run goes on under the default, and read-only steps start without waiting. When screens will stay unchanged on this route, the Frame says so and why.
+
+Unattended runs. When nobody answers, because the person is away, the run is headless or it runs as a subagent, every question keeps its default. The state file records each as `default (unanswered)` in the Gates table with the question word for word, and the handoff lists them first so the person can overturn them. The boss never waits and never stops for an answer. The same holds for every question in this skill: the standing questions, the dirty checkout, someone else's branch and clearance itself, whose default is check-first.
 
 ```
 Triage: no token source, 412 raw color lines, 3 button families, 18 routes.
 Plan: build a system from the app and prove it on the invite flow, then write
 a plan for the other 17 screens. All work goes on branch ds/2026-03-12-build.
 Budget: 2 hours, 4 workers.
-Screens: only the invite flow will look different. The other 17 stay unchanged
-unless you reply "Go, 2h", which lets me move them too, one per commit.
+Screens: only the invite flow will look different. Moving the other 17 screens
+(6 families) is a separate step: reply "Go, 2h" and I move them, one per commit.
 Question: none.
 Bans: none named yet. Name any you never want to see, such as uppercase labels.
 ```
@@ -174,4 +179,4 @@ When a design source, such as a brand kit or a design file, defines a look the a
 
 ## Blind spots
 
-The script counts text. It misses class names built at runtime, styles set in script, and values from a CMS, and it over-counts a hex-looking anchor such as `#add`. Families match on name suffix, so `SaveCTA` counts as a button only if it copies Button's classes, and `SessionButton` counts even when it only renders `Button`. Raw copies need 3 shared static classes, so a copy that drifted further is missed. It cannot tell a stock shadcn file from a heavily edited one with the stock name. That drift is measured against the registry, per `base-shadcn.md`. Say in the Frame that the counts are a first read, and let the siblings' own inventories give the numbers the report uses.
+The script counts text. It misses class names built at runtime, styles set in script, and values from a CMS, and it over-counts a hex-looking anchor such as `#add`. Families match on name suffix, so `SaveCTA` counts as a button only if it copies Button's classes. A wrapper counts as its canonical member only when it imports and renders it, so one that renders a library's `Button` still counts as its own. Raw copies need 3 shared static classes, so a copy that drifted further is missed. It cannot tell a stock shadcn file from a heavily edited one with the stock name. That drift is measured against the registry, per `base-shadcn.md`. Say in the Frame that the counts are a first read, and let the siblings' own inventories give the numbers the report uses.

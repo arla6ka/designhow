@@ -24,6 +24,7 @@ One file, `.design-system/boss/state.md`, written only by the boss. A person rea
   briefs/<step>.<n>.md     the boss, before each spawn
   returns/<step>.md        each step's status line and file list
 .design-system/close.md    every count the report quotes, written at close, the same file the build writes
+.design-system/found-not-fixed.tsv  found-not-fixed rows past the report's 30, the same file the build writes
 .design-system/pr.md       the PR body, on a minimal footprint only, untracked
 .design-system/run.md      the build's record. The boss writes the skeleton, then the build's coordinator is its only writer
 .design-system/scripts/    scripts a rerun needs (inventory scripts, the states module, rendered-type), committed
@@ -31,7 +32,7 @@ One file, `.design-system/boss/state.md`, written only by the boss. A person rea
 .design-system/review/
   <surface>-{before,after}-<width>.png   captures for every changed surface, gitignored
   *.probe.json             the probe beside each capture, tracked
-  surfaces.tsv             surface, route and states, the montage's input, tracked
+  surfaces.tsv             surface, route, states and tier, the montage's input, tracked
   traces.tsv               one row per changed surface, tracked
   open-gates.tsv           findings the montage warns on under an open gate, tracked
   <surface>-review.md      review reports the boss saves from returned text, tracked
@@ -56,7 +57,7 @@ State: drifting (adoption_pct 41, families_with_2plus 3)
 Intent: full ("fix it")
 Host: flat subagents, worktrees yes, browser yes
 Signals: triage/signals.tsv
-Question: none. "Fix it" on a mess counts as clearance, so the migration runs within the budget.
+Question: none. "Fix it" does not name a migration, so the run ends check-first and offers it.
 Bans: "no uppercase labels" (the person, 10:03), in the standing orders word for word.
 Design source: none named.
 Answer:
@@ -64,14 +65,14 @@ Answer:
 ## Route
 Full. Steps copied from references/routes.md on 2026-03-12 10:05.
 Branch: ds/2026-03-12-full, from main at 7dc8f3d. main gets no commits. Merging is the person's call.
-Clearance: the ask ("fix it" on a mess), within the session budget.
+Clearance: none. Check-first, with the migration offered at handoff.
 
 ## Budget
-Session 2h (host), from 10:02. Workers: 5 docs, 2 code (9 GB free, swap 20%, backend stopped). Phase caps from routes.md:
+Session 2h (host), from 10:02. Workers: 5 docs, 2 code (memory pressure 34% free, backend stopped). Phase caps from routes.md:
 - triage and Frame 5%, 6m (10:08)
 - build 35%, 42m (10:50), audit beside it
 - decided defaults 15%, 18m (11:08), reserved
-- migration 30%, 36m (11:44), review 12m beside it
+- migration 30%, 36m (11:44), to docs and found-not-fixed with no clearance
 - close 15%, 18m (12:02), never cut
 No new writing step after 11:26 (70%), except decided defaults. Read-only steps may run past it.
 
@@ -79,12 +80,13 @@ No new writing step after 11:26 (70%), except decided defaults. Read-only steps 
 1. ... (run-record.md's list, then delegation.md's boss lines, then project rules and bans)
 
 ## Steps
-| # | Step | Skill | State | Record | Verdict | Evidence |
+| # | Step | Skill | Status | Record | Verdict | Evidence |
 |---|---|---|---|---|---|---|
 | 1 | Build | build-design-system | done | .design-system/run.md | partial | returns/build.md, `npm run check` exit 0 in run.md#ledger |
-| 2 | Migrate audit | migrate-design-system | in progress | .migration/q4/ | | |
-| 3 | Check the build | boss | done | state.md#decisions | partial | page table: 11 of 12 rows met, brand page has no typeface license |
-| 4 | Clearance | person | not started | | | |
+| 2 | Migrate audit | migrate-design-system | doing | .migration/q4/ | | |
+| 3 | Late defaults | migrate-design-system | skipped (none late) | | | plan.md#gates, reconciled |
+| 4 | Check the build | boss | todo | | | |
+| 5 | Clearance | person | default (unanswered) | | | check-first, offer in the report |
 
 ## Decisions
 | When | Decision | Why | Evidence |
@@ -95,7 +97,7 @@ No new writing step after 11:26 (70%), except decided defaults. Read-only steps 
 ## Gates
 | ID | Question | Default | Status | Commit | From |
 |---|---|---|---|---|---|
-| G-01 | Merge 14 body grays into text.default? | merge | applied | 4f5e6d7 | .design-system/run.md G-01 |
+| G-01 | Merge 14 body grays into text.default? | merge | default (unanswered) | 4f5e6d7 | .design-system/run.md G-01 |
 
 ## Resume
 Next action: save step 2's status line to returns/migrate-audit.md and check plan.md.
@@ -103,7 +105,7 @@ Next action: save step 2's status line to returns/migrate-audit.md and check pla
 ## Report
 ```
 
-Step states are `not started`, `in progress`, `done`, `partial`, `blocked: <condition>`, `failed: <check>`, `skipped: <reason>` and `not started: budget`. Gate statuses are `open`, `decided` and `applied`, per `build-design-system/references/run-record.md` (Terms), and Commit names the run-branch commit that applied the default.
+Status words in every table here follow `build-design-system/references/run-record.md` (Terms, Status): `todo`, `doing`, `done`, `blocked (<condition>)`, `skipped (<reason>)`, `gate` and `default (unanswered)`. A step cut by the budget is `skipped (budget)`. Verdict is the return's first word (`done`, `partial`, `blocked`, `failed`). Gate statuses follow Terms (Gate), and Commit names the run-branch commit that applied the default or the answer.
 
 Gate IDs are `G-NN`, the form the montage reads. The From column names the record and the sibling's own ID. When two records use the same ID, the later one gets the next free `G-NN` here, and its From cell keeps the original.
 
@@ -166,10 +168,11 @@ When `montage.mjs` exits 0 with warnings on open gates, the close file gets a `#
 
 ## The handoff report
 
-The Report section follows the final message in `build-design-system/references/run-record.md` (Handoff report): its four parts in order, headings dropped, every count from `close.md` with its unit. The boss adds these:
+The Report section follows the final message in `build-design-system/references/run-record.md` (Handoff report), with its parts in order, headings dropped, every count from `close.md` with its unit, ending with the Found, not fixed table. The boss adds these:
 
 - It links only tracked files, such as `close.md`, `review/index.html` and `review/traces.tsv`, never a PNG or anything in `tmp/`. On a minimal footprint it names `index.html` as a local file.
-- Gates lists up to 3 applied gates that change what a screen shows or does, the ones bearing on the complaint first, then the rest by how many screens they touch.
-- When surfaces wait on clearance, one sentence follows the merge in Next: `To move the other N screens too, reply "Go, <budget>".` On a minimal footprint, Next opens the PR per `build-design-system/references/coordinator-path.md` (Minimal footprint).
+- Gates opens with every `default (unanswered)` row from the Gates table, the Frame's questions included, so the person can overturn them. Then up to 3 other applied gates that change what a screen shows or does, the ones bearing on the complaint first, then the rest by how many screens they touch.
+- A check-first run offers the migration after the merge in Next, sized from `plan.md`: `To move the other N screens too (M families, about <budget>), reply "Go, <budget>".` On a minimal footprint, Next opens the PR per `build-design-system/references/coordinator-path.md` (Minimal footprint).
+- Found, not fixed is one table for the whole run, in the run-record format. The boss merges every sibling's rows (the build's handoff, the migrate `plan.md` or `close.md`, `ui-review` findings, `token-mapping` gaps), drops duplicates by route and what, and sorts and caps them as that format says.
 - With no live reader, the Frame goes into the first part.
 - On a read-only route, Checks reads `n/a (read-only route)`, the first part says no screen changed because the ask was to look, and Next is the smallest writing ask that follows.

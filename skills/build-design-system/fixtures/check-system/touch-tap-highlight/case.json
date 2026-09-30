@@ -1,0 +1,1 @@
+{ "rule": "trap/touch-tap-highlight", "expect": { "trap/touch-tap-highlight": 3 } }

@@ -64,7 +64,7 @@ Set in `frame.md`, it decides which visual differences are acceptable.
 - In `exact` mode, fail on any difference above the noise floor.
 - In `mapped` mode, list each changed region with its bounding box and the mapping row that explains it. A region with no explaining row is `unexplained`. One unexplained region fails the surface, or sends it to a gate if the change might be intended.
 - Layout shifts count. If a mapped spacing change moves an element, the mapping row must name that spacing value.
-- Never raise the threshold, add a mask, or widen the noise floor during the run unless a gate that is no longer `open` allows it. Those are baseline edits by another name.
+- Never raise the threshold, add a mask, or widen the noise floor during the run unless a gate that no longer reads `gate` allows it. Those are baseline edits by another name.
 - An identical-value swap is proven per `build-design-system/references/run-record.md` (Terms), for one surface with `pixdiff.mjs <before dir> <after dir> --surface <name>` at tolerance 0 (`browser.md`, Compare after a change), or for a motion value with animation lists matching `baselines/motion/`. A changed motion value is a decision, shown by before and after animation lists, never by a still capture.
 
 ## Rendered checklist
@@ -93,7 +93,7 @@ Check behavior against the brief's KEEP lines, one check per line. Use the surfa
 - Keyboard. Every action on the surface works without a pointer.
 - Navigation. URLs, the back button, and new-tab behavior on links.
 - Failure. Entered values survive a failed request, and retry works.
-- Loading. Pending states do not clear input or allow a double submit. The action keeps its label, and pending text goes in a status region or beside the control (`traps.md`, `trap/loading-label-swap`). A control disabled while pending keeps focus, through a focusable disabled state or `aria-disabled`, and focus never drops to the page.
+- Loading. Pending states do not clear input or allow a double submit. The control keeps its label, its box and its focus, with a spinner inside and `aria-busy`, per the one pending fix (`build-design-system/references/component-contract.md`, Variants and states, for `trap/loading-label-swap` and `trap/loading-layout-shift`).
 
 Record each as pass, fail, or not run with a reason. "Not run" is not a pass.
 
@@ -105,7 +105,7 @@ A difference that breaks a KEEP line fails the surface. Any other difference is 
 
 ## Design review
 
-Run `ui-review` on the after-captures with the system's own criteria, or the team's. A Blocking finding the migration introduced fails the surface. A Blocking finding already present in the baseline becomes a gate, and the surface can still verify. Should-fix findings go in the verdict as notes. Anything the review hands to a person goes in the verdict as a question, and the coordinator turns it into a gate.
+Run `ui-review` on the after-captures with the system's own criteria, or the team's. A `blocking` finding the migration introduced fails the surface. A `blocking` finding already present in the baseline becomes a gate and a found-not-fixed row, and the surface can still verify. `should-fix` and `note` findings go in the verdict and on the found-not-fixed list. Anything the review hands to a person goes in the verdict as a question, and the coordinator turns it into a gate.
 
 ## Anti-tamper rules
 
