@@ -121,7 +121,7 @@ Requirements:
 
 ## Motion presets
 
-A system with overlays, toasts, loaders or toggles always makes motion decisions, so motion is a foundation even when the app barely animates. Name the presets in the token source before the first component, by job: `instant`, `micro` (hover and press), `enter`, `exit`, `overlay`, `sheet`, `collapse` and `loader`. Each has a duration, an easing, the properties it animates and its reduced-motion form. Components read presets through named utilities or variants, never their own durations, and the motion page lists each preset with the components that use it.
+A system with overlays, toasts, loaders or toggles always makes motion decisions, so motion is a foundation even when the app barely animates. Name the presets in the token source before the first component, by job: `instant` (press), `micro` (hover), `enter`, `exit`, `overlay`, `sheet`, `collapse` and `loader`. Each has a duration, an easing, the properties it animates and its reduced-motion form. Components read presets through named utilities or variants, never their own durations, and the motion page lists each preset with the components that use it.
 
 The app's own durations and easings are the source, clustered like any value. When the app has no motion for a job, the gate default is `instant`, no animation, because that is reversible and adds no direction. Under reduced motion the default is an opacity fade in place of movement.
 

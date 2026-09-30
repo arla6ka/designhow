@@ -61,7 +61,7 @@ Default every row above and present `frame.md` once, asking only where no defaul
 6. **Pilot.** Brief the pilot from `references/worker-brief.md` and run it end to end: worker, verifier, ledger row, landing. Fix what it exposed in the template. Exit when the pilot is `verified` and landed, and the template changes are logged.
 7. **Build the codemod.** Turn the pilot's recipe into a codemod, run it on the pilot's starting commit and diff the result against the hand migration. What it misses goes in the brief. Exit when that diff is recorded and a second run is a no-op.
 8. **Fan out.** Run a rolling window under the cap in `frame.md` (`references/orchestration.md`), one surface per worker, each with its own branch and worktree (or the fallback in `references/platforms.md`) and a brief with every field filled. Exit spawning at about 70% of the budget (`references/orchestration.md`, Budget and stopping).
-9. **Verify each surface.** A verifier that did not write the code checks the visual diff, rendered checklist, accessibility snapshot, behavior and its delta, and runs `design-review` (`references/verification.md`). Exit per surface when the ledger has a verdict for its current commit.
+9. **Verify each surface.** A verifier that did not write the code checks the visual diff, rendered checklist, accessibility snapshot, behavior and its delta, and runs `ui-review` (`references/verification.md`). Exit per surface when the ledger has a verdict for its current commit.
 10. **Integrate continuously.** Land each verified surface on the run branch as its own commit with its captures. After each landing, run the integration checks. A red integration build stops landing until it is green.
 11. **Delete legacy.** When a legacy module has zero callers, one unit deletes it, its adapter and its allowlist rows in one change, and the lint rule bans the path. Anything imported from outside the repo waits at a gate.
 12. **Close.** Run a last drain, recapture every surface at the final integration commit, and give each reopened row a new verdict there. Write `close.md`, audit `decisions.tsv`, turn each recurring fix into a check (`references/orchestration.md`), and clear scratch files. Exit when the predicate holds or the report names what is left.
@@ -76,7 +76,7 @@ Park in `gates.md` with a default and keep working. Mapped pixel changes, color 
 
 - A token or component the system lacks.
 - A visual diff nobody can explain, or a change that removes, renames or restructures existing semantics.
-- A Blocking `design-review` finding already present in the baseline. The surface still verifies.
+- A Blocking `ui-review` finding already present in the baseline. The surface still verifies.
 - A behavior change of any size, including one that looks like a fix, because a migration keeps behavior as found.
 - A standing order that the code contradicts.
 - A dead end that survived one replan.

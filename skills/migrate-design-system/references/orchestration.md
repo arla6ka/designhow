@@ -25,7 +25,7 @@ How one coordinator keeps tens of workers moving without losing any. Read it bef
 
 **Worker.** One surface, one branch, one worktree, one attempt. It runs the codemod, finishes by hand what the codemod left, runs its checks, commits to its own branch, and returns its report as its final message. It cannot ask questions, so it guesses at anything the brief leaves out.
 
-**Verifier.** Checks one surface at one commit and returns one verdict. It did not write the code. Where the checks involve judgment, such as explaining a visual diff or running `design-review`, its model comes from another family than the worker's.
+**Verifier.** Checks one surface at one commit and returns one verdict. It did not write the code. Where the checks involve judgment, such as explaining a visual diff or running `ui-review`, its model comes from another family than the worker's.
 
 **Mapper.** Runs `token-mapping` for one surface during Inventory and writes `mapping/<surface>.md`. It edits nothing. Its `Status: stopped: <condition>` counts as `blocked` (`build-design-system/references/run-record.md`, Terms).
 

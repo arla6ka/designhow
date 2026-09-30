@@ -149,7 +149,7 @@ const JSX_EXT = /\.(tsx|jsx)$/;
 const CSS_EXT = /\.(css|scss|sass|less|pcss)$/;
 const DEFAULTS = {
   include: ["app", "src", "components", "lib", "pages"],
-  exclude: ["node_modules", ".next", ".git", "dist", "build", "out", "coverage", ".design-system", ".migration", ".design-review", "public", "scripts", ".agents", ".claude", ".cursor", ".codex", "__fixtures__"],
+  exclude: ["node_modules", ".next", ".git", "dist", "build", "out", "coverage", ".design-system", ".migration", ".ui-review", "public", "scripts", ".agents", ".claude", ".cursor", ".codex", "__fixtures__"],
   tokenSources: [],
   uiDir: null,
   registry: "registry.json",
@@ -184,7 +184,7 @@ const phys = (cfg, rel) => (cfg.fixtures && !existsSync(join(cfg.root, rel)) && 
 const readRel = (cfg, rel) => readFileSync(join(cfg.root, phys(cfg, rel)), "utf8");
 const existsRel = (cfg, rel) => existsSync(join(cfg.root, phys(cfg, rel)));
 const uiEntries = (cfg) => (cfg.uiDir && existsSync(join(cfg.root, cfg.uiDir)) ? readdirSync(join(cfg.root, cfg.uiDir)).map((e) => (cfg.fixtures ? unfix(e) : e)).sort() : []);
-const SEGMENT_EXCLUDES = new Set(["node_modules", ".next", ".git", ".design-system", ".migration", ".design-review", ".agents", ".claude", ".cursor", ".codex", "__fixtures__"]);
+const SEGMENT_EXCLUDES = new Set(["node_modules", ".next", ".git", ".design-system", ".migration", ".ui-review", ".agents", ".claude", ".cursor", ".codex", "__fixtures__"]);
 
 // Blank out comments, keep offsets. mask[i] = 1 inside a string or template literal.
 function lex(src, js) {

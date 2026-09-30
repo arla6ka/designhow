@@ -5,7 +5,7 @@ description: Use when an ask names one phase of design system work, such as "ext
 
 # Build a design system
 
-This skill turns the UI an app ships into semantic tokens, canonical components, checks and generated docs with Markdown twins, then proves them on one pilot flow against screenshots taken before any edit. It runs in build, harden or seed mode (`references/modes.md`), and the base reference for the app's foundation (`references/base-*.md`) wins over the general references. It calls `token-mapping`, `component-docs` and `design-review` instead of restating them.
+This skill turns the UI an app ships into semantic tokens, canonical components, checks and generated docs with Markdown twins, then proves them on one pilot flow against screenshots taken before any edit. It runs in build, harden or seed mode (`references/modes.md`), and the base reference for the app's foundation (`references/base-*.md`) wins over the general references. It calls `token-mapping`, `component-docs` and `ui-review` instead of restating them.
 
 Every write lands on the run branch (`references/run-record.md`, Terms). A new visual direction lands only when the person chose it (`references/modes.md`). The run never publishes or deploys.
 
@@ -91,7 +91,7 @@ Follow `references/checks.md`. The check exits 0 before phase 6. Prove the shipp
 1. Move the rest of the pilot with the codemod, reading every hunk. Move unsupported props by hand.
 2. Capture after with the baseline's viewports, themes and data. An untraced difference is a defect. A rendered change with no capture reports `checks-only`.
 3. Walk the flow by keyboard, trigger its error and loading states, and recover. Measure every trap in the pilot's files before and after (`references/browser.md`), and fix it or gate it with its measurement.
-4. Run `design-review` on the after screenshots. Fix as decisions what existing tokens and components can fix, and broken behavior. The rest are gates. Done when the rerun review and `check-system.mjs --files` on the pilot's files are clean.
+4. Run `ui-review` on the after screenshots. Fix as decisions what existing tokens and components can fix, and broken behavior. The rest are gates. Done when the rerun review and `check-system.mjs --files` on the pilot's files are clean.
 5. Move surfaces one per commit (`references/coordinator-path.md`, Surfaces on the run branch).
 
 ### 7. Docs

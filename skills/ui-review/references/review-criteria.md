@@ -38,7 +38,7 @@ Cite these by number and name, such as "7. The screen shows what is happening."
 
 **10. It matches the rest of the product.** Patterns that look the same behave the same as on neighboring screens. A departure has a reason in code, a spec or a comment, or it is a finding.
 
-For a product with few neighboring screens, compare against Geist's component pages, where one page per component shows every variant and state side by side. Use it to spot a departure, and still cite this criterion, never the system. The review never needs to open it. To find where the app departs from its own decisions, such as two weights doing one job, run "Finding this app's visual slop" in `../build-design-system/references/traps.md` for the component types on the reviewed screens only. Without that sibling skill, skip it and say so in the Review record.
+For a product with few neighboring screens, Geist's component pages, one page per component with every variant and state side by side, can help spot a departure when you have internet access. The review works without them, and a finding cites this criterion, never the system. To find where the app departs from its own decisions, such as two weights doing one job, run "Finding this app's visual slop" in `../build-design-system/references/traps.md` for the component types on the reviewed screens only. Without that sibling skill, skip it and say so in the Review record.
 
 **11. Content holds up at the extremes.** The layout survives the longest realistic names, large numbers, translated text, and missing values, as well as very short content.
 

@@ -50,7 +50,7 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Input:** Drifting, and "Our UI is a mess, fix it." with a budget of 8 hours. Then the same repo with "Our UI is a mess, clean it up".
 
-**Expect:** state `drifting`, route Full. "Fix it" on a mess is clearance, so the state file names the ask as source and 8 hours as budget. Build, migrate audit, decided defaults, then `migrate-design-system` on the other screens and `design-review` on the final captures. "Clean it up" gives no clearance, so the route ends at the plan after the decided defaults, and Next carries the Go line.
+**Expect:** state `drifting`, route Full. "Fix it" on a mess is clearance, so the state file names the ask as source and 8 hours as budget. Build, migrate audit, decided defaults, then `migrate-design-system` on the other screens and `ui-review` on the final captures. "Clean it up" gives no clearance, so the route ends at the plan after the decided defaults, and Next carries the Go line.
 
 **Fails if:** the fix-it run ends at the plan, migration edits start before `plan.md` exists, or the build and the migration write at the same time.
 
@@ -74,7 +74,7 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Input:** Settled, and "check the invite flow before I ship." Then a repo with no branch diff, and "check it before I ship, and tell me if our colors are consistent."
 
-**Expect:** route Review, with `design-review` on the flow and `token-mapping` on its files side by side. With no flow named, `design-review` runs on the top routes, stated as the default, and `token-mapping` answers by role, with `palette_pct` apart from `adoption_pct`. `git status` matches before outside `.design-system/boss/`, and the check line reads "n/a (read-only route)".
+**Expect:** route Review, with `ui-review` on the flow and `token-mapping` on its files side by side. With no flow named, `ui-review` runs on the top routes, stated as the default, and `token-mapping` answers by role, with `palette_pct` apart from `adoption_pct`. `git status` matches before outside `.design-system/boss/`, and the check line reads "n/a (read-only route)".
 
 **Fails if:** anything in the repo changes, review findings are "fixed", the boss hands back with steps running, or palette classes count as raw in one skill and as token use in the other.
 

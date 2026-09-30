@@ -39,7 +39,7 @@ The window by worker kind, the swap limits, the service stops and the command lo
 
 **Nested host.** Each step goes to one step agent, which loads the sibling skill, becomes its coordinator and spawns its workers. The tree stops at three levels: boss, step agent, worker. The build step agent is the coordinator, so it writes the token source and the first family. The boss sees only the step agent's final message and the files.
 
-**Flat host.** Agents cannot start their own. Short steps still go to one step agent: `token-mapping`, `design-review`, `component-docs`, and `migrate-design-system` in audit mode. For `build-design-system` and an editing migration, the boss holds the sibling's coordinator seat so it can spawn that sibling's workers directly, with one decision row per seat. Any product code that coordinator would write goes to a worker. The token source and the first family go to the one worker the boss names (`build-design-system/references/coordinator-path.md`). In the migrate seat that means a verifier per surface and one commit per surface. The ordered track is in `coordinator-path.md`, "Flat host: the build and migrate seats".
+**Flat host.** Agents cannot start their own. Short steps still go to one step agent: `token-mapping`, `ui-review`, `component-docs`, and `migrate-design-system` in audit mode. For `build-design-system` and an editing migration, the boss holds the sibling's coordinator seat so it can spawn that sibling's workers directly, with one decision row per seat. Any product code that coordinator would write goes to a worker. The token source and the first family go to the one worker the boss names (`build-design-system/references/coordinator-path.md`). In the migrate seat that means a verifier per surface and one commit per surface. The ordered track is in `coordinator-path.md`, "Flat host: the build and migrate seats".
 
 **No subagents.** One agent runs everything in order, taking each sibling's seat. It updates `state.md` before and after each step so a crash loses one step at most. The route, briefs and verdicts stay the same.
 
@@ -47,7 +47,7 @@ The window by worker kind, the swap limits, the service stops and the command lo
 
 Some hosts give the coordinator file tools and subagents but no shell. Then every shell step goes to a worker: `triage.sh` before and after, `git status` saves, the dev server, check reruns, the clean-clone check and pixel diffs. Each brief names the exact command and asks for its full output and exit code. The coordinator saves that output under `triage/` or `returns/` and judges it as its own. A worker that owns the dev server keeps it up until the last browser step returns. Record "no shell: shell steps delegated" as a decision row. With no shell and no subagents, the run stops at triage and says which commands to run.
 
-Read-only work fans out on any host with subagents: a triage scout per app, a `design-review` per flow, a `component-docs` per component. Writing steps follow `SKILL.md` (Run the steps), and disjoint means file lists that share no path, checked as in "Without worktrees" below.
+Read-only work fans out on any host with subagents: a triage scout per app, a `ui-review` per flow, a `component-docs` per component. Writing steps follow `SKILL.md` (Run the steps), and disjoint means file lists that share no path, checked as in "Without worktrees" below.
 
 Live workers at handback follow standing order 16 in `build-design-system/references/run-record.md`. If the host cannot wait on background agents, or they die with the parent, run the steps in sequence. If the host forces a handback anyway, write the Running workers section in `state.md` first (`state.md`, Live workers).
 
@@ -70,7 +70,7 @@ Record the choice as a decision row.
 - Workers may write artifacts inside their own scope.
 - No brief's RETURN path points into `.design-system/boss/`, which only the coordinator writes.
 
-The full report lives in the sibling's record (`.design-system/run.md`, `.migration/<run>/`). For a sibling that returns text only, such as `design-review` or `component-docs`, the coordinator saves the text where the route says, such as `.design-system/review/<surface>-review.md`. The verdict rests on those files, never on a summary.
+The full report lives in the sibling's record (`.design-system/run.md`, `.migration/<run>/`). For a sibling that returns text only, such as `ui-review` or `component-docs`, the coordinator saves the text where the route says, such as `.design-system/review/<surface>-review.md`. The verdict rests on those files, never on a summary.
 
 ```sh
 cat > .design-system/boss/returns/build.md <<'RETURN'
@@ -117,10 +117,10 @@ Open a step's files only after its final message returns, since a live worker ma
 
 | Sibling | Check |
 |---|---|
-| `build-design-system` | Its Handoff section exists. Rerun the check command it names on a clean clone, after the repo's own typecheck prerequisites, and see it exit 0, with any allowlist committed. The check reads nothing from `.design-system/` or a skill folder. Rerun the spec check from the repo's `scripts/`. Walk the "Done, page by page" table in `system-structure.md`. Every trap in the pilot's files is fixed with before and after numbers, or gated with its measurement. Every design-review finding on the pilot that existing tokens and components can fix is fixed, and the rest are gated. A red check is `failed` |
+| `build-design-system` | Its Handoff section exists. Rerun the check command it names on a clean clone, after the repo's own typecheck prerequisites, and see it exit 0, with any allowlist committed. The check reads nothing from `.design-system/` or a skill folder. Rerun the spec check from the repo's `scripts/`. Walk the "Done, page by page" table in `system-structure.md`. Every trap in the pilot's files is fixed with before and after numbers, or gated with its measurement. Every ui-review finding on the pilot that existing tokens and components can fix is fixed, and the rest are gated. A red check is `failed` |
 | `migrate-design-system`, audit | `plan.md` exists and its counts match `inventory/counts.txt`. Its pin is the token commit or later. `scripts/migration-inventory.mjs --help` exits 2 and changes no file. No path in `legacy.txt` is a `registry.json` entry or a kept product composition. Before the first edit brief, and again at close, its gates agree with the build's, or it was re-pinned |
 | `migrate-design-system`, edit | Rerun its inventory `--check` on the final commit. Read `.migration/<run>/queue.tsv` for rows not `landed` |
-| `token-mapping`, `design-review`, `component-docs` | The status line is present and its counts match the report body |
+| `token-mapping`, `ui-review`, `component-docs` | The status line is present and its counts match the report body |
 
 Verdicts use the worker statuses in `build-design-system/references/run-record.md` (Terms): `done`, `partial` (each gap named), `blocked` (the sibling's stop condition quoted, a `Status: stopped: <condition>` line included) and `failed` (the check that failed, with its output). A verdict with no evidence path does not go in the state file.
 

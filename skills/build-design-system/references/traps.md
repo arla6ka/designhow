@@ -125,7 +125,7 @@ A family with no rows here still gets a spec. Its traps come from the app, throu
 
 ## Finding this app's visual slop
 
-Find the app's own decisions, then where the app breaks them. Run this in harden and build before specs are filled, and in `design-review` for criterion 10.
+Find the app's own decisions, then where the app breaks them. Run this in harden and build before specs are filled, and in `ui-review` for criterion 10.
 
 1. **Measure what the app does.** On the routes with the most traffic, collect computed styles per text role and per surface. Save a script like this as a file, such as `/abs/repo/.design-system/scripts/rendered-type.js`, and run it on each route with a browser tool (`browser.md`, Tool how-to):
 

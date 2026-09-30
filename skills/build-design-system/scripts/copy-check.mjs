@@ -67,7 +67,7 @@ const INVENTORY = "docs/system/copy-inventory.tsv";
 const WRITING = "docs/system/writing.md";
 const ALLOWLIST = "scripts/copy-check-allowlist.json";
 const HEAD = ["slot", "text", "component", "source", "file", "line"];
-const EXCL = new Set(["node_modules", ".next", ".git", "dist", "build", "out", "coverage", ".design-system", ".migration", ".design-review", "public", "scripts", "docs", ".agents", ".claude", ".cursor", ".codex", "fixtures"]);
+const EXCL = new Set(["node_modules", ".next", ".git", "dist", "build", "out", "coverage", ".design-system", ".migration", ".ui-review", "public", "scripts", "docs", ".agents", ".claude", ".cursor", ".codex", "fixtures"]);
 const STEPS = ["Action", "Confirm title", "Confirm action", "Result"];
 
 class BadInput extends Error {}

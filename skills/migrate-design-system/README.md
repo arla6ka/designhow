@@ -4,7 +4,7 @@ Moves an app onto a design system that already exists, one surface at a time, wi
 
 Where old and new components share one import path, it finds legacy by diffing each file against the team's registry, not by path.
 
-It uses the other skills in this repo. `token-mapping` builds each surface's migration list, `design-review` is part of each verdict, and `component-docs` documents any component the system owner adds to close a gap.
+It uses the other skills in this repo. `token-mapping` builds each surface's migration list, `ui-review` is part of each verdict, and `component-docs` documents any component the system owner adds to close a gap.
 
 ## What the scripts touch
 

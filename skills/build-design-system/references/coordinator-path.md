@@ -116,13 +116,13 @@ By default, specs cover the pilot's families, and build adds the families the st
 
 Scopes stop two writers from touching one file, not from answering one question two ways on two pages. So after any fan-out of more than three writers, and again before the handoff, the run reviews itself, settles each conflict once, then fixes every side.
 
-1. **Review.** Read-only workers side by side, one lens each, each writing `.design-system/review/lens-<name>.md` with the commit it read on its first line, a count table, then findings by topic, worst first. Every finding gives each side's `path:line` with a short quote, a severity (`conflict`, `wrong`, `stale`, `missing`, `nit`), its evidence type (`seen`, `measured` or `inferred`, as `design-review` uses them), a dedupe key `<criterion number or trap/rule ID>|<element role and name, or region>`, and a proposed answer by the precedence below.
+1. **Review.** Read-only workers side by side, one lens each, each writing `.design-system/review/lens-<name>.md` with the commit it read on its first line, a count table, then findings by topic, worst first. Every finding gives each side's `path:line` with a short quote, a severity (`conflict`, `wrong`, `stale`, `missing`, `nit`), its evidence type (`seen`, `measured` or `inferred`, as `ui-review` uses them), a dedupe key `<criterion number or trap/rule ID>|<element role and name, or region>`, and a proposed answer by the precedence below.
    - Cross-page conflicts: the same topic answered two ways, such as durations, sizes, item limits, prop and tone names, the disabled pattern, empty values, or which component does a job. Also "use X instead" that points at nothing, and duplicate or dangling rule IDs.
    - Specs against code: every prop, default, constant, token, key and ARIA claim a spec makes holds at HEAD.
    - Format and bans: headings, the rule shape, counts, sources, and every ban in prose, tables and examples outside `Don't:` lines.
    - Showcase against rules: the showcase obeys the rules it shows, since agents copy it.
    - Newcomer: one agent builds one real screen on a real route from the docs alone, logs each place it got stuck, then restores the repo.
-   - Polish: every overlay open, at every width and theme. It can run as `design-review`.
+   - Polish: every overlay open, at every width and theme. It can run as `ui-review`.
 2. **Decide.** The lenses merge into one ledger by dedupe key, and each finding ends fixed, skipped with a reason, or moved to the roadmap. An `inferred` finding is confirmed before it enters a fix brief. The coordinator writes one numbered decision per conflict in `docs/system/decisions.md`, committed, never only in the run record, since agents in later sessions read the repo. A rename of a prop, tone or token is a decision too, so every fix worker writes against the new name at once. A decision that changes every instance lists its consumers, and the fix sweeps them with named opt-outs, never as a silent global change. Mark findings on files that changed since a lens's commit as stale. No message to the person says done before the lenses have run.
 3. **Fix.** One worker per ownership set, side by side, each reading the decisions first and its lens findings second: code (the component folder, tokens, utility config), foundation and writing pages, specs split by an explicit file list, and the showcase. Docs workers never compile. The code worker lists every call site its renames break, with file and line, for the showcase worker. Then regenerate the indexes, run every check, capture every page the fix touched in both themes, and commit per worker.
 
@@ -134,7 +134,7 @@ The decisions page opens with its precedence: the person's direct words, then th
 
 ## Sibling skills under this coordinator
 
-Under this coordinator, `component-docs` and `design-review` return text and write no file. The coordinator saves a component entry to `docs/system/<component>.md` and a review to `.design-system/review/<surface>-review.md`. Run directly, each saves to its own default path. A cheap CSS fix a review finding names, such as an overflow at the narrow width or a control height off the scale, lands on the run branch as a decision when existing tokens cover it, with captures and a trace row like any surface. It is not a follow-up.
+Under this coordinator, `component-docs` and `ui-review` return text and write no file. The coordinator saves a component entry to `docs/system/<component>.md` and a review to `.design-system/review/<surface>-review.md`. Run directly, each saves to its own default path. A cheap CSS fix a review finding names, such as an overflow at the narrow width or a control height off the scale, lands on the run branch as a decision when existing tokens cover it, with captures and a trace row like any surface. It is not a follow-up.
 
 ## Close
 

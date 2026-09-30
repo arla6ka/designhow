@@ -338,7 +338,7 @@ for (const f of files) {
 }
 
 // Freshness helpers: the check's include folders, <Name tag counts, and git reads.
-const EXCL = new Set(["node_modules", ".next", ".git", "dist", "build", "out", "coverage", ".design-system", ".migration", ".design-review", "public", "scripts", "docs", ".agents", ".claude", ".cursor", ".codex"]);
+const EXCL = new Set(["node_modules", ".next", ".git", "dist", "build", "out", "coverage", ".design-system", ".migration", ".ui-review", "public", "scripts", "docs", ".agents", ".claude", ".cursor", ".codex"]);
 let includeDirs = ["app", "src", "components", "lib", "pages"];
 if (Array.isArray(csCfg.include) && csCfg.include.length) includeDirs = csCfg.include;
 let jsxFiles = null;

@@ -1,6 +1,6 @@
 # Browser
 
-Build, migrate and design-review capture screenshots and accessibility trees and measure them. This page says what to capture and how. A repo's own Playwright or visual-test harness wins over the skill's scripts. Record which tool ran in the run record.
+Build, migrate and ui-review capture screenshots and accessibility trees and measure them. This page says what to capture and how. A repo's own Playwright or visual-test harness wins over the skill's scripts. Record which tool ran in the run record.
 
 Contents
 

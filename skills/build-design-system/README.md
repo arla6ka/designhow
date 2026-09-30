@@ -4,7 +4,7 @@ Turns an app's UI into a design system that people and agents can use. It has th
 
 It inventories the real routes, components and values with scripts and captures every screen before touching anything. Then it writes semantic tokens in the format the foundation reads, picks one canonical component per family with a spec answered from the app's own evidence, and generates docs with Markdown twins and `llms.txt`. The check it copies into the repo keeps the system enforced after the run (`references/checks.md`). Everything lands on a run branch, one surface per commit with before and after captures, and the merge is yours.
 
-It uses three sibling skills: `token-mapping` to fold existing values into the new tokens, `component-docs` for each component page, and `design-review` for the pilot. Install all four together.
+It uses three sibling skills: `token-mapping` to fold existing values into the new tokens, `component-docs` for each component page, and `ui-review` for the pilot. Install all four together.
 
 ## Use as-is
 

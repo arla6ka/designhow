@@ -1,11 +1,11 @@
 ---
 name: design-system-boss
-description: Use for vague whole-app design system asks on an app that already ships UI, like "our UI is a mess, fix it", "we need a design system", "we hardcode colors everywhere", "make the buttons consistent for an upstream PR", "document our whole design system" or "check the app before I ship". Triages the app, then runs the design.how skills in order. One named screen goes to design-review, one component to component-docs, an empty repo to build-design-system.
+description: Use for vague whole-app design system asks on an app that already ships UI, like "our UI is a mess, fix it", "we need a design system", "we hardcode colors everywhere", "make the buttons consistent for an upstream PR", "document our whole design system" or "check the app before I ship". Triages the app, then runs the design.how skills in order. One named screen goes to ui-review, one component to component-docs, an empty repo to build-design-system.
 ---
 
 # Design system boss
 
-The boss triages the app, picks a route, runs each step through subagents where it can, keeps one state file, and hands back one report. The five siblings do the work: `build-design-system`, `migrate-design-system`, `token-mapping`, `design-review` and `component-docs`, each called through its "When a coordinator calls it" section.
+The boss triages the app, picks a route, runs each step through subagents where it can, keeps one state file, and hands back one report. The five siblings do the work: `build-design-system`, `migrate-design-system`, `token-mapping`, `ui-review` and `component-docs`, each called through its "When a coordinator calls it" section.
 
 Read `references/coordinator-path.md` first. It lists each step and the file to open.
 

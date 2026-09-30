@@ -1,4 +1,4 @@
-# design-review
+# ui-review
 
 Critiques a screen, flow, prototype, or running build against a set of criteria. The report ranks each problem, lists states the design leaves out, and hands open questions to a person.
 
@@ -31,11 +31,11 @@ Each rule prevents a specific failure. Change one only when its stated reason do
 
 This skill ships no scripts. With `build-design-system` installed beside it, it runs these from there:
 
-- `capture.mjs` opens the app's local or given URL in a headless browser and writes PNG and JSON captures under `.design-review/<date>-<flow>/`, or the folder a coordinator names.
+- `capture.mjs` opens the app's local or given URL in a headless browser and writes PNG and JSON captures under `.ui-review/<date>-<flow>/`, or the folder a coordinator names.
 - `state-timeline.js` runs inside the open page and only reads computed styles.
 - `check-spec.mjs` reads `docs/system/` and runs read-only `git` commands.
 - The accessibility scan installs `axe-core` from npm into `.design-system/tmp/`. That install, and `agent-browser` if you use that tool, are the only network calls besides the page under review.
-- A direct run writes its report to `.design-review/<date>-<flow>.md`. Under a coordinator it writes no report file.
+- A direct run writes its report to `.ui-review/<date>-<flow>.md`. Under a coordinator it writes no report file.
 
 On a local build it intercepts every request that is not a same-origin GET or HEAD and aborts or stubs it, so no form submission leaves the machine.
 

@@ -29,6 +29,6 @@ Each skill swaps a guess for a step it can prove. It screenshots every route bef
 - **[migrate-design-system](./skills/migrate-design-system/SKILL.md)**. Moves every screen onto the system with parallel workers, each checked against its before screenshot. Start with audit mode, which changes nothing.
 - **[token-mapping](./skills/token-mapping/SKILL.md)**. Maps hex codes and pixel values to your tokens by purpose, so an 8px radius never stands in for an 8px gap. It never edits.
 - **[component-docs](./skills/component-docs/SKILL.md)**. Writes a component's docs from its code and two real uses in your product, with the rules right next to the examples.
-- **[design-review](./skills/design-review/SKILL.md)**. Reviews a screen or flow, including the states a screenshot misses, and ranks what's actually broken.
+- **[ui-review](./skills/ui-review/SKILL.md)**. Reviews a screen or flow, including the states a screenshot misses, and ranks what's actually broken.
 
 MIT licensed.

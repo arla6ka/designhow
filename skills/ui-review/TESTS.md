@@ -1,4 +1,4 @@
-# Tests: design review
+# Tests: UI review
 
 Setup, phrasing, the baseline and changing one thing per run are in `../TESTING.md`. The cases below run on one or two screens from your own product.
 
@@ -103,7 +103,7 @@ With the skill off, watch for criteria made up on the spot, opinions written as 
 
 **Input:** the coordinator case above, run as a subagent on a host that refuses files a subagent writes outside its scope, with a captures folder named in the brief.
 
-**Expect:** the whole report comes back as the final message. No file lands under `.design-review/` or anywhere else except captures in the named folder. The coordinator saves the text to `.design-system/review/<surface>-review.md`. A direct run on the same screen still saves `.design-review/<date>-<flow>.md`.
+**Expect:** the whole report comes back as the final message. No file lands under `.ui-review/` or anywhere else except captures in the named folder. The coordinator saves the text to `.design-system/review/<surface>-review.md`. A direct run on the same screen still saves `.ui-review/<date>-<flow>.md`.
 
 **Fails if:** it writes a report file under a coordinator, or a direct run leaves no saved report.
 
@@ -123,7 +123,7 @@ With the skill off, watch for criteria made up on the spot, opinions written as 
 
 **Input:** repo access, a browser tool, a settings route whose icon-only delete button is 20 by 20 px, and "review the settings page".
 
-**Expect:** the record names the tool, the widths and the accessibility scan. The target-size finding cites the button by role and name with its `@eN` ref, and gives the measured box. Captures use absolute paths under `.design-review/<date>-<flow>/`, the session is named after the flow, and a file listing follows each capture.
+**Expect:** the record names the tool, the widths and the accessibility scan. The target-size finding cites the button by role and name with its `@eN` ref, and gives the measured box. Captures use absolute paths under `.ui-review/<date>-<flow>/`, the session is named after the flow, and a file listing follows each capture.
 
 **Fails if:** the size is estimated from a screenshot, an automated scan result is ranked as Blocking on its own, a capture path starts with `.`, or a session is named plain `review`.
 
@@ -159,7 +159,7 @@ With the skill off, watch for criteria made up on the spot, opinions written as 
 
 **Input:** "check the settings page before I ship it, and tell me if we're using colors consistently", run directly on a branch with a diff.
 
-**Expect:** the first line is one plain sentence that answers both halves, such as "Nearly. One tab bug blocks shipping, and cards use two grays for the same text," with no criterion numbers, severities or skill names. The ship line comes second. The reply lists the accessibility scan and any spec check with their exit codes, gives at most 3 items for a person with defaults, and ends with one `Next:` prompt. The report is saved at `.design-review/<date>-<flow>.md` with captures beside it, and nothing lands in the repo root.
+**Expect:** the first line is one plain sentence that answers both halves, such as "Nearly. One tab bug blocks shipping, and cards use two grays for the same text," with no criterion numbers, severities or skill names. The ship line comes second. The reply lists the accessibility scan and any spec check with their exit codes, gives at most 3 items for a person with defaults, and ends with one `Next:` prompt. The report is saved at `.ui-review/<date>-<flow>.md` with captures beside it, and nothing lands in the repo root.
 
 **Fails if:** the first line is the ship line alone, a count, a status or the Review record, the answer is buried below the findings, the reply narrates the review, or the report exists only in chat.
 

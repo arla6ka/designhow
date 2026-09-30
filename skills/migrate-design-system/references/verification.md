@@ -105,7 +105,7 @@ A difference that breaks a KEEP line fails the surface. Any other difference is 
 
 ## Design review
 
-Run `design-review` on the after-captures with the system's own criteria, or the team's. A Blocking finding the migration introduced fails the surface. A Blocking finding already present in the baseline becomes a gate, and the surface can still verify. Should-fix findings go in the verdict as notes. Anything the review hands to a person goes in the verdict as a question, and the coordinator turns it into a gate.
+Run `ui-review` on the after-captures with the system's own criteria, or the team's. A Blocking finding the migration introduced fails the surface. A Blocking finding already present in the baseline becomes a gate, and the surface can still verify. Should-fix findings go in the verdict as notes. Anything the review hands to a person goes in the verdict as a question, and the coordinator turns it into a gate.
 
 ## Anti-tamper rules
 
@@ -148,7 +148,7 @@ RUN            1. forbidden-path check  2. manifest check  3. check out the comm
                6. rendered checklist: link cue, overflow and word breaks, container width,
                   nav links and table columns, contrast on recolored text
                7. accessibility compare, sorting adds-only from gates  8. KEEP checks and behavior delta
-               9. design-review
+               9. ui-review
 SERVER         your own dev server in your own worktree on port <base + verifier n>, stopped before
                you return, because you check out the surface commit (the verifier exception in
                build-design-system/references/coordinator-path.md, Dev server and retries)

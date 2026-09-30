@@ -9,7 +9,7 @@ These rules hold on every route:
 - The migrate audit is read-only. On Build and Harden it starts right after the build's token commit, pinned to it, and runs beside the rest of the build, so plan.md exists even if the build hits its cap. At close, the boss reconciles the audit's gates with the build's or harden's. If the build changed a token, component API or file the plan names after the pin, the pin is stale. Rerun the audit pinned to the final commit, or re-pin it and redo the affected rows, and record which. A minimal footprint writes no audit plan, since the state file's edit list is its plan.
 - Identical-value swaps land on every route without clearance, in build, harden or a swap step the boss briefs, each proven as `build-design-system/references/run-record.md` (Terms) defines, with the proof saved per route. Other component swaps outside the pilot need clearance, unless a decided gate default names them.
 - The repo works after the run. The check scripts, check-spec, the docs generator and the docs live in the repo (`scripts/`, `docs/`), and `.design-system/` holds only run records and the rerun scripts in `.design-system/scripts/`, nothing the check reads. The check passes on a clean clone. On a minimal footprint nothing is vendored, the repo's own checks are the check, and `.design-system/` goes in `.git/info/exclude`.
-- On a writing route, a cheap CSS fix a `design-review` finding names lands on the run branch as a decision when existing tokens cover it, per `build-design-system/references/coordinator-path.md` (Sibling skills under this coordinator). It goes to a worker, not a follow-up.
+- On a writing route, a cheap CSS fix a `ui-review` finding names lands on the run branch as a decision when existing tokens cover it, per `build-design-system/references/coordinator-path.md` (Sibling skills under this coordinator). It goes to a worker, not a follow-up.
 - On Full and Harden, horizontal overflow at the narrow width in shared layout is a decided default, per the same file (Clearance).
 - A step's output passes to the next by path. Never paste a summary of it in place of the file.
 - A read-only ask (review, document) that arrives mid-run runs against the starting branch and writes nothing to docs/system until the run lands. A writing ask queues after the current run or becomes a gate.
@@ -38,7 +38,7 @@ Phase caps set the budget, not a formula. Take the session from the person, else
 | Migrate audit | inside the build's cap, side by side |
 | Decided defaults | 15%, reserved up front on every writing route |
 | Migration, when cleared | 30% |
-| `design-review`, `token-mapping`, `component-docs` | 10%, side by side with other work |
+| `ui-review`, `token-mapping`, `component-docs` | 10%, side by side with other work |
 | Close: after-triage, clean-clone check, captures, montage, report | 15%, never cut |
 
 A phase that finishes early passes its time on. A phase at its cap starts nothing new and closes what is running. Past 70% of the session no new writing step starts, which leaves close its time. The decided-defaults step is the exception. It has its own reserved share, it is cheap, and it is what makes screens change, so it starts at its turn. When the session is short, cut the build's scope, never close. The build settles its formats before any fan-out and runs its phases in the order `build-design-system/references/coordinator-path.md` (Lock before fan-out) gives. Brief the build or harden in this order, and write the planned cut into the Frame:
@@ -78,7 +78,7 @@ For an app with no UI yet. The system starts from whatever brand material exists
 1. `build-design-system`, seed mode. Receives the brand material triage found (logo files, a font, a color in a README or a slide), the foundation (default shadcn), and the budget. Done when the handoff lists every brand value as a gate with its default, and the spec check passes on the seed components.
 2. Check the system, as Build step 3.
 
-Nothing to migrate. Next is the first screen built on the seed, with `design-review` on it.
+Nothing to migrate. Next is the first screen built on the seed, with `ui-review` on it.
 
 ## Full
 
@@ -87,7 +87,7 @@ For "fix it" asks. Build or harden, then migrate, then review.
 1. to 4. As Build, or as Harden when triage marked the system weak. The audit already ran beside the build.
 5. Clearance, per `SKILL.md` (Clear the migration). Without an ask that counts, send one message with the plan's counts and open gates, asking for the one reply `Go, <budget>`. Done when the clearance source is saved, or the route is marked ended at the plan.
 6. `migrate-design-system`, on the run branch. Receives the existing run folder, the budget from clearance, and scope and pilot from `plan.md`. Surfaces migrate one per commit, verified, with captures in `.design-system/review/`. Unexplained diffs stay out and become gates. Done when it returns its final report or stop shape.
-7. `design-review`. Receives the final integration captures from the migration run folder for the flows the ask named. With none named, it takes the three surfaces with the most rows in `plan.md`. Done when each flow has a report with its status line. With no clearance, this step is `skipped: no migration ran`, since the build reviewed its own pilot.
+7. `ui-review`. Receives the final integration captures from the migration run folder for the flows the ask named. With none named, it takes the three surfaces with the most rows in `plan.md`. Done when each flow has a report with its status line. With no clearance, this step is `skipped: no migration ran`, since the build reviewed its own pilot.
 
 ## Named families for a PR
 
@@ -116,7 +116,7 @@ For a settled system the app has not moved onto. An ask that names families and 
 1. `migrate-design-system`, audit mode. Receives the system location and commit that triage found, and writes the product coverage map as the build would (`build-design-system/references/inventory.md`). A `missing` pattern becomes a gate, never a new component inside the migration. Done when `plan.md` exists.
 2. Clearance, as Full step 5. Decided defaults need none, so they land in step 3 first.
 3. `migrate-design-system`, as Full step 6.
-4. `design-review`, as Full step 7.
+4. `ui-review`, as Full step 7.
 
 ## Document
 
@@ -136,7 +136,7 @@ For one named component.
 
 For a screen or flow close to shipping.
 
-1. `design-review`, one run per flow, side by side. Receives the flow, the running build if one starts, and the purpose if the ask gave one. With no flow named, take the top routes from `triage/routes.txt`. Done when each run returns a report with its status line.
+1. `ui-review`, one run per flow, side by side. Receives the flow, the running build if one starts, and the purpose if the ask gave one. With no flow named, take the top routes from `triage/routes.txt`. Done when each run returns a report with its status line.
 2. `token-mapping`, when a token source exists or the ask is about consistency. Receives the files those flows render. Runs alongside step 1. With no token source, or a palette-only list, it answers with Consistency by role. Done when it returns a report with its status line.
 
 Nothing in the repo changes on this route.
@@ -158,5 +158,5 @@ Nothing changes outside `.design-system/boss/` and `.migration/`, except the aud
 | `token-mapping` | its report | `build-design-system` foundations, or the migration's first mapping |
 | `build-design-system` | `.design-system/run.md` handoff, migration map, codemod command, counts by route, product coverage map, and in harden mode the stray-code list | `migrate-design-system`, first for decided defaults |
 | `migrate-design-system` audit | `.migration/<run>/plan.md` | the clearance message, then the editing run |
-| `migrate-design-system` | final integration commit and captures | `design-review` |
+| `migrate-design-system` | final integration commit and captures | `ui-review` |
 | `component-docs` | the entry and its three blocks | the repo's entry folder, or `returns/component-docs.entry.md` |

@@ -1,9 +1,9 @@
 ---
-name: design-review
+name: ui-review
 description: Critiques a screen, flow, prototype or running build against agreed criteria, accessibility included, and ranks findings by severity. Use for "check this page before I ship", "is this flow ready", "is it accessible", keyboard or screen-reader checks, "it feels off on my phone", "it feels janky", or a second read on UI. A whole-app ship check goes to design-system-boss, token compliance to token-mapping.
 ---
 
-# Design review
+# UI review
 
 A written critique of rendered UI. It does not fix the design or rewrite copy. Criteria are in `references/review-criteria.md`, and finding the design, evidence and probes in `references/sources.md`.
 
@@ -54,7 +54,7 @@ The report is ready when:
 - Every claim that something works or is fixed names its command or capture from this session.
 - The last line reads `Coverage:` with the routes, viewports, themes and probes measured, then what was not.
 
-Run directly, save the report to `.design-review/<date>-<flow>.md` with captures beside it. The chat reply opens with the answer and ship lines, gives each command run with its exit code, lists up to three items for a person with defaults, and ends with `Next:` and one prompt to paste. That prompt covers every Blocking and shown-versus-sent finding as "Fix X so that <check>", such as "Fix Enter in Email so that it sends 1 POST". Each Next check must fail on the current build.
+Run directly, save the report to `.ui-review/<date>-<flow>.md` with captures beside it. The chat reply opens with the answer and ship lines, gives each command run with its exit code, lists up to three items for a person with defaults, and ends with `Next:` and one prompt to paste. That prompt covers every Blocking and shown-versus-sent finding as "Fix X so that <check>", such as "Fix Enter in Email so that it sends 1 POST". Each Next check must fail on the current build.
 
 A stopped run returns only what stopped it, a one-line guess at what each screen does, and the shortest reply that unblocks it.
 

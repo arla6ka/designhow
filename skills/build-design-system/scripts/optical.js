@@ -20,6 +20,12 @@
 // glyph is the ink center minus the mark's own box center: a glyph drawn off center in its viewBox. Each row carries
 // clip (page coordinates for a zoomed crop) and, beside text, the three reference lines' page y.
 // Returns { page, ref, tolerance, summary, rows, coverage }. coverage is last and names what was not measured.
+if (typeof window === "undefined") {
+  // Run from Node by mistake, or with --help: print the header above and stop.
+  const lines = require("fs").readFileSync(__filename, "utf8").split("\n");
+  console.log(lines.slice(0, lines.findIndex((l) => !l.startsWith("//"))).map((l) => l.replace(/^\/\/ ?/, "")).join("\n"));
+  process.exit(process.argv.includes("--help") ? 0 : 1);
+}
 (() => {
   const o = Object.assign({ ref: null, scope: null, tolerance: 0.5, limit: 200 }, window.__dsOptical || {});
   const root = (o.scope && document.querySelector(o.scope)) || document.querySelector("main,[role=main]") || document.body;

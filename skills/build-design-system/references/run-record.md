@@ -28,7 +28,7 @@ These words mean the same thing in every design.how skill. Other files point her
 - **Decision.** A choice a reversible change settles, made and recorded with its evidence. Fixes to broken behavior, adds-only accessibility changes (`traps.md`) and merges inside tolerance are decisions. Removing or restructuring semantics, brand, product vocabulary, visible change on shipped screens beyond tolerance and intentional behavior changes are gates.
 - **Gate.** A product or brand choice a person could reasonably answer either way. It carries a default, the run applies that default on the run branch, and the person reverses it by naming it at merge. Its states are `open` (waits on a person), `decided` (default chosen and recorded) and `applied` (landed on the run branch). At close, a `decided` gate is `applied`, or the handoff lists it as not landed with its reason.
 - **Clearance.** The person's go-ahead, within a budget, to move surfaces beyond identical-value swaps and decided gate defaults (`coordinator-path.md`, Clearance). These words in the ask count as clearance within the session budget: "looks like a different product", "make it look like one thing", "every page looks different", "consistent" or "consistency" with a verb that means change ("make every page consistent"), "fix it" or "fix this" aimed at a mess or an inconsistency, "migrate", "move every screen", "roll out", "adopt", "use it everywhere", and "nobody uses it", "nobody follows it" or any "ignore" aimed at the system. An ask that names none of them, including a fallback route picked because nothing matched, grants no clearance.
-- **Worker status.** A worker's report opens with `done`, `partial`, `blocked: <reason>` or `failed: <reason>`, in every skill. A sibling's `Status: stopped: <condition>` (token-mapping, component-docs, design-review) counts as `blocked`.
+- **Worker status.** A worker's report opens with `done`, `partial`, `blocked: <reason>` or `failed: <reason>`, in every skill. A sibling's `Status: stopped: <condition>` (token-mapping, component-docs, ui-review) counts as `blocked`.
 - **Footprint.** How much the run adds to the repo. Full copies in the check scripts, specs and generated docs. Minimal, the default when the repo is not the person's own or the ask is for a PR, adds only tokens, the components touched and the screen changes, and uses the repo's own lint, typecheck and build as the check (`coordinator-path.md`, Start).
 
 ## Rules
@@ -226,7 +226,7 @@ G-01 applied, merge. G-02 applied, reuse text.inverse. G-04 decided, keep both, 
 The next likely screen is the project list. It hits two coverage gaps: tables (Meanwhile: a divided list, as /settings) and bulk actions (Meanwhile: none selected hides the bar).
 
 ### Trial
-One fresh agent, given only the repo on a throwaway branch and the AGENTS.md block, built the project list. Check: npm run check exit 0. design-review: 1 Blocking (row actions unreachable by keyboard). Twins opened: button.md, table-gap row. Gaps it named: tables, bulk actions.
+One fresh agent, given only the repo on a throwaway branch and the AGENTS.md block, built the project list. Check: npm run check exit 0. ui-review: 1 Blocking (row actions unreachable by keyboard). Twins opened: button.md, table-gap row. Gaps it named: tables, bulk actions.
 
 ### The check cannot see
 Copied from `node scripts/check-system.mjs --list-blind-spots`: rendered contrast, behavior, layout, runtime class names, files outside include, by-hand rules.
@@ -245,7 +245,7 @@ Gates, each already applied on the branch: 14 body grays become one text color (
 Next: "Merge ds/2026-03-12-build." To undo one, name it: "Merge ds/2026-03-12-build, but keep the 14 grays separate (reverse G-01)."
 ```
 
-The Trial runs once at handoff: a fresh agent gets only the repo and the AGENTS.md block and builds the named next screen on a throwaway branch. Record its check findings, its `design-review` Blocking count, which twins it opened and which coverage gaps it named. A trial that fails the check or opens no twin is a finding for the handoff.
+The Trial runs once at handoff: a fresh agent gets only the repo and the AGENTS.md block and builds the named next screen on a throwaway branch. Record its check findings, its `ui-review` Blocking count, which twins it opened and which coverage gaps it named. A trial that fails the check or opens no twin is a finding for the handoff.
 
 A run that built the system as a separate layer, in a new folder, adds `### Adoption blockers` before Next: providers not mounted at the root, product imports of the new layer (zero is a blocker), duplicate toast regions, and overlay layering against the legacy layer, each with its file.
 
