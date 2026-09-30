@@ -24,6 +24,10 @@ Change one only when its stated reason doesn't apply to you.
 - No list, no mapping. Mapping from memory is how wrong names spread.
 - Called by another skill, it runs to the end, puts questions in the report and opens with a status line, since a coordinator has no one to answer mid-run.
 
+## What the scripts touch
+
+This skill ships no scripts and writes no file. With `build-design-system` installed beside it, it runs `oklch.mjs` from there, which converts the colors given as arguments and prints the result, with no file access and no network. It reads token files and product code, and computed styles from a running build when you give a URL.
+
 ## Check after changing
 
 File access and a browser are optional, and the pasted path must keep working. Run `TESTS.md` on one real screen or file.

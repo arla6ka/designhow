@@ -6,7 +6,7 @@ Read the section for the path this run takes, and record the path in the Review 
 
 Look before asking. With repo access and a browser:
 
-1. Use a dev server if one answers, or start the project's own dev command. Under a coordinator, start nothing (`../build-design-system/references/coordinator-path.md`, Dev server and retries).
+1. Use a dev server if one answers, or start the project's own dev command. Under a coordinator, start nothing (`../build-design-system/references/coordinator-path.md`, Dev server and retries). Before the first capture, confirm the running app was built from the branch under review, and record the commit.
 2. A scope the caller names (a flow, a route list, captures) wins over every default below.
 3. "Before I ship" means the screens the current branch changes. Read the diff against the main branch and open the routes it touches.
 4. With no diff, as on main, take 5 top routes by default, the routes with the most call sites: count the links and navigations to each route path in product code, and break ties by nav order. Write "Default scope: 5 top routes, no branch diff" in the Review record with the routes and counts, so the reader can widen it.
@@ -30,11 +30,11 @@ Read the page title, the main heading, the primary action and the route. Write o
 
 An automated accessibility scan against WCAG A and AA runs at each viewport whenever a browser tool runs (`browser.md`, Evidence for a review). Sort its results like any accessibility observation (`SKILL.md` step 6). With pasted screenshots only, the record says the scan did not run.
 
-Captures follow the three rules in `browser.md`: absolute paths, every command spelled out, and one session per run, named after the flow (`review-invite`) so parallel runs never share a browser. Refs number across a whole session, so a ref is valid only with the capture it came from. Cite it that way: `@e34 (home-1280.png)`. On the Playwright path, cite the selector where agent-browser would cite a ref.
+Captures follow the three rules in `browser.md`: absolute paths, every command spelled out, and one session per run, named after the flow (`review-invite`) so parallel runs never share a browser. A sweep of more than 5 routes runs headless through `capture.mjs`, since a shared browser pane is for showing the person. Reset any emulation you set and close your tab at the end. A hover check run in a background tab is recorded as `hover not verified`. Stop any wait loop when its server stops. Refs number across a whole session, so a ref is valid only with the capture it came from. Cite it that way: `@e34 (home-1280.png)`. On the Playwright path, cite the selector where agent-browser would cite a ref.
 
 "On mobile" or a named device class means one capture at the phone width with touch emulation on (`capture.mjs --mobile --widths <the app's narrowest width, default 390>`, which sets isMobile and hasTouch).
 
-Each finding's evidence is seen (a named capture), measured (the value and command, or the requests that fired), or inferred. Device emulation doesn't reliably reproduce sticky hover, safe areas or the software keyboard, so a touch finding checked only in emulation says `emulated, needs a device`, and a hover check also reads the source for `:hover` rules outside `@media (hover: hover)`. An input's font size is computed, so `trap/touch-input-zoom` is `measured` in emulation.
+Each finding's evidence type is seen (a named capture), measured (the value and command, or the requests that fired), or inferred. Each finding also carries a dedupe key, `<criterion number or trap/rule ID>|<element role and name, or region>`, the same on every route and viewport, so repeats merge into one finding with a count and a coordinator's ledger merges this report with other reviews. An inferred finding enters `Next:` or a fix brief only as the check that settles it. Device emulation doesn't reliably reproduce sticky hover, safe areas or the software keyboard, so a touch finding checked only in emulation says `emulated, needs a device`, and a hover check also reads the source for `:hover` rules outside `@media (hover: hover)`. An input's font size is computed, so `trap/touch-input-zoom` is `measured` in emulation.
 
 ## The dev overlay
 
@@ -70,6 +70,7 @@ Run all of these whenever the flow has a dialog or a form, with valid input unle
 - Cancel with valid input. Record the requests sent (expect 0) and where focus lands.
 - Cancel with input, then reopen. Read every field's displayed value, submit, and compare the fields with the next request body.
 - Submit while pending. Use the slow stub. Record the button's box idle and pending (`browser.md`, Measuring a loading state), whether it is disabled, where focus sits, and whether a second submit fires a second request. Focus should stay on the control, never drop to the page. A label that changes while pending is `trap/loading-label-swap` in `traps.md`.
+- State order. Run `../build-design-system/scripts/state-timeline.js` (`browser.md`) on the dialog's trigger and each field, and cite the trap it reports, such as `trap/hover-beats-focus` or `trap/open-trigger-unfocused`.
 - Failure and retry. Use the 503 stub, then read every field's displayed value and whether the error is visible. Submit again and compare the request body with what the fields show.
 
 A field that shows one value while the request sends another is a measured finding under criterion 8. Its severity follows the shown-versus-sent rule in `review-criteria.md`.

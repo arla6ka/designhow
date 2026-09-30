@@ -14,7 +14,7 @@ Follow along at [design.how](https://design.how).
 npx skills@latest add arla6ka/skills
 ```
 
-For Claude.ai, download the skills at [design.how](https://design.how/skills) and upload the zips in the `claude-ai` folder, one per skill.
+It works with any coding agent that reads skills. To install by hand, copy the folders in `skills/` into your agent's skills folder, such as `.agents/skills/`. If your agent installs skills by upload, download them at [design.how](https://design.how/skills) and upload the zips in the `upload` folder, one per skill.
 
 ## Why use it?
 

@@ -24,6 +24,13 @@
 // spec/stale-cite  every file:line or file:start-end the spec cites must hold the same text as it did at the spec's
 //                  last commit. A spec with uncommitted edits is being written against the working tree, so only
 //                  the file's existence and the line count are checked
+// spec/dead-path   a backticked repo path (a/b.ext or a/b/) that does not exist, or a backticked `npm run x`
+//                  (pnpm, yarn, bun) whose script package.json does not define. "planned" on the line passes it
+// spec/example-export  an example that imports a name its module does not export, when the module resolves to a
+//                  repo file (a relative path, the component's source, or a tsconfig path). An import line marked
+//                  "// planned" passes
+// spec/test-file   a warning, never a failure: a States, Keyboard or ARIA row says "test" and no test file for the
+//                  component exists (<slug>.test.* or <Name>.spec.*, or one under a __tests__ folder)
 // Examples live in examplesDir from scripts/gen-docs.config.json, default docs/system/examples. Rule tests live in
 // docs/system/rule-tests/<id>.tsv. docs/system/vague-words.txt adds words a rule may not lean on.
 import { dirname, join, relative, resolve, basename, sep } from "node:path";
@@ -71,7 +78,9 @@ Options
   --root <dir>       repo root. Default: the git root of the first file or folder,
                      else of the current folder, else the current folder
   --no-props         skip spec/props-drift
-  --no-fresh         skip spec/call-sites and spec/stale-cite
+  --no-fresh         skip the checks against the repo now: spec/call-sites,
+                     spec/stale-cite, spec/dead-path, spec/example-export and
+                     the spec/test-file warning
   --no-rule-tests    skip spec/rule-tests
   --no-examples      skip spec/examples
   --self-test        run the fixtures in --fixtures <dir>, default
@@ -79,8 +88,9 @@ Options
   --fixtures <dir>   the fixture folder for the self-test
   --help             this text
 
-Prints "file:line rule-id message" per failure. Exit 0 clean, 1 on failures or
-no specs found, 2 on bad input.`;
+Prints "file:line rule-id message" per failure, and "file:line spec/test-file
+warning: message" per warning, which never fails. Exit 0 clean, 1 on failures
+or no specs found, 2 on bad input.`;
 const USAGE_LINE = "usage: check-spec.mjs [--root <repo>] [--no-props] [--no-fresh] [--no-rule-tests] [--no-examples] <file-or-folder or ->...\n--root defaults to the git root of the first file or folder, else of the current folder. --help for more.";
 
 const argv = process.argv.slice(2);
@@ -299,7 +309,8 @@ function groundKind(g) {
   if (/^single use \S+:\d+/.test(g)) return "single use";
   if (/^measured .*\d/.test(g)) return "measured";
   if ((m = /^principle (wcag|platform|heuristic|input): \S/.exec(g))) return m[1] !== "wcag" || /\d+\.\d+(\.\d+)?/.test(g) ? "principle" : null;
-  if (/^person ["\u201c].+["\u201d]/.test(g)) return "person";
+  // A person-grounded rule cites its docs/system/decisions.md row, and never quotes the person in shipped docs.
+  if (/^person D\d+\b/.test(g)) return "person";
   if (/^gate G-\d+ default/.test(g)) return "gate";
   return null;
 }
@@ -362,12 +373,63 @@ const disp = (abs) => { const r = relative(real(process.cwd()), real(abs)); retu
 const notes = new Set();
 const note = (s) => { if (!notes.has(s)) { notes.add(s); console.log(`note: ${s}`); } };
 
-let failures = 0;
+// Freshness helpers for spec/dead-path, spec/example-export and spec/test-file.
+const pkgScripts = (() => { const j = readJSON(join(root, "package.json")); return j ? new Set(Object.keys(j.scripts || {})) : null; })();
+const tsPaths = (() => {
+  try {
+    const raw = readFileSync(join(root, "tsconfig.json"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"])\/\/.*$/gm, "$1").replace(/,(\s*[}\]])/g, "$1");
+    const o = JSON.parse(raw).compilerOptions || {};
+    return Object.entries(o.paths || {}).map(([k, v]) => [k, [].concat(v).map((t) => posix(join(o.baseUrl || ".", t)))]);
+  } catch { return []; }
+})();
+const isFile = (rel) => { const st = statSync(join(root, rel), { throwIfNoEntry: false }); return !!st && st.isFile(); };
+// The repo file an import specifier names, or null when it is a package or does not resolve.
+function resolveModule(fromRel, mod, own) {
+  const bases = [];
+  if (mod.startsWith(".")) bases.push(posix(join(dirname(fromRel), mod)));
+  if (own && mod === own.import) bases.push(own.source.replace(/\.[cm]?[jt]sx?$/, ""));
+  for (const [k, targets] of tsPaths) {
+    const star = k.endsWith("*"), pre = star ? k.slice(0, -1) : k;
+    if (star ? mod.startsWith(pre) : mod === k) for (const t of targets) bases.push(star ? t.replace("*", mod.slice(pre.length)) : t);
+  }
+  for (const b of bases) for (const ext of ["", ".tsx", ".ts", ".jsx", ".js", ".mjs", "/index.tsx", "/index.ts", "/index.js"]) if (isFile(b + ext)) return b + ext;
+  return null;
+}
+// The names a module exports, or null when it re-exports a whole module and the list cannot be known.
+function exportsOf(rel) {
+  const code = readFileSync(join(root, rel), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  if (/export\s*\*\s*from/.test(code)) return null;
+  const names = new Set();
+  for (const m of code.matchAll(/export\s+(?:declare\s+)?(?:default\s+)?(?:async\s+)?(?:function\*?|const|let|var|class|type|interface|enum)\s+([A-Za-z_$][\w$]*)/g)) names.add(m[1]);
+  for (const m of code.matchAll(/export\s+(?:type\s+)?\{([^}]*)\}/g)) for (const part of m[1].split(",")) { const n = part.trim().replace(/^type\s+/, "").split(/\s+as\s+/).pop().trim(); if (n) names.add(n); }
+  if (/export\s+default\b/.test(code)) names.add("default");
+  return names;
+}
+let testFiles = null;
+// Test files in the repo: *.test.* and *.spec.* files, and files under a __tests__ folder.
+const listTests = () => {
+  if (testFiles) return testFiles;
+  testFiles = [];
+  const skipDir = new Set(["node_modules", ".git", ".next", "dist", "build", "out", "coverage"]);
+  const walkT = (rel) => {
+    const st = statSync(join(root, rel || "."), { throwIfNoEntry: false });
+    if (!st) return;
+    if (st.isDirectory()) { for (const e of readdirSync(join(root, rel || "."))) if (!skipDir.has(e)) walkT(rel ? `${rel}/${e}` : e); return; }
+    if (/\.(test|spec)\.[cm]?[jt]sx?$/.test(rel) || /(^|\/)__tests__\//.test(rel)) testFiles.push(rel);
+  };
+  walkT("");
+  return testFiles;
+};
+const squash = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const hasTestFor = (...names) => { const keys = names.filter(Boolean).map(squash); return listTests().some((rel) => keys.includes(squash(basename(rel).split(".")[0]))); };
+
+let failures = 0, warnings = 0;
 for (const file of files) {
   const text = readSpec(file);
   const lines = text.split("\n");
   const kind = kinds.get(file);
   const fail = (line, rule, msg) => { failures++; console.log(`${file}:${line} ${rule} ${msg}`); };
+  const warn = (line, rule, msg) => { warnings++; console.log(`${file}:${line} ${rule} warning: ${msg}`); };
   const slug = file === STDIN ? stdinSlug : basename(file, ".md");
   const abs = file === STDIN ? STDIN : real(file);
 
@@ -412,7 +474,7 @@ for (const file of files) {
     if (p.hasEvidence) {
       const bad = p.grounds.filter((g) => !groundKind(g));
       const counting = p.grounds.filter((g) => { const k = groundKind(g); return k && k !== "gate"; });
-      if (bad.length || !counting.length) fail(d.line, "spec/rule-shape", `${d.id} needs a ground: app n/m, single use file:line, measured <value>, principle <kind>: <name>, person "<their words>"${bad.length ? ` (not a ground: '${bad[0].slice(0, 60)}')` : ""}`);
+      if (bad.length || !counting.length) fail(d.line, "spec/rule-shape", `${d.id} needs a ground: app n/m, single use file:line, measured <value>, principle <kind>: <name>, person D<n> (a docs/system/decisions.md row)${bad.length ? ` (not a ground: '${bad[0].slice(0, 60)}')` : ""}`);
     }
     const ck = p.hasCheck ? p.check.replace(/\.$/, "").trim() : "";
     if (!/^(lint|test|probe|review)\b/.test(ck) || (!/^review\b/.test(ck) && !/^(lint|test|probe)\s+\S/.test(ck)))
@@ -463,6 +525,25 @@ for (const file of files) {
       });
       for (const d of defs) if (!rows.has(d.id)) fail(d.line, "spec/rule-tests", `${d.id} has no rule-tests row`);
     }
+  }
+  // spec/dead-path: every backticked repo path and package script the page names resolves now
+  if (!noFresh && file !== STDIN) {
+    let inF = false;
+    lines.forEach((l, i) => {
+      if (/^(```|~~~)/.test(l)) { inF = !inF; return; }
+      if (inF || /\bplanned\b/i.test(l)) return;
+      for (const m of l.matchAll(/`([^`]+)`/g)) {
+        const t = m[1].trim();
+        for (const r of t.matchAll(/\b(?:npm|pnpm|yarn|bun) run ([\w:.@/-]+)/g)) {
+          if (!pkgScripts) { note("no package.json at the root, so spec/dead-path skips package scripts"); continue; }
+          if (!pkgScripts.has(r[1])) fail(i + 1, "spec/dead-path", `\`${r[0]}\`: package.json has no "${r[1]}" script. Fix the name, or mark the line planned`);
+        }
+        if (!t.includes("/") || !/^(\.{1,2}\/)?[\w.()[\]-]+(\/[\w.@()[\]-]+)*(\/|\.[A-Za-z0-9]{1,6})$/.test(t) || /^[\w-]+\/[\w-]+$/.test(t)) continue;
+        const clean = t.replace(/\/$/, "");
+        if (!existsSync(join(root, clean)) && !existsSync(join(dirname(resolve(file)), clean)))
+          fail(i + 1, "spec/dead-path", `\`${t}\` does not exist under ${root}. Fix the path, or mark the line planned`);
+      }
+    });
   }
   if (kind !== "component") continue;
 
@@ -582,6 +663,7 @@ for (const file of files) {
       const dir = `${examplesDir}/${slug}`;
       const entry = regEntry(slug);
       const spec = entry?.import || (/from\s+["']([^"']+)["']/.exec(descText) || [])[1] || null;
+      const ownSource = (/source\s+`([^`]+\.(?:tsx|jsx|ts|js))`/.exec(descText) || [])[1] || null;
       if (!spec) note(`${file} has no import path in the registry or the Description, so example imports are not checked`);
       const listed = new Set();
       const covered = new Map(); // covers -> "path" | "na"
@@ -612,6 +694,23 @@ for (const file of files) {
         if (!/Caption:/.test(code.split("\n")[0])) fail(r.line, "spec/examples", `example ${p} needs a Caption: comment on line 1`);
         if (spec && !new RegExp(`(?:from|import)\\s*\\(?\\s*["']${escRe(spec)}["']|require\\(\\s*["']${escRe(spec)}["']`).test(code)) fail(r.line, "spec/examples", `example ${p} needs an import from ${spec}`);
         if (/\.(tsx|jsx|ts|js|mts|mjs)$/.test(p) && !/export\s+default\b|\bas\s+default\b/.test(code)) fail(r.line, "spec/examples", `example ${p} needs a default export`);
+        // spec/example-export: every name the example imports from a repo module exists there now
+        if (!noFresh) {
+          const own = spec && ownSource ? { import: spec, source: ownSource } : null;
+          const codeLines = code.split("\n");
+          for (const m of code.matchAll(/^[^\S\n]*import\s+(?!type\s)([^'"]*?)\s+from\s+["']([^"']+)["'][^\n]*/gm)) {
+            const at = code.slice(0, m.index).split("\n").length;
+            if (/\bplanned\b/i.test(m[0]) || /\bplanned\b/i.test(codeLines[at - 2] || "")) continue;
+            const mod = resolveModule(p, m[2], own);
+            const have = mod && exportsOf(mod);
+            if (!have) continue;
+            const clause = m[1].trim(), want = [];
+            const named = /\{([^}]*)\}/.exec(clause);
+            if (named) for (const part of named[1].split(",")) { const n = part.trim().replace(/^type\s+/, "").split(/\s+as\s+/)[0].trim(); if (n) want.push(n); }
+            if (/^[A-Za-z_$][\w$]*/.test(clause.replace(/\{[^}]*\}/, "").replace(/\*\s*as\s+[\w$]+/, "").replace(/,/g, "").trim())) want.push("default");
+            for (const n of want) if (!have.has(n)) fail(r.line, "spec/example-export", `example ${p} imports ${n === "default" ? "a default export" : `\`${n}\``} from ${m[2]}, which ${mod} does not export. Export it, or mark the import // planned`);
+          }
+        }
       }
       // Coverage: the registry's variants and states, else the Variants section's axes and values.
       const need = ["default"];
@@ -730,6 +829,19 @@ for (const file of files) {
     });
   }
 
+  // spec/test-file: a behavior row checked by "test" needs a test file for the component. A warning only
+  if (!noFresh) {
+    const byTest = [];
+    const tables = [states && table({ start: states.start, lines: (() => { const i = states.lines.findIndex((l) => /^### /.test(l)); return i < 0 ? states.lines : states.lines.slice(0, i); })() }), table(sub("Accessibility", "Keyboard")), table(sub("Accessibility", "ARIA"))];
+    for (const t of tables) {
+      const c = t ? t.head.findIndex((h) => /checked by/i.test(h)) : -1;
+      if (c >= 0) for (const r of t.rows) if (/\btest\b/i.test(r.cells[c] || "")) byTest.push(r.line);
+    }
+    const name = (/^#\s+([A-Z][\w$]*)\b/.exec(lines.find((l) => /^#\s/.test(l)) || "") || [])[1];
+    if (byTest.length && !hasTestFor(slug, name))
+      warn(byTest[0], "spec/test-file", `${byTest.length} row(s) say Checked by test, and no test file for ${slug} exists (${slug}.test.*, ${name || slug}.spec.* or one under __tests__). Write an interaction test that fails when the behavior breaks`);
+  }
+
   // spec/tokens
   const tok = body("Tokens");
   if (!tok || !(table(tok)?.rows.length || tok.lines.some((l) => /NOT SUPPLIED/.test(l))))
@@ -751,7 +863,7 @@ function gapRow(t) {
 
 const skipped = plain.length ? `, ${plain.length} plain entr${plain.length === 1 ? "y" : "ies"} skipped (no '### State precedence')` : "";
 if (!files.length && !plain.length) { console.log("no specs found. A spec is a .md file with a '### State precedence' heading"); process.exit(1); }
-console.log(`${files.length} spec(s) checked${skipped}, ${failures} failure(s)`);
+console.log(`${files.length} spec(s) checked${skipped}, ${failures} failure(s)${warnings ? `, ${warnings} warning(s)` : ""}`);
 process.exit(failures ? 1 : 0);
 
 // ---------- self-test ----------

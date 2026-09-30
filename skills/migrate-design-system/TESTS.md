@@ -9,6 +9,7 @@ Every case applies to every setup, with these exceptions:
 - Called by a coordinator: only when a router skill is installed, since the caller reads only the final message.
 - Shared-file conflict, The rolling window, and Worker scope and returns: parallel runs only.
 - Shared import path: only for foundations where old and new components share one import path.
+- Parity before fan-out: the amendment half only on hosts that can message a running agent.
 
 ## Done means
 
@@ -82,11 +83,19 @@ The skill-off prompt is "Migrate this app to our design system in packages/ui. U
 
 **Fails if:** it picks one, invents a component, or stops the whole run to ask.
 
+## Parity before fan-out
+
+**Input:** the Normal setup, where a legacy `Select` on one route searches as the user types and the system `Select` has no search prop, and the legacy `Toaster` stays mounted in the layout beside the system one. Mid-fan-out, the person changes a decided gate default.
+
+**Expect:** `parity.tsv` covers every legacy call site before the first baseline capture. The Select row reads `gap: blocking` with the missing prop in `proof`, goes to the system owner, and no surface worker spawns until a rerun reads `parity` or a gate keeps that call site on legacy. The toast row is a `shared` coexistence row. Each surface's parity rows show up as KEEP lines in its brief. The changed default reaches each running worker as an amendment with the person's words pasted, and the stale brief lines are rewritten in place with the template version bumped.
+
+**Fails if:** Baselines start before `parity.tsv` covers every call site, a worker spawns while a blocking row is open, a running worker gets a "how is it going" message, or a correction is appended below the brief line it contradicts.
+
 ## Audit mode
 
 **Input:** "Audit how far this app is from our design system. Don't change anything." Then start an edit run from the same plan.
 
-**Expect:** a run folder with `frame.md`, the inventory, mapping files, and `plan.md` in the documented shape. No lint rule. The only file outside the run folder is `scripts/migration-inventory.mjs`, with an empty `allowlist.tsv` in the run folder from the start. `--help` and an unknown flag print usage and the allowlist format, exit 2, and leave `inventory/counts.txt` byte-identical. Run from outside the app with an absolute `--run`, it prints the same counts as from inside. With `--root` set to another repo, or on a scan that reads no files, it exits 3. The edit run calls the script unchanged.
+**Expect:** a run folder with `frame.md`, the inventory, mapping files, `parity.tsv`, and `plan.md` in the documented shape, with its Parity block. No lint rule. The only file outside the run folder is `scripts/migration-inventory.mjs`, with an empty `allowlist.tsv` in the run folder from the start. `--help` and an unknown flag print usage and the allowlist format, exit 2, and leave `inventory/counts.txt` byte-identical. Run from outside the app with an absolute `--run`, it prints the same counts as from inside. With `--root` set to another repo, or on a scan that reads no files, it exits 3. The edit run calls the script unchanged.
 
 **Fails if:** any other file changed, the plan's counts differ from the inventory output, `--help` rewrites a file, a run from outside the app prints `0 0 0 0`, or the edit run moves the script or edits a hardcoded `../` path.
 

@@ -6,11 +6,13 @@ Contents
 
 - What to capture and why
 - Pick the tool
+- Before the first check
 - After an edit: routes and the dev server
 - Capture every route in one command
 - Compare after a change
 - Measuring a loading state
 - Measuring motion
+- Measuring state order
 - Measuring optical alignment
 - Evidence for a review
 - Review captures on the run branch
@@ -37,6 +39,14 @@ A capture is evidence only when a second capture of the same page, with no code 
 
 With none of them, the run has no browser. Each skill says what it does then.
 
+## Before the first check
+
+- Confirm the running app was built from the run branch. In the folder the server runs from, `git rev-parse --abbrev-ref HEAD` names the run branch, and a change from the latest commit shows on the served page.
+- A sweep over more than 5 routes runs headless through `capture.mjs` or `probe.mjs`. The shared browser pane is for showing the person.
+- Reset every emulation you set (viewport, color scheme, reduced motion, touch) and close your tab when you finish.
+- A wait loop that polls a server stops when that server's process exits. Check the process on each round, and kill the loop at close.
+- Every script prints a `Coverage:` line last. Paste it beside the result, since a claim covers only what that line names.
+
 ## After an edit: routes and the dev server
 
 After any edit to a shared ui file or the tokens, load every route and require success, because type checks miss runtime breaks between server and client code.
@@ -49,7 +59,7 @@ After an edit to global CSS or the token source, confirm the dev server serves t
 
 A file watcher can miss new files, and after a crash it can miss edits. After adding a file, fetch the module the server serves and look for a name you just wrote, such as `curl -s <dev url>/<module path> | grep -c <NewExport>`. When it is missing, touch the file once, then restart only the frontend and wait for a 200.
 
-Background tabs may not render, run animations or fire resize observers, so bring a tab to the front for any measurement that depends on layout. A theme toggle that saves to storage flips the theme for every worker sharing the browser, so a worker sets the theme on its own tab's root instead of clicking the toggle.
+Background tabs may not render, run animations or fire resize observers, so bring a tab to the front for any measurement that depends on layout. When hover or timing ran in a background tab, write "hover not verified" beside the result. A theme toggle that saves to storage flips the theme for every worker sharing the browser, so a worker sets the theme on its own tab's root instead of clicking the toggle.
 
 On Next.js with Turbopack, for example, restart the dev server after editing `@theme` or global CSS, and at close run `next build` then `next start` before the `--status` pass. Next.js refuses a second `next dev` in the same folder. To measure the base commit from a second worktree, give it a copy-on-write clone of `node_modules` (`cp -cR` on macOS), since Turbopack refuses a symlinked `node_modules` that points outside the worktree.
 
@@ -67,13 +77,15 @@ Beside each capture it writes a `.probe.json`: each control's role, name and sta
 
 Read the router's rules before listing surfaces. On the Next.js App Router, for example, a route is a folder with a `page` file, private folders (`app/**/_*`) never route, and `app/(shop)/cart/page.tsx` is `/cart`.
 
+`--eval <skills>/build-design-system/scripts/optical.js` runs an in-page audit in every capture after animations settle and writes what it returns beside the screenshot, such as `settings-before-390-dark.optical.json`. Any script that returns JSON works, so one command runs an audit over every surface, width and theme.
+
 `--routes /,/settings/billing` takes paths separated by spaces or commas and captures the load state only. States need `--surfaces`, since only its `states` column names them.
 
 It requests every route first and exits 1 on any answer other than 200, or the row's `status` column (`--expect-status notfound=404`). It settles each page as above, and on a React app waits for handlers to attach before a state function clicks. `--theme-via` defaults to `media`, the OS preference. `--height 320` with `--widths 390` measures dialogs on a short screen (`traps.md`, `trap/overlay-no-max-height`). `--mobile` turns on isMobile and hasTouch, and `--storage-state <file>` reaches signed-in screens (Rules). `--via agent-browser --session ds-1` captures the load state of each route with agent-browser instead.
 
 ## Compare after a change
 
-**Run a no-change control first.** Before comparing any before and after pair, capture the same surfaces again with no code change and diff that control against the baseline. Every region that changes in the control is noise, such as dev overlays, random data, animation and relative times. Hide those regions, or capture a production build with fixed data, and repeat until the control diffs at 0. Record the control's result in the run record. Until the control is clean, no before and after diff is a finding.
+**Run a no-change control first.** Before comparing any before and after pair, capture the same surfaces again with no code change and diff that control against the baseline. Every region that changes in the control is noise, such as dev overlays, random data, animation and relative times. Hide those regions, or capture a production build with fixed data, and repeat until the control diffs at 0. Record the control's result in the run record. Until the control is clean, no before and after diff is a finding. An audit that measures, such as `optical.js`, takes its tolerance from the same control: run it twice with no change and use the largest difference between the two runs, or its default when they match.
 
 A live page against a saved baseline is a browser-tool job (Tool how-to). Two saved files or folders go through `pixdiff.mjs`:
 
@@ -110,13 +122,23 @@ A capture settles every animation, so motion needs its own evidence. Run these w
 
 Matching before and after lists prove a motion value swap (`run-record.md`, Terms). A changed duration, easing, animated property or trigger is a decision.
 
+## Measuring state order
+
+`state-timeline.js` records one control's border, outline, shadow, fill and focus every frame while real input runs: hover, keyboard focus, press, open, close by the trigger, Escape, and a click outside. It reports `trap/hover-beats-focus`, `trap/disabled-still-hovers`, `trap/open-trigger-unfocused`, `trap/overlay-focus-return` and `trap/disabled-drops-focus`, and prints how long each press and state takes to settle.
+
+```sh
+node <skills>/build-design-system/scripts/state-timeline.js --base http://localhost:3000 --route /settings --target '[data-slot=select-trigger]' --open '[role=listbox]' --root /abs/repo
+```
+
+Run it on one control per family and state (a trigger, a field, a disabled button, a pending submit), in each theme. With agent-browser, eval the file, call `__dsTimeline.start(selector, { open })`, drive the input with the tool's own commands, then eval `__dsTimeline.stop()`. Keep the tab at the front, since a background tab runs no hover or frames. Two traps need a hand check. For `trap/exit-eats-input`, close the overlay and press the trigger and the content under it within the exit's duration. For `trap/escape-nested`, open a menu inside a dialog and press Escape once.
+
 ## Measuring optical alignment
 
-`trap/icon-optical-size` and `trap/icon-optical-align` need numbers to find candidates and a person's eye to decide, because a reference that is right for one context is wrong for another.
+`trap/icon-optical-size` and `trap/icon-optical-align` need numbers to find candidates and a person's eye to decide the reference.
 
-Sort every icon into one of two contexts before measuring. Beside text: an icon inside a labeled button, a menu item, a link or a tab. Alone in its own box: an icon button, a chip's remove button, an input slot, a checkbox or radio mark, a select chevron. Then run `scripts/optical.js` in each showcase page (its header gives the agent-browser and Playwright lines). It lists each icon off by more than 0.5px, or with ink over 2px taller than the label's cap height.
-
-Beside text, the number that counts is `vsCap`. Alone in a box, it is `vsBox`, even when the box also holds text elsewhere. Record the count within 0.5px and the worst offenders before and after, such as "207 of 214 within 0.5px". Then send the person a contact sheet: the same element in every context it appears, cropped and zoomed 300 to 400%, before and after, in both themes. Change one context per round. When the person says a correction went too far, halve it for that context only. The person decides from the crops.
+1. **Decide the reference first.** Before any worker measures, run `scripts/optical.js` on one showcase page. Crop two real beside-text instances at 300 to 400% from each row's `clip`, draw the three `lines` (cap-height center, x-height center, midpoint) on each crop, and ask the person which one reads centered. Record the answer as a numbered decision naming the typeface. A second typeface gets its own decision.
+2. **Measure per context.** Set `window.__dsOptical = { ref: "<decided>" }` in the page and run the script again. To run it over every surface, pass `capture.mjs --eval` a copy under `.design-system/scripts/` whose first line sets that option. Each row names its context. Beside text and form boxes count against the decided reference (`vsCap`, `vsX` or `vsMid`). Alone in a box counts `vsBox` and `hBox`. A corner mark compares its inset with the text in the opposite corner. A control inside a field frame compares its top, bottom and near-side insets. `glyph` is the ink's offset inside its own box, and only a glyph with a nonzero `glyph` may get a per-glyph offset.
+3. **Record and show.** Record the count within tolerance per context and the worst offenders before and after, such as "207 of 214 within 0.5px", with the script's `coverage` line. Send the person a contact sheet: the same element in every context it appears, zoomed, before and after, in both themes. Change one context per round. When the person says a correction went too far, halve it for that context only.
 
 ## Evidence for a review
 

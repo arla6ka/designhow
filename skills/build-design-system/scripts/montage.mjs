@@ -286,4 +286,5 @@ notes.forEach((p) => console.log(`note: ${p}`));
 warnings.forEach((p) => console.log(`warning: ${p}`));
 problems.forEach((p) => console.log(`problem: ${p}`));
 console.log(`montage: ${headline}. Wrote ${join(dir, "index.html")}`);
+console.log(`Coverage: ${rows.length} surface(s) at widths ${widths.join(",")}, first theme only, ${useDiff ? `pixels by pixdiff.mjs at tolerance ${val("--tolerance", "0")}` : "pixels by byte comparison"}, behavior ${noProbe ? "not probed (--no-probe)" : "from the .probe.json pairs"}. Not compared: other themes (pixdiff.mjs on the folders proves those), widths outside --widths, hover, focus and motion in flight`);
 process.exit(problems.length ? 1 : 0);

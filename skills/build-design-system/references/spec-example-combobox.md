@@ -42,7 +42,7 @@ Real uses, 11 call sites (`rg -n "<Combobox\b" src components`, outside `compone
 | `docs/system/examples/combobox/default.tsx` | default | Required customer field, empty, with the trigger |
 | `docs/system/examples/combobox/show-clear.tsx` | showClear=true | Optional project filter with a value and the clear button |
 | Not applicable: `showClear=false` is the stock default, shown by `default.tsx` | showClear=false | none |
-| `docs/system/examples/combobox/loading.tsx` | state:loading | A search in flight, earlier results kept and unpickable |
+| `docs/system/examples/combobox/pending.tsx` | state:pending | A search in flight, earlier results kept and unpickable |
 | `docs/system/examples/combobox/in-invoice-form.tsx` | composition:Field | The Bill to field inside the New invoice form, with label and error text |
 (11 more rows, one per state and axis value)
 
@@ -59,7 +59,7 @@ Real uses, 11 call sites (`rg -n "<Combobox\b" src components`, outside `compone
 |---|---|---|---|---|
 | Empty | No value and no text typed | Type, or open the list with the trigger or Down Arrow | Placeholder text "Search customers" | screenshot |
 | Open | Typing, Down Arrow, Alt+Down, or the trigger | Move through items, pick one, close with Escape | Popup below the input, `aria-expanded="true"` | snapshot |
-| Loading results | A search request still running after the 150ms debounce | Keep typing. Earlier results stay listed and cannot be picked | Status row "Searching…" with a spinner at the list's height, `aria-busy="true"` on the list | test |
+| Pending results | A search request still running after the 150ms debounce | Keep typing. Earlier results stay listed and cannot be picked | Status row "Searching…" with a spinner at the list's height, `aria-busy="true"` on the list | test |
 | Load failed | The search request failed | Retry from the status row, or keep typing | Status row "Customer search failed" with a Retry button | test |
 | Invalid | Submitted with no value in a required field, or the value was archived since | Pick a valid record | Error text under the field from `FieldError`, `aria-invalid="true"` | test |
 | Disabled | The parent form is saving | Read the value. Focus stays on the input and presses do nothing until the save settles | `aria-disabled="true"` on the input, no response from the trigger | test |
@@ -67,7 +67,7 @@ Real uses, 11 call sites (`rg -n "<Combobox\b" src components`, outside `compone
 
 ### State precedence
 - Disabled and invalid: disabled wins. The error text hides while the form saves, so a pending save never shows a stale error.
-- Loading results and no results: loading wins until the request settles, so the empty row never flashes during a search.
+- Pending results and no results: pending wins until the request settles, so the empty row never flashes during a search.
 - Invalid and filled: both show. A failed submit keeps the value and the typed text.
 - Selected item and disabled item: disabled item wins in the list. An archived customer that is still the value shows "Archived", cannot be picked again, and the input turns invalid.
 (6 more lines)

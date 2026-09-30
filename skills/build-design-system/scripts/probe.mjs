@@ -557,13 +557,16 @@ if (process.argv[1] && (await import("node:path")).resolve(process.argv[1]) === 
       for (const n of g.notes) console.log(`note: grow ${dim} ${w}: ${n}`);
     }
     await launched.browser.close();
+    console.log(`Coverage: grew ${dim} on ${target} at ${route}, widths ${widths.join(",")}, height ${height}. Breaks tested: wrap, truncate, overflow, below-fold, shift. Not tested: other routes, widths, heights and themes, and content other than the grown ${dim === "count" ? "item" : "text"}`);
     process.exit(0);
   }
   const after = (f) => { const i = argv.indexOf(f); if (i < 0) return []; const out = []; for (let k = i + 1; k < argv.length && !argv[k].startsWith("--"); k++) out.push(argv[k]); return out; };
   const flagVals = new Set(["--base", "--widths", "--height", "--click", "--root"].map(val).concat(after("--routes")));
   const files = argv.filter((a) => !a.startsWith("--") && !flagVals.has(a));
-  let found = 0;
+  let found = 0, where = "";
+  const NOT = "Not measured: hover, focus and keyboard, contrast over images, pseudo-elements, text past the first 600 elements, more than 50 flat panels or 40 clipped items, and every trap in traps.md this list does not name";
   if (files.length) {
+    where = `${files.length} probe file(s)`;
     for (const f of files) {
       if (!existsSync(resolve(f))) { console.error(`probe: no file at ${resolve(f)}`); process.exit(2); }
       const p = JSON.parse(readFileSync(resolve(f), "utf8"));
@@ -578,6 +581,7 @@ if (process.argv[1] && (await import("node:path")).resolve(process.argv[1]) === 
     const height = Number(val("--height") || 900);
     if (!height) { console.error("probe: --height takes a number, such as 320"); process.exit(2); }
     const click = val("--click");
+    where = `${routes.length} route(s) at widths ${widths.join(",")}, height ${height}${click ? `, after clicking ${click}` : ""}, reduced motion on`;
     const launched = await launchChromium({}, { root: repoRoot(val("--root")) });
     if (launched.error) { console.error(`probe: ${launched.error}`); process.exit(2); }
     for (const route of routes) for (const w of widths) {
@@ -597,5 +601,6 @@ if (process.argv[1] && (await import("node:path")).resolve(process.argv[1]) === 
     await launched.browser.close();
   }
   console.log(`probe: ${found} finding(s)`);
+  console.log(`Coverage: 5 traps (button-label-wrap, surface-matches-parent, narrow-hidden-nav, overlay-no-max-height, reduced-motion-ignored) on ${where}. ${NOT}`);
   if (process.exitCode !== 2) process.exitCode = found ? 1 : 0;
 }

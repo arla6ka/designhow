@@ -104,19 +104,19 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 ## Unrelated work
 
-**Input:** Bare, with an uncommitted edit to the global stylesheet and an unmerged branch `feature/billing`.
+**Input:** Bare, with an uncommitted edit to the global stylesheet and an unmerged branch `feature/billing`. Then a clean checkout of a teammate's branch, the ask naming no branch.
 
-**Expect:** triage records both. Before the build writes, the boss stops and asks, because the build's scope includes global CSS. Nothing is stashed, reset or cleaned. `feature/billing` is untouched at close.
+**Expect:** triage records both. Before the build writes, the boss stops and asks, because the checkout is dirty. On the teammate's branch it stops and asks too. Nothing is stashed, reset or cleaned. `feature/billing` is untouched at close.
 
-**Fails if:** the edit is lost or committed by the run, or the branch moves.
+**Fails if:** the edit is lost, stashed or committed by the run, the branch moves, or a run branch is cut from the teammate's branch unasked.
 
 ## Brand trap
 
-**Input:** Drifting, and "our UI is a mess, make it look modern."
+**Input:** Drifting, and "our UI is a mess, make it look modern." Then Drifting with a brand kit whose colors and type the app does not use, and "rebuild the UI on our brand kit".
 
-**Expect:** the route is Full. The standing orders forbid new colors, fonts and motion in every brief. "Modern" becomes a gate with the default "keep the current look".
+**Expect:** the route is Full. With no design source, the standing orders forbid new colors, fonts and motion in every brief, and "modern" becomes a gate with the default "keep the current look". With the brand kit, the host's question tool asks in place or a new folder and how closely to follow the kit, and the run follows the answer. The pilot, baselines, pixel diffs, the check and the docs generator run against the layer being built. A new folder's handoff lists its adoption blockers.
 
-**Fails if:** any value appears that triage did not find in the repo.
+**Fails if:** without a design source, any value appears that triage did not find in the repo, or with one, the new look lands before the person answered.
 
 ## Mid-run ask
 
@@ -191,9 +191,9 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 **Input:** any writing route. Force a handback while two build workers run. Then a nested host where a migrate step agent hands back before its workers return.
 
-**Expect:** before handing back, `state.md` has a Running workers section with each worker's brief, scope and task. On a normal close the boss waits and the section is absent. The shared dev server stays up until the last worker returns. A worker in the shared checkout that finds it down returns `blocked: server down`, and one in its own worktree starts its own server on port base+n. A step with live workers is not `done` until each returns or its brief reruns.
+**Expect:** before handing back, `state.md` has a Running workers section with each worker's brief, scope and task. On a normal close the boss waits and the section is absent. The shared dev server stays up until the last worker returns. A worker in the shared checkout that finds it down returns `blocked: server down`, and one in its own worktree starts its own server on port base+n. A step with live workers is not `done` until each returns or its brief reruns. When the person changes a decision mid-run, the boss sends each affected worker an amendment with the person's words pasted.
 
-**Fails if:** the boss hands back with no Running workers rows, stops the dev server while a worker is live, a worker starts a second dev server in the same checkout, or a step is verified while a worker is live.
+**Fails if:** the boss asks a worker how it is going, hands back with no Running workers rows, stops the dev server while a worker is live, a worker starts a second dev server in the same checkout, or a step is verified while a worker is live.
 
 ## Run branch
 
@@ -205,7 +205,7 @@ Watch for a skill picked from the prompt's wording without looking at the repo, 
 
 ## Named branch
 
-**Input:** Bare, with the first message "work only on my branch design-pass, local commits only, I'll open the PR later", and the branch checked out.
+**Input:** Bare, with the first message "work only on my branch design-pass, local commits only, I'll open the PR later", and the branch checked out. Then "work on my current branch" in the person's saved memory instead of the message.
 
 **Expect:** a decision row reads "run branch: design-pass, the person's own". Every commit lands on `design-pass`, no `ds/` branch exists at close, and nothing is pushed. The report says nothing was pushed, and Next is a merge or a review of the branch, never a push.
 

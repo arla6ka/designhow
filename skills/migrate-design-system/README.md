@@ -1,10 +1,20 @@
 # migrate-design-system
 
-Moves an app onto a design system that already exists, one surface at a time, with one coordinator agent running many workers. It builds a script-backed inventory, captures baselines before touching anything, lands the shared layer first, proves the recipe on a pilot, turns it into a codemod, then fans out. Each surface lands only after a separate verifier checks it against its baseline. The run ends when the inventory counts reach zero and every surface is verified on the final commit. It can also run as a read-only audit that ends at a plan.
+Moves an app onto a design system that already exists, one surface at a time, with one coordinator agent running many workers. It builds a script-backed inventory, checks every legacy call site's props and behaviors against the system, captures baselines before touching anything, lands the shared layer first, proves the recipe on a pilot, turns it into a codemod, then fans out. Each surface lands only after a separate verifier checks it against its baseline. The run ends when the inventory counts reach zero and every surface is verified on the final commit. It can also run as a read-only audit that ends at a plan.
 
 Where old and new components share one import path, it finds legacy by diffing each file against the team's registry, not by path.
 
 It uses the other skills in this repo. `token-mapping` builds each surface's migration list, `design-review` is part of each verdict, and `component-docs` documents any component the system owner adds to close a gap.
+
+## What the scripts touch
+
+This skill ships no scripts. The agent writes `scripts/migration-inventory.mjs` into your repo to the interface in `references/inventory.md`, and runs the rest from `build-design-system`.
+
+- `migration-inventory.mjs` reads the source tree and the run folder, and writes only `inventory/` in `.migration/<run>/`.
+- `capture.mjs` opens the local dev server in a headless browser and writes PNG and JSON captures under `.design-system/review/` or the folder the brief names. `pixdiff.mjs` and `montage.mjs` read those captures and write their reports beside them.
+- `check-system.mjs` and `check-spec.mjs` read the repo. `--shrink-allowlist` rewrites `scripts/check-allowlist.json`.
+- Shell: `git` creates the run branch unless you name one, one branch and worktree per worker, and one commit per landed surface. Nothing merges or pushes unless you ask. `run-window.sh` in `references/platforms.md` starts your agent CLI once per surface.
+- Network: the dependency install in each worktree, and whatever your agent CLI calls. The scripts call nothing beyond the dev server.
 
 ## Use as-is
 

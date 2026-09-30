@@ -2,7 +2,7 @@
 
 Agent tools change often, so confirm names and flags against current docs before a long run.
 
-The pattern needs four things from a platform: start an agent with a brief, give that agent its own checkout, tell the coordinator when the agent finishes, and let the coordinator read what the agent returned. Everything else lives in the run folder, so it works the same everywhere.
+The pattern needs four things from a platform: start an agent with a brief, give that agent its own checkout, tell the coordinator when the agent finishes, and let the coordinator read what the agent returned. Everything else lives in the run folder, so it works the same everywhere. Messaging a running agent is optional. Without it, an amendment waits for the retry (`references/orchestration.md`, Liveness).
 
 ## Worktrees
 

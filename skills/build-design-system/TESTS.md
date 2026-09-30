@@ -114,7 +114,9 @@ Prompt: "Build a design system for this app." Fill the table for Normal and Vagu
 
 **Fails if:** a commit lands on the starting branch, a gate default exists only as a table row, every route captures at 0% after a visual ask, the Next prompt asks for a step the run decided, a semantics removal lands as a decision, or the run merges its own branch.
 
-**Named branch version:** the person names their own working branch in the first message. The run commits there, cuts no `ds/` branch, pushes nothing, and records the branch as a decision.
+**Named branch version:** the person names their own working branch in the first message, or says "work on my current branch". The run commits there, cuts no `ds/` branch, pushes nothing, and records the branch as a decision.
+
+**Dirty checkout version:** the tree holds uncommitted changes. The run asks the person which branch to use through the question tool before its first write, and never stashes.
 
 ## Answers the complaint
 
@@ -160,17 +162,17 @@ Prompt: "Build a design system for this app." Fill the table for Normal and Vagu
 
 **Input:** the normal repo after phase 3. The person states two bans. Plant one violation of each, one in the showcase chrome and one in a spec.
 
-**Expect:** the bans go into the standing orders word for word, into every later brief, into `bans` in the check config, and onto the writing page as `rule/ban-*` lines grounded `person "<their words>", <date>`. The check fails on both plants, and passes the same text on a `Don't:` line. The next commit has no hit outside `Don't:` lines, the coordinator's own chrome included.
+**Expect:** the bans go into the standing orders word for word, into every later brief, into `bans` in the check config, and into `docs/system/decisions.md` as numbered rows, and onto the writing page as `rule/ban-*` lines grounded `person D<n>`, with no quote of the person in any shipped doc. The check fails on both plants, and passes the same text on a `Don't:` line. The next commit has no hit outside `Don't:` lines, the coordinator's own chrome included.
 
 **Fails if:** a ban lives only in chat or memory, a later brief lacks it, the check misses a plant, or a ban becomes a gate.
 
 ## Design source fidelity
 
-**Input:** the normal repo plus a mockup file, with the answer "pixel fidelity". Then the same run where the person, after seeing the sample, says "keep the existing look".
+**Input:** the normal repo plus a mockup file whose look the app does not have, with the answers "pixel fidelity" and "a new folder". Then the same run where the person, after seeing the sample, says "keep the existing look".
 
-**Expect:** the source is read frame by frame after a frame listing, and `.design-system/inventory/design-structures.md` names each structure with its frame id, and the drawing scale is a decision. One or two components are restyled first, each captured beside a crop of its frame at the same scale in both themes, and nothing else changes until the person confirms. On "keep the existing look", the restyle stops and the sample reverts in its own commit. With no answer given, the rest waits under a gate that keeps the current look.
+**Expect:** the source is read frame by frame after a frame listing, and `.design-system/inventory/design-structures.md` names each structure with its frame id, and the drawing scale is a decision. One or two components are restyled first, each captured beside a crop of its frame at the same scale in both themes, and nothing else changes until the person confirms. On "keep the existing look", the restyle stops and the sample reverts in its own commit. With no answer given, the rest waits under a gate that keeps the current look. Both questions went through the host's question tool. The pilot, baselines, pixdiff, the check and `gen-docs.mjs` run against the new folder, the brand page has a source map row per source element, and the handoff lists adoption blockers.
 
-**Fails if:** more than two components change before the sample is confirmed, the source decides behavior or data, fidelity is assumed with no answer, or the revert touches other files.
+**Fails if:** more than two components change before the sample is confirmed, the source decides behavior or data, fidelity is assumed with no answer, the new look lands in place, or the revert touches other files.
 
 ## Rules by the method
 
@@ -192,9 +194,9 @@ Prompt: "Build a design system for this app." Fill the table for Normal and Vagu
 
 ## Example files
 
-**Input:** a Button with `variant` (3 values, one identical to default) and `size` (2 values), states loading and disabled, used inside a Dialog footer on one screen.
+**Input:** a Button with `variant` (3 values, one identical to default) and `size` (2 values), states pending and disabled, used inside a Dialog footer on one screen.
 
-**Expect:** the spec's `### Example files` lists `default`, each variant value and size with a visual difference, `state:loading`, `state:disabled`, one `matrix:variant,size` and `composition:Dialog`. The value identical to default has a `Not applicable` row with its reason. Every file sits at `<examples dir>/button/<name>.<ext>`, starts with a `Caption:` comment, imports from the registry's import path, default-exports one example and passes the typecheck. The twin shows each file's source under its section.
+**Expect:** the spec's `### Example files` lists `default`, each variant value and size with a visual difference, `state:pending`, `state:disabled`, one `matrix:variant,size` and `composition:Dialog`. The value identical to default has a `Not applicable` row with its reason. Every file sits at `<examples dir>/button/<name>.<ext>`, starts with a `Caption:` comment, imports from the registry's import path, default-exports one example and passes the typecheck. The twin shows each file's source under its section.
 
 **Fails if:** a variant value or state is silently missing, a file copies the component instead of importing it, an example sends a request, or the composition uses a parent no call site has.
 
@@ -274,9 +276,9 @@ Prompt: "Build a design system for this app." Fill the table for Normal and Vagu
 
 **Input:** after a fan-out of four spec writers, one page says a menu opens instantly and another gives it a 150ms fade, two specs name the in-flight prop `loading` and `pending`, a showcase page uses a raw hex, and someone hand-edited the rules index.
 
-**Expect:** four read-only lens reports, each naming the commit it read, list the conflict with both `path:line` sides, the two prop names, the hex and the stale index. `docs/system/decisions.md` is committed with its precedence at the top and one decision per conflict, the rename included. The fix workers own disjoint files, write against the decided names, and the code worker lists the call sites its rename breaks. `gen-docs.mjs --check` fails on the hand-edited index until it is regenerated. Afterward both menu pages and the code agree.
+**Expect:** read-only lens reports, the newcomer and polish lenses included, each naming the commit it read, list the conflict with both `path:line` sides, the two prop names, the hex and the stale index. Every finding carries its evidence type and a dedupe key, and the lenses merge into one ledger where each finding is fixed, skipped with a reason, or moved to the roadmap. `docs/system/decisions.md` is committed with its precedence at the top and one decision per conflict, the rename included. The fix workers own disjoint files, write against the decided names, and the code worker lists the call sites its rename breaks. `gen-docs.mjs --check` fails on the hand-edited index until it is regenerated. Afterward both menu pages and the code agree.
 
-**Fails if:** a decision lives only in the run record, a fix worker edits a file another owns, a review changes a file, or the index stays hand-written.
+**Fails if:** a decision lives only in the run record, a fix worker edits a file another owns, a review changes a file, an `inferred` finding reaches a fix brief unconfirmed, a message says done before the lenses ran, or the index stays hand-written.
 
 ## Generated docs
 
@@ -298,7 +300,7 @@ Prompt: "Build a design system for this app." Fill the table for Normal and Vagu
 
 **Input:** a whole-system run with 8 families on a host with subagents. Midway, after four families land, the person changes the rule format.
 
-**Expect:** before the first family worker starts, the run record shows each row of `references/coordinator-path.md` (Lock before fan-out) settled with its path: the branch, the bans in the check config, the design-source answer, the spec format with the first family's spec as exemplar, the icon sizes, the motion presets and the showcase shell. The person has seen the first family's page. The format change runs as its own migration of every spec already written, one commit per family, with `check-spec.mjs` exiting 0 after each.
+**Expect:** before the first family worker starts, the run record shows each row of `references/coordinator-path.md` (Lock before fan-out) settled with its path: the branch, the bans in the check config, the design-source answer, the spec format with the first family's spec as exemplar, the icon sizes, the alignment reference the person picked from zoomed crops, each source conflict as a numbered row in `docs/system/decisions.md`, the motion presets and the showcase shell. The person has seen the first family's page. The format change runs as its own migration of every spec already written, one commit per family, with `check-spec.mjs` exiting 0 after each.
 
 **Fails if:** a family worker starts before those rows are settled, or the change reaches only the next briefs and leaves four families in the old format.
 

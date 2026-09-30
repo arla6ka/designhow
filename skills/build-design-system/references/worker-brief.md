@@ -24,6 +24,8 @@ Delegate a family when its files do not overlap with any other open family, and 
 
 Size the fan-out first. In a small layer, by default under 15 component files and one theme, the coordinator writes the components and only specs fan out, because a brief costs more than the code. Otherwise families fan out too, one per worker. The window starts at the browser row of `coordinator-path.md` (Machine budget) and never exceeds the budget. Refill a slot only when no report waits for review, and never wait for a whole batch.
 
+Name roles in briefs, not models. The cheapest model that can read the whole scope runs read-only surveys. The strongest runs code, rules and the second review.
+
 Give each worker its own branch or worktree, cut from the run branch, and merge verified work back into the run branch. Two agents in one checkout overwrite each other, and no instruction in a brief prevents that. When the host cannot give a worktree, fall back to disjoint file scopes on one branch: split any shared file first (one stylesheet per component, for example), forbid git commands in workers, and have the coordinator commit each family after review. Record the fallback in the run record, and use the shared brief below.
 
 Before fan-out, remove the reasons a worker would need a shared file. Make the showcase registry, the docs page list and the rules index find files by glob or generation, and add each family's barrel line and registry entry as a stub first. Then a worker's page renders the moment its file exists, and its imports use the public path from the first line. A worker that cannot see its own page ships unmeasured contrast and unchecked states.
@@ -79,6 +81,8 @@ rule shape and depth. The template is the fallback only when none exists
 Rule method: <path to rule-method.md, and writing-method.md when the family renders copy>
 Traps for this family: <paste the rows from traps.md>
 Gates that touch this family and their defaults: <list, or "none">
+Person's calls: <explicit values the person set, each with its file, or "none">
+Checks known to fail, and who owns each fix: <list, or "none">
 
 ACCEPTANCE
 - Contract sections met, or each unmet item listed as a gap
@@ -88,7 +92,8 @@ ACCEPTANCE
 - Every Usage rule has its ID, shape, ground, check and Don't and Do lines
   (rule-method.md), and a row in docs/system/rule-tests/<component>.tsv with
   verdict ship, rewritten or gate. The rules land with the component, not later
-- Tests pass: <test command>
+- Tests pass: <test command>. Every behavior claim (keyboard, focus, open state,
+  timers, copy feedback) has an interaction test that fails when it breaks
 - Every trap you mark fixed has measured before and after numbers in
   .design-system/evidence/<family>/, such as the button box idle and pending
 - Migration map entry per replaced implementation, with unsupported props listed
@@ -119,6 +124,9 @@ FORBIDDEN
 - Writing a report file anywhere. The report is your final message
 - Starting a dev server, browser or container the brief does not name
 - Starting agents of your own. Do the reading and the work yourself
+- Forcing a numeric target that reads wrong on a zoomed crop. Report it with
+  the crop. Never nudge one instance to meet an alignment target; request a
+  global offset from the one writer instead
 
 REPORT
 Return this block as your final message, as text. Write it to no file.
@@ -159,7 +167,7 @@ SCOPE
 You may write: docs/system/<component>.md, docs/system/rule-tests/<component>.tsv,
 <examples dir>/<component>/ for missing example files, and
 .design-system/evidence/<component>/ for captures and measurements, and
-.design-system/scripts/ for a probe script a spec cites as its test.
+.design-system/scripts/ for a probe script a spec cites as evidence.
 One-off probes go in .design-system/tmp/<worker id>/, which is deleted at
 close, so never cite a file there.
 You may read anything in the repo. No git commands. The coordinator commits.
@@ -184,9 +192,10 @@ ACCEPTANCE
 - node <repo>/scripts/check-spec.mjs <repo>/docs/system/<component>.md exits 0, which includes
   spec/props-drift: every Variants axis and value, and every Props note, matches
   the component at HEAD
-- Every States, Keyboard and ARIA row names how it was checked. "test" or
-  "snapshot" points at a file in .design-system/evidence/<component>/. With no
-  test runner in the repo, a probe script in .design-system/scripts/ counts as the test
+- Every States, Keyboard and ARIA row names how it was checked. "test" means a
+  <component>.test.* file that fails when the behavior breaks (check-spec warns
+  when none exists). "snapshot" points at a file in .design-system/evidence/<component>/.
+  A missing test is a defect for the coordinator, not a file you write
 - Contrast is measured in each theme with a command, and the ratio is written down
 - Every answer names its source: a command, a file and line, a capture, or a gate
 - Examples opens with "Real uses, <n> call sites", counted with
@@ -253,6 +262,8 @@ When several workers edit neighboring files in one checkout, sometimes the same 
 ```markdown
 # Shared brief for every worker in this run
 
+Version <n>, <date>. The coordinator rewrites a stale line in place and bumps this line. It never appends a correction.
+
 Repo: <path>. The system lives in <component folder> (import <public path>), specs in
 <docs folder>, the showcase at <dev url>/<showcase root>/<slug>. Before touching
 anything, read the agent instructions, the writing page, the decisions log and the spec
@@ -275,7 +286,11 @@ of every component you work on.
   repo root on your files only.
 
 ## House rules
-<tokens only, the person's bans, the icon rule, prop naming, the spec format>
+<tokens only, the person's bans, the person's calls with their files, the icon rule,
+prop naming, the spec format>
+
+## Checks known to fail
+<each failing check, and who owns its fix, or "none">. Report a new failure only.
 
 ## Final report, under 300 words
 What you changed by file, what you found and did not fix and why, any shared-file change
@@ -315,7 +330,8 @@ Open a worker's files only after its final message returns, since it may still b
 
 - A failed, timed-out or lost worker gets the one retry in `coordinator-path.md` (Dev server and retries), with the failing output pasted into CONTEXT. A split sends the component first, then examples and docs.
 - A worker that never reports gets a ledger row saying so. Do not quietly redo its work without that row.
-- Judge a worker by its commits and its report. Do not message it to ask how it is going, because that restarts it or pulls it off the task. Past its TIMEBOX with no new commit, treat it as lost.
+- Judge a worker by its commits and its report. Past its TIMEBOX with no new commit, treat it as lost.
+- A running worker gets a message only to amend its brief, with the changed decision or the person's words pasted in full, or to `STOP` it, naming which of its own edits to revert. Never ask how it is going, because that restarts it or pulls it off the task. Record each message in the run record.
 - A retry is a fresh brief with the failing output folded in, never a follow-up message to the old worker, because follow-ups get dropped on the next restart.
 
 Two units failing on the same cause stop refills for that cause (`coordinator-path.md`, Dev server and retries).

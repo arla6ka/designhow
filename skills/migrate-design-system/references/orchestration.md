@@ -29,6 +29,8 @@ How one coordinator keeps tens of workers moving without losing any. Read it bef
 
 **Mapper.** Runs `token-mapping` for one surface during Inventory and writes `mapping/<surface>.md`. It edits nothing. Its `Status: stopped: <condition>` counts as `blocked` (`build-design-system/references/run-record.md`, Terms).
 
+**Parity agent.** One agent during Parity. It reads each legacy call site and the system component that replaces it, and writes `parity.tsv` (`references/inventory.md`, Functional parity). It edits nothing else.
+
 Keep two levels, the coordinator and the agents it spawns. Add track leads only when one drain can no longer keep up. Each extra layer re-reads everything, and a lead that blocks hides its workers.
 
 ## The rolling window
@@ -37,7 +39,7 @@ After the pilot, the window starts at the browser row of the machine budget in `
 
 When a worker finishes, start the next ready surface at the next drain. Do not run fixed batches. A batch waits for its slowest member, while a window refills as soon as a slot opens.
 
-A surface is ready when its dependencies are `landed`, it has no open gate, its mapping has no unresolved rows, and every brief field can be filled. When the surfaces are near-identical and the codemod covers them, the pilot can run as an ordinary unit with its checks inline, and the window opens as soon as it lands.
+A surface is ready when its dependencies are `landed`, it has no open gate, its mapping has no unresolved rows, and every brief field can be filled. No surface is ready while a `gap: blocking` parity row is open (`references/inventory.md`, Functional parity). When the surfaces are near-identical and the codemod covers them, the pilot can run as an ordinary unit with its checks inline, and the window opens as soon as it lands.
 
 Two surfaces that share a file cannot run at the same time. Either one surface takes the file and the other waits, or the file moves to the shared layer.
 
@@ -57,21 +59,28 @@ Each drain does the same steps in one pass:
 
 1. List `inbox/` and `verdicts/` files not yet recorded in the tables.
 2. Classify each as reported, verified, failed, lost, or noise.
-3. Update `queue.tsv`, `ledger.tsv` and `agents.tsv`. Queue a verifier for each report that needs one.
+3. Update `queue.tsv`, `ledger.tsv` and `agents.tsv`. Queue a verifier for each report that needs one. A follow-up that two or more reports list as outside their scope becomes a coordinator task: a unit, a gate, or a KNOWN FAILING line in the next briefs.
 4. Land each surface with a `verified` row at its current commit that merges cleanly, one commit per surface, and append a `reopened` row for every verified surface whose paths the landing touched. Then, in a commit of its own, apply the report's allowlist shrink candidates (`check-system.mjs --shrink-allowlist` for `scripts/check-allowlist.json`) and delete `allowlist.tsv` rows that match nothing. The coordinator is the allowlists' only writer.
-5. Regenerate `status.md`.
+5. Regenerate `status.md`, and every generated file the wave's landings feed, such as generated docs, in a commit of its own.
 6. Spawn the next wave in one message, up to the cap.
 7. End with three lines: counts by state, what changed, open gates.
 
-Check one brief per wave against the template in `references/worker-brief.md`, while the wave runs. An empty or vague field stops the next refill until the template or the step that filled it is fixed.
+Check one brief per wave against the template in `references/worker-brief.md`, while the wave runs. An empty or vague field stops the next refill until the template or the step that filled it is fixed. The template carries a version line. When a decision or the template changes, rewrite the stale line in place in the template and every brief not yet spawned, send running workers an amendment (Liveness), and bump the version. Never append a correction below the line it contradicts.
 
 Never read a worker's diff during a drain. A diff that needs reading is a verifier's job.
 
 ## Liveness
 
-Judge a worker by what it left behind: commits on its branch and the final message it returned. Its transcript, log and claims do not count. Never message a worker to ask how it is doing, since that restarts it or pulls it off task, and never extend its job with follow-ups. A retry or a new scope is a fresh spawn with a full brief, because follow-up instructions get dropped on the next restart.
+Judge a worker by what it left behind: commits on its branch and the final message it returned. Its transcript, log and claims do not count. Never ask a worker how it is doing, since that pulls it off task, and never extend its job with follow-ups. A new scope is a fresh spawn with a full brief.
 
-Each row in `agents.tsv` has an expected finish time. A worker past it with no new side effect is presumed lost. Write `inbox/<surface>.<n>.lost.md` with its last side effect and retry per the table below. If it turns up later, anything useful it did goes into a new brief. Its branch never merges unchecked.
+On a host that can message a running agent, the coordinator sends two kinds of message, each logged in `decisions.tsv`:
+
+- An amendment: a changed decision or the person's words, pasted in full, with the brief line it replaces. The coordinator rewrites that line in `briefs/<surface>.<n>.md` as well, so a retry carries it.
+- `STOP`, naming which of the worker's own edits to revert, by file or commit. The worker reverts them, commits, and returns its report as `partial`.
+
+Without messaging, or when the worker returned first, the amendment goes into the retry's brief and the coordinator does not land the edits a STOP would revert.
+
+Each row in `agents.tsv` has an expected finish time. A worker past it with no new side effect, and absent from the host's list of live agents, is presumed lost. List live agents before relaunching any missing step. Write `inbox/<surface>.<n>.lost.md` with its last side effect and retry per the table below. If it turns up later, anything useful it did goes into a new brief. Its branch never merges unchecked.
 
 Account for every spawn at close. A lost worker whose surface someone else quietly redid hides both the cost and the gap.
 

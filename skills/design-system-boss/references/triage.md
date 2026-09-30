@@ -75,7 +75,7 @@ Adoption also leaves out the component layer, the token source, examples, docs, 
 | `build_record`, `migration_runs`, `boss_state` | paths | earlier runs | resume |
 | `run_script`, `routes`, `source_lines`, `families_present` | route files, lines, families | whether the app can start, and how big it is. `routes` leaves out folders the router treats as private | which steps can verify visually, and the default flows for a review |
 | `scaffold_files_skipped` | files | source files left out as scaffolding | reading a before-and-after, where a rise here is the build's own output, not drift |
-| `git_uncommitted` | files | uncommitted files outside skill and run folders | the stop on unrelated work |
+| `git_uncommitted` | files | uncommitted files outside skill and run folders | the stop on unrelated work. Above 0 on a writing route, the boss asks the person and never stashes. So does a starting branch whose recent commits are another author's, unless the person named it |
 
 ## The foundation
 
@@ -151,7 +151,7 @@ Ask at most one, and only for one of these:
 - A read-only repo on a route that writes.
 - A package component library as the foundation, which the team may be keeping or leaving. The default is to keep it and wrap it, per `base-library.md`.
 
-Put it in the Frame with the default already applied. The run goes on under the default until someone answers, and read-only steps start without waiting. When screens will stay unchanged on this route, the Frame says so and why.
+Put it in the Frame with the default already applied, and ask it through the host's question tool when there is one, per `build-design-system/references/run-record.md` (Questions). The run goes on under the default until someone answers, and read-only steps start without waiting. When screens will stay unchanged on this route, the Frame says so and why.
 
 ```
 Triage: no token source, 412 raw color lines, 3 button families, 18 routes.
@@ -169,6 +169,8 @@ Budget and clearance are not this question. The Frame asks for both as the one r
 ## Standing questions
 
 The bans and design-source questions, and when a batch of up to six goes with them, are in `build-design-system/references/run-record.md` (Questions). The boss asks them in the Frame on every writing route, and a sibling called under the boss does not ask them again.
+
+When a design source, such as a brand kit or a design file, defines a look the app does not have, the design-source question also asks whether the new look goes in place or in a new folder. Ask it with the host's question tool, and follow the answer. Either way, the pilot, baselines, pixel diffs, the check and the docs generator run against the layer being built. A new folder's build handoff lists its adoption blockers.
 
 ## Blind spots
 

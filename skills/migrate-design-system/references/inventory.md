@@ -14,6 +14,7 @@ The inventory is a script, not a search the model runs by hand. It finds every p
 - The allowlist
 - Blocking new legacy usage
 - The check commands
+- Functional parity
 - The shared layer
 - Audit mode and plan.md
 
@@ -194,17 +195,37 @@ outside=$(git diff --name-only "$BASE..$HEAD" -- . $(printf ':(glob,exclude)%s '
 [ -z "$outside" ] || { printf 'Outside scope:\n%s\n' "$outside"; exit 1; }
 ```
 
+## Functional parity
+
+Before Baselines, one read-only agent reads every legacy call site against the system component that replaces it and writes one row per prop or behavior to `parity.tsv`. For each call site it checks controlled and uncontrolled use, refs, test ids, async search, long lists, nested overlays, focus return, form submit, sticky headers and themes, plus every prop the call site passes.
+
+```
+surface	file	line	legacy	system	behavior	verdict	proof
+billing-invoices	app/billing/invoices/filter.tsx	22	~/ui/Select	Select	async search as the user types	gap: blocking	Select has no onSearch prop
+settings-profile	app/settings/profile/form.tsx	40	~/ui/Input	Input	ref focused on submit error	parity	Input forwards ref, input.test.tsx:31
+shared	app/layout.tsx	12	~/ui/Toaster	Toaster	one toast region	gap: degrading	both render a live region
+```
+
+- `parity` names the prop or test that proves it in `proof`.
+- `parity with change` means the system does it differently, such as focus returning to the trigger instead of the page. That is a behavior change, so it is a gate (`SKILL.md`, Boundaries).
+- `gap: blocking` loses something a user needs to finish the task, and goes to the system owner as a gap. `gap: degrading` is a gate. `gap: cosmetic` needs a mapping row.
+- `untested` means nothing proves it either way. It becomes a KEEP line in the surface's brief, which the verifier checks.
+
+Coexistence rows cover what breaks while legacy and system components share a screen, with `surface` set to `shared` when a row spans surfaces: overlay layering between the two layers, duplicate toast regions, a default variant that flips when the import changes, and which prop wins when a legacy and a system prop set the same thing.
+
+While any `gap: blocking` row is open, the fan-out does not start or refill. The row closes when the owner lands what was missing and a rerun reads `parity`, or when a gate keeps that call site on legacy. The build's product coverage map (`build-design-system/references/inventory.md`) is the reverse view, product patterns the system lacks. A call site that needs a `missing` or `partial` pattern there cites that row.
+
 ## The shared layer
 
 One agent, alone, lands what every surface needs: the system package and lockfile, theme provider, global styles, token wiring, shared wrappers and the lint config. A command that pulls components from the system's registry or generator runs only in this phase, and one that overwrites a customized file is a gate (the foundation's base reference). After each edit it runs the runtime checks in `references/verification.md`, because a type check misses breaks that show only when a route renders. A component the owner adds to close a gap gets its `component-docs` page before any brief names it.
 
 ## Audit mode and plan.md
 
-Audit mode needs neither a settled system nor a running app. It runs Frame and Inventory, including the mapping runs, and ends by writing `plan.md`. Outside the run folder it writes one file, `scripts/migration-inventory.mjs`, with `--help` and the allowlist format, so the edit run reuses it instead of moving it and repointing its paths. It commits that file on the run branch when there is one, and otherwise leaves it untracked and names it in `plan.md`. No lint rule is added.
+Audit mode needs neither a settled system nor a running app. It runs Frame, Inventory with the mapping runs, and Parity, and ends by writing `plan.md`. Outside the run folder it writes one file, `scripts/migration-inventory.mjs`, with `--help` and the allowlist format, so the edit run reuses it instead of moving it and repointing its paths. It commits that file on the run branch when there is one, and otherwise leaves it untracked and names it in `plan.md`. No lint rule is added.
 
 Because it only reads, it can run beside `build-design-system` or harden work. Start it once their token commit lands and pin that commit in the plan's first line, so the person gets a plan even when the build runs out of budget.
 
-The run re-pins the plan itself before handoff, never the person. On the run branch's final commit: run the inventory with `--pin`, reconcile `legacy.txt` again, update the counts and first-line commit in `plan.md`, reread Docs coverage against the twins there, drop gates the build already decided, and merge each remaining conflict with a build gate into one gate. Skip it only when `git diff --name-only <pin>..HEAD` is empty. The later implementation run reruns the inventory, since the code will have moved.
+The run re-pins the plan itself before handoff, never the person. On the run branch's final commit: run the inventory with `--pin`, reconcile `legacy.txt` again, rerun the parity rows whose system component changed, update the counts and first-line commit in `plan.md`, reread Docs coverage against the twins there, drop gates the build already decided, and merge each remaining conflict with a build gate into one gate. Skip it only when `git diff --name-only <pin>..HEAD` is empty. The later implementation run reruns the inventory, since the code will have moved.
 
 ```markdown
 # Migration plan: <app> to <system version>
@@ -218,6 +239,9 @@ Blind spots: <places static search cannot see>
 
 ## Shared layer work
 <each shared change, with the files it touches>
+
+## Parity
+<counts by verdict from parity.tsv, then each blocking and degrading gap with file:line, the system component and what it lacks. Fan-out waits on every blocking row.>
 
 ## Gaps for the system owner
 <each missing token or component, with the surfaces it blocks and file:line>

@@ -135,4 +135,5 @@ for (const [name, fa, fb] of pairs) {
 }
 await browser.close();
 console.log(`${pairs.length} compared, ${failed} over ${max}%, tolerance ${tolerance}${only ? `, ${skipped} of other surfaces skipped` : ""}`);
+console.log(`Coverage: ${pairs.length} pair(s) compared pixel by pixel on every channel including alpha${dirMode ? `, every before file in ${A}${only ? ` for ${[...only].join(", ")}` : ""}` : ""}. Not compared: after files with no before file, accessibility trees, probe files, motion, and any state or width that was not captured`);
 process.exit(failed ? 1 : 0);

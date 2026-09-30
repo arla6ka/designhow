@@ -5,7 +5,7 @@ description: Reports how hardcoded style values on a page, file or diff map onto
 
 # Token mapping
 
-A report that lands raw values (hex codes, pixel values, shadows) on a token list someone else owns. With no token set, it hands back groundwork for building one. The rules and an example report are in `references/mapping-rules.md`, finding and reading sources in `references/sources.md`. Sibling links are relative to this skill's folder.
+A report that lands raw values (hex codes, pixel values, shadows) on a token list someone else owns. With no token set, it hands back groundwork for building one. The rules and an example report are in `references/mapping-rules.md`, finding and reading sources in `references/sources.md`.
 
 ## Start from whatever the ask gives
 
@@ -21,7 +21,7 @@ Take the values and the list in the brief as given and run to the end without as
 
 ## Steps
 
-1. **Load the rules.** Read `references/mapping-rules.md` and any AGENTS.md or CLAUDE.md. Done when overrides and any precedence rule are noted.
+1. **Load the rules.** Read `references/mapping-rules.md`, any AGENTS.md or CLAUDE.md, and `docs/system/decisions.md`. Done when overrides and any precedence rule are noted.
 2. **Load the list.** Done when Source has its name, format, location, read method and time.
 3. **Resolve it.** Follow every alias to its final value in each mode, and compare any second source. Done when every alias resolves and every disagreement is written down.
 4. **Collect the groundwork.** One row per property (a `border` shorthand is two rows), each with its location (`file:line`, or URL plus selector), category and job, sorted per `mapping-rules.md` (What counts as the team's list). Done when every raw and palette value in scope has a row.
@@ -41,6 +41,7 @@ The report is ready when:
 - A semantic token appears wherever one covers the job, never its primitive.
 - Anything inferred rather than read, such as a job taken from a class name, is marked inferred.
 - Nothing in the repo changed.
+- The last line reads `Coverage:` (`mapping-rules.md`, Report shape).
 
 ## Stops
 
@@ -50,7 +51,7 @@ Stop and report on these only.
 - One name has two values in the same mode, which makes the list broken.
 - Two sources disagree and no project rule says which wins. Report both sides.
 
-A stopped run returns the condition, the groundwork from step 4 (grouped per `mapping-rules.md`, When the repo has no token file), and the shortest message that unblocks it, such as "Paste `tokens.json` or give its path." Gaps are never a stop, at any count.
+A stopped run returns the condition, the groundwork from step 4 (grouped per `mapping-rules.md`, When the repo has no token file), and the shortest message that unblocks it, such as "Paste `tokens.json` or give its path." Gaps are never a stop.
 
 ## Hard limits
 

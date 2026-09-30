@@ -66,6 +66,7 @@ In order of preference: use an existing variant, use a semantic token, add a CSS
 - An update to a `stock` file may overwrite it. An update to a `customized` file is a hand merge from `add --diff`.
 - `--overwrite` destroys local changes. It is a gate every time, and the gate lists the files and their drift status.
 - After adding any third-party item, read every file it wrote, fix imports to the project's aliases, and swap icons to `iconLibrary`.
+- `cn()` merges classes with `tailwind-merge`, which drops one of two classes it reads as the same group. A custom token utility such as `text-label` (a size) beside `text-muted-foreground` (a color) loses one. Register each custom token group with `extendTailwindMerge`, and test a two-class call per group.
 - On the Next.js App Router, for example, a hand-written component or wrapper with an event handler, state or an effect needs `"use client"` as its first line. Stock files already carry it where needed. A handler added to a shared Button without it breaks every server-rendered page that renders the Button, and `tsc` still passes. Attach a handler only where the component is already a client component, then request every route and require 200 (`browser.md`, After an edit).
 
 ## Seed

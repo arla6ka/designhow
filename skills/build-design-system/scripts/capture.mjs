@@ -2,7 +2,7 @@
 // capture.mjs: capture routes x widths x themes (x states) into one folder with one command. Node 18+.
 // Run `node scripts/capture.mjs --help` for usage.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { launchChromium, repoRoot } from "./find-chromium.mjs";
@@ -40,6 +40,7 @@ Files, in --out
                                                headings, text contrast, link cues and
                                                side-by-side control heights. montage.mjs
                                                compares them. --no-probe skips them
+  ...same name with .<audit>.json              what each --eval script returned
 
 Options
   --root <dir>         the app's repo root, where Playwright is looked for first.
@@ -57,6 +58,11 @@ Options
                        name, or surface.state, to async (page) => {} that reaches it:
                        export default { error: async (page) => { ... } }
                        A listed state with no function is reported as not captured
+  --eval <file.js>...  in-page audit scripts, such as scripts/optical.js. Each runs in
+                       every capture after animations settle, and what it returns is
+                       written as JSON beside the screenshot, named by the file:
+                       optical.js gives <capture>.optical.json. A script that throws
+                       or returns nothing counts as not captured
   --full               full-page screenshots (default: the viewport)
   --mobile             Playwright only. isMobile and hasTouch on, for a review of a phone
   --storage-state <f>  Playwright only. A storage state file the person provides, to reach
@@ -76,7 +82,7 @@ Exit 2 on bad input or no browser.`;
 
 const argv = process.argv.slice(2);
 if (!argv.length || argv.includes("--help") || argv.includes("-h")) { console.log(HELP); process.exit(argv.length ? 0 : 2); }
-const KNOWN = new Set(["--height", "--root", "--base", "--kind", "--out", "--routes", "--surfaces", "--widths", "--themes", "--theme-via", "--states", "--full", "--via", "--session", "--status", "--no-probe", "--expect-status", "--mobile", "--storage-state"]);
+const KNOWN = new Set(["--height", "--root", "--base", "--kind", "--out", "--routes", "--surfaces", "--widths", "--themes", "--theme-via", "--states", "--full", "--via", "--session", "--status", "--no-probe", "--expect-status", "--mobile", "--storage-state", "--eval"]);
 const bad = argv.filter((a) => a.startsWith("--") && !KNOWN.has(a));
 if (bad.length) { console.error(`capture: unknown ${bad.join(", ")}\n\n${HELP}`); process.exit(2); }
 const val = (f, d) => { const i = argv.indexOf(f); return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith("--") ? argv[i + 1] : d; };
@@ -106,6 +112,12 @@ const storageState = val("--storage-state") && resolve(val("--storage-state"));
 if (storageState && !existsSync(storageState)) die(`no storage state at ${storageState}`);
 if (tool !== "playwright" && (storageState || argv.includes("--mobile"))) die("--mobile and --storage-state need --via playwright");
 const root = repoRoot(val("--root"), val("--out") || val("--surfaces") || val("--states"));
+if (argv.includes("--eval") && !(list("--eval") || []).length) die("--eval needs one or more in-page script files, such as --eval /abs/skills/build-design-system/scripts/optical.js");
+const audits = (list("--eval") || []).flatMap((f) => f.split(",")).filter(Boolean).map((f) => {
+  const p = resolve(f); if (!existsSync(p)) die(`--eval: no file at ${p}`);
+  const n = basename(p).replace(/\.(m?js)$/, ""); if (n === "probe") die("--eval: a script named probe would overwrite the .probe.json files. Rename it");
+  return { name: n, src: readFileSync(p, "utf8") };
+});
 
 const slug = (p) => p.replace(/[?#].*$/, "").replace(/^\/+|\/+$/g, "").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase() || "home";
 let surfaces = [];
@@ -151,6 +163,7 @@ const themeClass = (t) => `document.documentElement.classList.toggle("dark", ${J
 if (via !== "media" && themes.length > 1) console.error(`capture: --theme-via ${via} sets the theme by hand. It proves the tokens, not that a dark OS reaches them. Capture once with --theme-via media too`);
 const name = (s, state, w, t) => `${s.surface}${state ? `.${state}` : ""}-${kind}-${w}${t === themes[0] ? "" : `-${t}`}`;
 const written = [], missed = [];
+let evals = 0;
 
 if (tool === "playwright") {
   const launched = await launchChromium({}, { root });
@@ -179,6 +192,10 @@ if (tool === "playwright") {
         const file = join(out, `${name(s, state, w, t)}.png`);
         await page.screenshot({ path: file, fullPage: argv.includes("--full"), animations: "disabled" });
         if (probe) writeFileSync(file.replace(/\.png$/, ".probe.json"), JSON.stringify(await page.evaluate(PROBE_SRC), null, 1));
+        for (const a of audits) {
+          try { const r = await page.evaluate(a.src); if (r === undefined || r === null) throw new Error("returned nothing"); writeFileSync(file.replace(/\.png$/, `.${a.name}.json`), JSON.stringify(r, null, 1)); evals++; }
+          catch (e) { missed.push(`${name(s, state, w, t)}: eval ${a.name} failed: ${String(e.message).split("\n")[0]}`); }
+        }
         written.push(file);
       } catch (e) { missed.push(`${name(s, state, w, t)}: ${String(e.message).split("\n")[0]}`); }
       await ctx.close();
@@ -215,6 +232,11 @@ if (tool === "playwright") {
         try { const j = JSON.parse(p.stdout.trim()); writeFileSync(file.replace(/\.png$/, ".probe.json"), JSON.stringify(typeof j === "string" ? JSON.parse(j) : j, null, 1)); }
         catch { missed.push(`${name(s, "", w, t)}: probe output was not JSON`); }
       }
+      for (const a of audits) {
+        const r = abIn(a.src, "eval", "--stdin");
+        try { let j = JSON.parse(r.stdout.trim()); if (typeof j === "string") j = JSON.parse(j); if (j === undefined || j === null) throw 0; writeFileSync(file.replace(/\.png$/, `.${a.name}.json`), JSON.stringify(j, null, 1)); evals++; }
+        catch { missed.push(`${name(s, "", w, t)}: eval ${a.name} failed: output was not JSON`); }
+      }
       written.push(file);
     }
   }
@@ -222,4 +244,6 @@ if (tool === "playwright") {
 
 for (const m of missed) console.log(`not captured\t${m}`);
 console.log(`capture: ${written.length} file(s) in ${out}, ${missed.length} not captured, ${not200.length} route(s) not as expected`);
+const planned = surfaces.reduce((n, s) => n + (1 + (tool === "playwright" ? s.states.length : 0)) * widths.length * themes.length, 0);
+console.log(`Coverage: ${written.length} of ${planned} captures (${surfaces.length} surface(s), widths ${widths.join(",")}, themes ${themes.join(",")} via ${via}, ${tool}), ${probe ? "probed" : "not probed (--no-probe)"}${audits.length ? `, ${evals} audit result(s) from ${audits.map((a) => a.name).join(", ")}` : ""}. Not captured: hover, focus and pressed states, motion in flight (animations are finished first, reduced motion on), states surfaces.tsv does not list, routes not listed${tool === "agent-browser" ? ", every state (agent-browser captures the load state only)" : ""}`);
 process.exit(not200.length || missed.some((m) => /failed|HTTP|not JSON/.test(m)) ? 1 : 0);

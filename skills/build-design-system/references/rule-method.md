@@ -67,7 +67,7 @@ Every rule rests on at least one ground, cited after `Evidence:`. A rule with no
 | Single use | `single use <file:line>, <why it generalizes>` | One call site, stated as one. Pair it with a measurement or a principle, or the rule ships as `NEEDS REVIEW` |
 | Measurement | `measured <value>, <evidence path or command>` | A probe, script or computed style on this app, saved under `.design-system/evidence/<component>/` and cited by path |
 | Principle | `principle <kind>: <name and mechanism>` | `wcag` with the criterion number, `platform` with the native element or OS convention, `heuristic` with the named usability heuristic, `input` with the input model. Say how it applies here |
-| Person | `person "<their words>", <date>` | A ban or preference the person stated in this run, quoted. It outranks the app's majority (`modes.md`, What decides a question) and needs no second ground |
+| Person | `person D<n>` | A ban or preference the person stated, recorded as row D<n> in `docs/system/decisions.md`. Shipped docs cite the row and never quote the person. It outranks the app's majority (`modes.md`, What decides a question) and needs no second ground |
 
 A principle sets a direction. A number comes from the app or a measurement, unless the principle states one, as a WCAG criterion does.
 

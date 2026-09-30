@@ -5,7 +5,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const HELP = `check-system.mjs: design system check (starter)
@@ -47,6 +47,17 @@ Options
                        on lines identical to a stock line are upstream's, not drift
   --left               after the scan, print what the allowlist still holds, by
                        file and rule. The close counts come from this output
+  --changed <ref>      report only findings on lines added or changed since the merge
+                       base of <ref> and HEAD, uncommitted and untracked files
+                       included. The allowlist still applies: an allowlisted
+                       literal is reported only past its count. For pull requests
+  --diff <file>        take the changed lines from a unified diff instead of git
+                       ("-" reads stdin)
+  --warn               report findings as warnings and always exit 0. Output is
+                       GitHub annotations (::warning file=,line=::) when
+                       GITHUB_ACTIONS is set, else "file:line warning ...". Skips
+                       the self-test. The blocking check stays a separate run
+  --format <f>         github or plain, overriding the guess --warn makes
   --list-rules         print rule id and rule, tab separated
   --list-blind-spots   print what the check cannot see, one line each
   --json               print findings as JSON
@@ -82,6 +93,9 @@ Config keys (all optional, JSON)
                  scanned in UI code (comments skipped) and in the banDocs pages. A line
                  holding "Don't:" or the ban's own id describes the ban and passes
   banDocs        folders of Markdown pages the bans also scan  ["docs/system"]
+  names          outside product names the shipped docs should not carry, each a
+                 string or {"name","why"}. A hit in a banDocs page is a
+                 rule/outside-name warning, which never fails the check
 
 Fixture files end in .fixture (button.tsx.fixture), so tsc, lint and the
 framework never compile them. The self-test reads them under their inner name.
@@ -109,7 +123,10 @@ const RULES = {
   "rule/stock-edit": ["A ui file on the drift list (stock, customized or forked) changed since its hash was recorded", "revert it, or review the edit, update the row's status and note, and run --rehash <file> in the same commit"],
   "rule/unregistered-ui": ["A file in the ui folder with no registry entry and no drift-list row", "register it, or move it out of the ui folder"],
   "rule/deprecated-import": ["An import of a component the registry says was replaced", "import the canonical component"],
+  "rule/outside-name": ["An outside product name from the config's names list in a shipped docs page. A warning, never a failure", "describe the pattern in this app's own words"],
 };
+// The fix a finding prints. A ban's id is the person's, so it has no RULES row.
+const fixFor = (rule) => RULES[rule]?.[1] || (rule.startsWith("rule/ban-") ? "remove it, since the person banned it" : "see the rules page");
 
 const BLIND = [
   "Rendered contrast, including non-text contrast of borders, focus rings and checkbox edges. Measure it in a browser",
@@ -853,6 +870,7 @@ function scan(cfg, only) {
     }
   }
   checkBans(cfg, files, report, !!only);
+  if (!only) checkNames(cfg, report);
   // allowlist key: the literal, without whitespace runs or (file:line) pointers, so it survives edits elsewhere
   for (const f of findings) f.key = f.detail.replace(/\s*\([^()]*:\d+\)/g, "").replace(/\s+/g, " ");
   return findings;
@@ -884,6 +902,71 @@ function checkBans(cfg, files, report, onlyGiven) {
   }
 }
 
+// Outside product names (config names) in the shipped docs pages. Each hit is a warning: it prints, and never fails.
+function checkNames(cfg, report) {
+  const names = (cfg.names || []).map((n) => (typeof n === "string" ? { name: n } : n)).filter((n) => n && n.name);
+  if (!names.length || cfg.off.has("rule/outside-name")) return;
+  const res = names.map((n) => ({ ...n, re: new RegExp(`(?<![\\p{L}\\p{N}])${n.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\p{L}\\p{N}])`, "iu") }));
+  const walk = (rel) => {
+    const st = statSync(join(cfg.root, rel), { throwIfNoEntry: false });
+    if (!st) return;
+    if (st.isDirectory()) { for (const e of readdirSync(join(cfg.root, rel)).sort()) walk(`${rel}/${e}`); return; }
+    if (!/\.mdx?$/.test(rel) || /(^|\/)spec-template\.md$/.test(rel)) return;
+    readFileSync(join(cfg.root, rel), "utf8").split("\n").forEach((l, i) => {
+      if (l.includes("rule/outside-name")) return;
+      for (const n of res) if (n.re.test(l)) report({ file: rel, line: i + 1, rule: "rule/outside-name", detail: `${n.name}${n.why ? ` (${n.why})` : ""}: ${l.trim().slice(0, 60)}`, warn: true });
+    });
+  };
+  for (const d of cfg.banDocs || []) walk(posix(d).replace(/^\.\//, "").replace(/\/$/, ""));
+}
+
+// ---------- changed lines (--changed, --diff) ----------
+// Lines added or changed per file, from a unified diff: Map(file -> Set(line numbers in the new file)).
+function parseDiff(text) {
+  const out = new Map();
+  const lines = text.split("\n");
+  let file = null, line = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    if (l.startsWith("--- ") && (lines[i + 1] || "").startsWith("+++ ")) {
+      const p = lines[i + 1].slice(4).replace(/\t.*$/, "").replace(/^"|"$/g, "");
+      file = p === "/dev/null" ? null : p.replace(/^[bw]\//, "");
+      if (file && !out.has(file)) out.set(file, new Set());
+      line = 0; i++; continue;
+    }
+    const h = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(l);
+    if (h) { line = Number(h[1]); continue; }
+    if (!file || !line) continue;
+    if (l.startsWith("+")) out.get(file).add(line++);
+    else if (l.startsWith(" ")) line++;
+  }
+  return out;
+}
+// Changed lines against the merge base of ref and HEAD, with the working tree's edits. Untracked files count whole.
+function gitChanged(root, ref) {
+  const git = (args) => execFileSync("git", args, { cwd: root, stdio: ["ignore", "pipe", "pipe"], maxBuffer: 256 << 20 }).toString();
+  const base = git(["merge-base", ref, "HEAD"]).trim();
+  const out = parseDiff(git(["diff", "--unified=0", "--no-color", "--no-ext-diff", "--relative", base]));
+  for (const f of git(["ls-files", "--others", "--exclude-standard"]).split("\n").filter(Boolean)) out.set(f, "all");
+  return out;
+}
+const FILE_RULES = new Set(["rule/stock-edit", "rule/unregistered-ui"]);
+// The findings a change adds: on a changed line (a file-level rule on any changed file), and past the allowlist's
+// count for that file, rule and literal. With changed null, every line counts.
+function newFindings(findings, changed, allow) {
+  const hit = (f) => { if (!changed) return true; const c = changed.get(f.file); return !!c && (c === "all" || FILE_RULES.has(f.rule) || c.has(f.line)); };
+  const groups = new Map();
+  for (const f of findings) { const k = `${f.file}\t${f.rule}\t${f.key}`; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(f); }
+  const out = [];
+  for (const [k, list] of groups) {
+    const [file, rule, key] = k.split("\t");
+    const entry = allow[file]?.[rule];
+    const over = list.length - (typeof entry === "number" ? entry : entry?.[key] ?? 0);
+    if (over > 0) out.push(...list.filter(hit).slice(0, over));
+  }
+  return out.sort((a, b) => (a.file < b.file ? -1 : a.file > b.file ? 1 : a.line - b.line));
+}
+
 // ---------- self-test ----------
 const defaultFixtures = () => ((p) => existsSync(p) ? p : join(dirname(fileURLToPath(import.meta.url)), "..", "fixtures", "check-system"))(join(dirname(fileURLToPath(import.meta.url)), "fixtures", "check-system"));
 function selfTest(dirArg) {
@@ -898,7 +981,9 @@ function selfTest(dirArg) {
       const root = join(dir, c, kind);
       if (!existsSync(root)) { console.log(`self-test: ${c}/${kind} missing`); ok = false; continue; }
       const cfg = loadConfig(root, null, { include: ["."], exclude: DEFAULTS.exclude, fixtures: true, ...(spec.config || {}), ...(spec[`${kind}Config`] || {}) });
-      const found = scan(cfg);
+      let found = scan(cfg);
+      // A changed-lines case: the folder's diff and allowlist decide what a pull request would be warned about.
+      if (spec.changed) found = newFindings(found, parseDiff(readFileSync(join(root, spec.changed), "utf8")), existsSync(join(root, cfg.allowlist)) ? readJSON(join(root, cfg.allowlist)) : {});
       const count = (r) => found.filter((f) => f.rule === r).length;
       let good, msg;
       if (kind === "fail") {
@@ -1041,7 +1126,7 @@ if (flag("--hash-stock") || flag("--rehash")) {
 // the default run self-tests only when a fixture folder sits beside this script (or --fixtures names one).
 let testOk = true;
 const fixturesAt = val("--fixtures") || (existsSync(defaultFixtures()) ? null : undefined);
-if (!flag("--no-self-test") && !flag("--files") && !flag("--init-allowlist") && !flag("--shrink-allowlist") && !flag("--prune-allowlist") && fixturesAt !== undefined) testOk = selfTest(fixturesAt);
+if (!flag("--no-self-test") && !flag("--files") && !flag("--warn") && !flag("--changed") && !flag("--diff") && !flag("--init-allowlist") && !flag("--shrink-allowlist") && !flag("--prune-allowlist") && fixturesAt !== undefined) testOk = selfTest(fixturesAt);
 
 const onlyArgs = listAfter("--files");
 const only = onlyArgs ? onlyArgs.map((f) => posix(relative(root, inRoot(f)))) : null;
@@ -1054,7 +1139,8 @@ const findings = scan(cfg, only);
 // The allowlist is keyed by file, rule and literal value: {"app/x.tsx": {"rule/raw-value": {"#166534": 2}}}.
 // Swapping an allowed value for a new one fails, because the new literal has no entry.
 const byKey = new Map();
-for (const f of findings) { const k = `${f.file}\t${f.rule}\t${f.key}`; if (!byKey.has(k)) byKey.set(k, []); byKey.get(k).push(f); }
+const warnings = findings.filter((f) => f.warn);
+for (const f of findings) { if (f.warn) continue; const k = `${f.file}\t${f.rule}\t${f.key}`; if (!byKey.has(k)) byKey.set(k, []); byKey.get(k).push(f); }
 const alPath = join(root, cfg.allowlist);
 
 if (flag("--prune-allowlist")) {
@@ -1099,7 +1185,37 @@ if (flag("--init-allowlist") || flag("--shrink-allowlist")) {
 let allow = {};
 if (!only) {
   if (existsSync(alPath)) allow = readJSON(alPath);
-  else if (findings.length && !flag("--json")) console.log(`note: no allowlist at ${cfg.allowlist}. Every finding fails. Create one once with --init-allowlist.`);
+  else if (findings.length && !flag("--json") && !flag("--warn")) console.log(`note: no allowlist at ${cfg.allowlist}. Every finding fails. Create one once with --init-allowlist.`);
+}
+
+// --changed, --diff and --warn: what a pull request adds, as warnings (--warn) or as failures scoped to its lines.
+if (flag("--changed") || flag("--diff") || flag("--warn")) {
+  const warn = flag("--warn");
+  const ref = val("--changed"), diffFile = val("--diff");
+  const format = val("--format") || (process.env.GITHUB_ACTIONS === "true" ? "github" : "plain");
+  const esc = (s) => String(s).replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
+  let changed = null;
+  if (ref || diffFile) {
+    try { changed = diffFile ? parseDiff(readFileSync(diffFile === "-" ? 0 : diffFile, "utf8")) : gitChanged(root, ref); }
+    catch (e) {
+      const why = `check-system: cannot read the changed lines${ref ? ` against ${ref}` : ""}: ${String(e.stderr || e.message).trim().split("\n")[0]}. In CI, fetch the base branch and enough history for a merge base`;
+      if (warn) { console.log(format === "github" ? `::warning::${esc(why)}` : `warning: ${why}`); process.exit(0); }
+      console.error(why); process.exit(2);
+    }
+  }
+  // GitHub reads annotation paths from the repo root, so a --root below it adds its prefix.
+  let prefix = "";
+  try { prefix = execFileSync("git", ["rev-parse", "--show-prefix"], { cwd: root, stdio: ["ignore", "pipe", "ignore"] }).toString().trim(); } catch {}
+  const list = newFindings(findings, changed, allow);
+  for (const f of list) {
+    const msg = `${f.rule}: ${fixFor(f.rule)}. Found: ${f.detail}`;
+    if (warn && format === "github") console.log(`::warning file=${esc(prefix + f.file).replace(/:/g, "%3A").replace(/,/g, "%2C")},line=${f.line}::${esc(msg)}`);
+    else console.log(`${f.file}:${f.line} ${warn || f.warn ? "warning " : ""}${msg}`);
+  }
+  const hard = list.filter((f) => !f.warn).length;
+  const scope = changed ? `on lines changed${ref ? ` since ${ref}` : ` in ${diffFile}`}` : "past the allowlist";
+  console.log(`check-system: ${list.length} finding(s) ${scope}${warn ? ", reported as warnings. Exit 0" : ""}`);
+  process.exit(warn || !hard ? 0 : 1);
 }
 
 let failed = 0, allowed = 0, legacy = 0;
@@ -1115,7 +1231,7 @@ for (const [k, list] of byKey) {
   if (list.length > cap) {
     failed += list.length - cap;
     const why = typeof entry === "number" ? ` (legacy allowlist count for this file is used up)` : cap ? ` (allowlist holds ${cap} of "${key}" here, found ${list.length})` : entry ? ` ("${key}" is not in the allowlist for this file)` : "";
-    for (const f of list) printed.push(`${f.file}:${f.line} ${f.rule} ${f.detail}. Fix: ${RULES[f.rule][1]}${why}`);
+    for (const f of list) printed.push(`${f.file}:${f.line} ${f.rule} ${f.detail}. Fix: ${fixFor(f.rule)}${why}`);
   } else { allowed += list.length; if (list.length < cap) shrink.push(`${file} ${rule} "${key}" ${cap} -> ${list.length}`); }
 }
 for (const [file, rules] of Object.entries(allow)) for (const [rule, v] of Object.entries(rules)) {
@@ -1133,9 +1249,10 @@ for (const [k, list] of byKey) {
   if (n) left.set(`${file}\t${rule}`, (left.get(`${file}\t${rule}`) || 0) + n);
 }
 
-if (flag("--json")) console.log(JSON.stringify({ findings, failed, allowed, shrink, left: [...left].map(([k, n]) => { const [file, rule] = k.split("\t"); return { file, rule, count: n }; }), stockExempt: cfg.stockExempt || 0, notes: cfg.notes, blindSpots: BLIND }, null, 2));
+if (flag("--json")) console.log(JSON.stringify({ findings, failed, allowed, warnings: warnings.length, shrink, left: [...left].map(([k, n]) => { const [file, rule] = k.split("\t"); return { file, rule, count: n }; }), stockExempt: cfg.stockExempt || 0, notes: cfg.notes, blindSpots: BLIND }, null, 2));
 else {
   printed.forEach((l) => console.log(l));
+  for (const f of warnings) console.log(`${f.file}:${f.line} warning ${f.rule} ${f.detail}. Fix: ${fixFor(f.rule)}`);
   if (shrink.length) console.log(`allowlist can shrink (run --shrink-allowlist):\n  ${shrink.join("\n  ")}`);
   if (legacy) console.log(`note: ${cfg.allowlist} still holds per-file counts. Delete it and run --init-allowlist to key it by literal value.`);
   for (const n of cfg.notes) console.log(`note: ${n}`);
@@ -1147,7 +1264,7 @@ else {
     console.log(`left: ${allowed} allowlisted finding(s) in ${files.size} file(s)${byRule.size ? `: ${[...byRule].sort((x, y) => y[1] - x[1]).map(([r, n]) => `${r} ${n}`).join(", ")}` : ""}`);
     for (const [k, n] of [...left].sort(([x], [y]) => (x < y ? -1 : 1))) console.log(`left\t${k}\t${n}`);
   }
-  console.log(`check-system: ${only ? only.length : listFiles(cfg).length} file(s) under ${root}, ${failed} failing, ${allowed} allowlisted${testOk ? "" : ", self-test FAILED"}`);
+  console.log(`check-system: ${only ? only.length : listFiles(cfg).length} file(s) under ${root}, ${failed} failing, ${allowed} allowlisted${warnings.length ? `, ${warnings.length} warning(s)` : ""}${testOk ? "" : ", self-test FAILED"}`);
   console.log(`The check cannot see:\n${BLIND.map((b) => `  - ${b}`).join("\n")}`);
 }
 // exitCode, not exit(): a large --json report on a pipe is written asynchronously, and exit() would cut it at 64 KB.

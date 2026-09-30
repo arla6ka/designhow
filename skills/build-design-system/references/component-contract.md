@@ -27,6 +27,8 @@ Within a family, rank candidates by these questions, in order. Stop at the first
 
 If no candidate passes question 1 or 2, build a new one on the native element or the installed behavior library, and absorb the variants the family actually uses. Adding a behavior library the app does not have is a gate.
 
+When the canonical pick wraps a primitive library, list the library's defaults for placement, offsets, timing and focus, and compare them across sibling components. Pickers (select, combobox, date, menu) share one placement rule, derived from the app and written to `docs/system/decisions.md`.
+
 Record the ranking in the run record, one line per candidate, so a reviewer sees why the others lost.
 
 ## API
@@ -62,17 +64,21 @@ States to consider, dropping the ones that do not apply with a one-line reason:
 
 - Interaction: default, hover, focus-visible, pressed, disabled
 - Value: empty, filled, selected, checked, indeterminate, invalid, read-only
-- Async: loading or pending, success, failure
+- Async: pending, success, failure. The state is named `pending` in props, specs and examples
 - Overlay: opening, open, closing, closed with focus returned
 - Content: long text, wrapping, overflow, empty, missing image
 
 When states overlap, say which wins, in the spec's State precedence list. `scripts/check-spec.mjs` fails a spec that leaves a pair open. A disabled field inside an invalid form shows no error.
+
+Derive the interaction-state order from the app: for each pair the code lets hold at once, read which style the app applies last, and keep the majority. When the app has none, the default is disabled, then open or focused, then invalid, then hover, then rest. An open trigger shows focus while open (`trap/open-trigger-unfocused`). Hover never overrides focus or invalid (`trap/hover-beats-focus`), and a disabled control never hovers (`trap/disabled-still-hovers`). `scripts/state-timeline.js` measures each pair frame by frame (`browser.md`). Border and halo changes may ease. Press feedback is instant, and a latency allowance never applies to visual feedback.
 
 A pending action keeps its label, its width and its focus (`traps.md`, `trap/loading-label-swap`). Pending text goes in a status or live region or next to the control, never in place of the label. While pending, the control stays focusable: prefer `aria-disabled="true"` or a focusable disabled state over native `disabled`, which can drop keyboard focus to the page. It sets `aria-busy="true"`, and its handler returns early, which blocks repeat activation.
 
 A pending submit beats dismissal in a dialog by default (`traps.md`, `trap/overlay-pending-dismiss`). The Dialog spec's State precedence says so, and its example has a pending state.
 
 Controls that sit together share one control height token per size, so a row of them lines up (`trap/control-height`).
+
+Under about 20px, a pending indicator is a thin ring, never a row of dots (`trap/loader-small-dots`). An empty value, such as a missing date or amount, renders through one component with accessible text (`trap/empty-value`). A form marks the rarer of required and optional fields, never every field (`trap/required-everywhere`).
 
 ## Accessibility
 
@@ -88,6 +94,8 @@ Controls that sit together share one control height token per size, so a row of 
 - Status changes that the user did not trigger by focus are announced once, by one layer.
 
 Contrast is measured by a script against the rendered colors in each theme, to WCAG AA by default: 4.5:1 for text, 3:1 for large text. Non-text parts that identify a control or its state need 3:1 against what sits next to them (WCAG 1.4.11): input and checkbox borders, the focus ring as drawn with its alpha, and a checked or selected fill. Record the measured ratio. Never write a ratio you did not measure.
+
+A translucent fill or tint is composited over every surface token it can sit on, in every theme, and each result is measured. Explanatory text, such as the reason a control is disabled, keeps full text contrast. Rerun the measurement before carrying a recorded ratio or reason into a new theme or surface.
 
 ## Styling
 
@@ -109,10 +117,10 @@ Test what the user can observe, not how the component is built.
 
 - It renders the right role and accessible name for each variant.
 - Keyboard: the documented keys do the documented thing.
-- States: disabled blocks activation, loading blocks repeat activation and keeps focus on the control, invalid exposes the error text to assistive tech.
+- States: disabled blocks activation, pending blocks repeat activation and keeps focus on the control, invalid exposes the error text to assistive tech.
 - A form inside it: cancel does not submit, submit submits once.
 
-Skip tests that restate a constant, such as a token's value or a class name, since they pass when the component is broken. With no test runner, use the closest check the repo has, such as a browser script over the example files, and record that.
+Every behavior claim in the spec (keyboard, focus, open state, timers, copy feedback) has an interaction test that fails when the behavior breaks. `check-spec.mjs` warns when a row says "test" and no test file for the component exists. Skip tests that restate a constant, such as a token's value or a class name, since they pass when the component is broken. With no testing library, write a small render-and-query helper in the system folder instead of adding a dependency, and record that.
 
 ## Registry and migration map
 
@@ -124,7 +132,7 @@ Skip tests that restate a constant, such as a token's value or a class name, sin
   "from": { "import": "@/components/legacy/PrimaryButton", "name": "PrimaryButton" },
   "to": { "import": "@/components/ui/button", "name": "Button" },
   "props": {
-    "isLoading": "loading",
+    "isLoading": "pending",
     "small": { "prop": "size", "value": "sm" },
     "color": { "red": { "prop": "tone", "value": "danger" } }
   },

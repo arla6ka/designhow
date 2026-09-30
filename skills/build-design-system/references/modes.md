@@ -25,19 +25,19 @@ Triage names the mode. When nobody ran triage, take the first that matches, the 
 
 When sources disagree, take the first that settles it:
 
-1. What the person asked for in this run, including the taste they stated: their bans, the references they named, and how closely to follow a design source. Their taste is a ground for rules (`rule-method.md`, Grounds).
-2. Project rules in AGENTS.md or CLAUDE.md.
-3. Gates already answered, and decisions already in the run record or the committed decisions log (`coordinator-path.md`, Review, decide, fix).
-4. The system's own specs and docs, once they exist.
-5. Shipped code in the same area of the app. It shows what users see today, not that it is right. A pattern shipped on one screen is a candidate, not a rule.
-6. A design spec or old docs, unless the person chose partial or pixel fidelity (below).
-7. General guidance, including `traps.md`.
+1. The person's bans and explicit calls: what they said in this run or saved to memory, gates they answered, and decisions already in the run record or `docs/system/decisions.md`. Their taste is a ground for rules (`rule-method.md`, Grounds).
+2. The person's own design source, at the fidelity they chose (below). At reference only it decides nothing by itself.
+3. The app's evidence: project rules in AGENTS.md or CLAUDE.md, the system's own specs and docs once they exist, then shipped code in the same area. Shipped code shows what users see today, not that it is right. A pattern shipped on one screen is a candidate, not a rule. Old docs sit here too.
+4. Principles and `traps.md`.
+5. Outside systems the person named, such as a public design system. They are general guidance and never override the person's design file.
 
-A conflict between two sources at the same level is a gate.
+A conflict between two sources at the same level is a gate. Before any writer starts, each conflict between named sources, and between a source and the bans, becomes a numbered row in `docs/system/decisions.md`.
 
 ## Following a design source
 
-A design file, brand kit or mockups the person gives may be a reference or the target. The Frame asks which (`run-record.md`, Questions). The default is reference only, because the person may want the current look, and a full restyle is expensive to undo.
+A design file, brand kit or mockups the person gives may be a reference or the target. The Frame asks which with the host's question tool (`run-record.md`, Questions), and when the source defines a look the app does not have, whether it lands in place or in a new folder. The run follows the answer. A new visual direction happens only when the person chose it there. The default is reference only, because the person may want the current look, and a full restyle is expensive to undo.
+
+Whatever the answer, the pilot, baselines, pixdiff, the check and `gen-docs.mjs` run against the layer being built. A layer built in a new folder lists its adoption blockers in the handoff (`run-record.md`, Handoff report).
 
 | Answer | What the source decides |
 |---|---|

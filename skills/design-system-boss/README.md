@@ -4,6 +4,17 @@ One entry skill for the other five. Say something vague, like "our UI is a mess,
 
 It never writes product code when it can spawn subagents, never invents brand values, never commits to a branch you did not name for the work, never pushes unasked, and never migrates past the decided defaults without clearance, which an adoption ask like "nobody uses our components" gives.
 
+## What the scripts touch
+
+The one script is `scripts/triage.sh`.
+
+- Reads files git tracks or would track in the repo, plus `package.json` and `components.json`.
+- Writes only into its output folder, `.design-system/boss/triage/` by default.
+- Network: none by default. With `TRIAGE_SHADCN_INFO=npx` it runs `npx shadcn@latest info`, which may download the package.
+- Shell: runs `rg`, `find`, `awk`, `perl`, `node` and read-only `git` commands, and the repo's own `node_modules/.bin/shadcn info` when that exists. `TRIAGE_SHADCN_INFO=0` skips it.
+
+The boss itself runs the sibling skills' scripts through its workers, and their READMEs list what those touch.
+
 ## Use as-is
 
 Install it with its siblings: `npx skills add arla6ka/skills`. By hand, copy the folder next to the other five in `.agents/skills/`, or `.claude/skills/` for Claude Code. Then say what you want in your own words. The boss reads the repo before it asks anything. It asks at most one routing question, plus your bans and how closely to follow a design source, each with a default already applied.

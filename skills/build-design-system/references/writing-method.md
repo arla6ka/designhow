@@ -12,6 +12,7 @@ Contents
 - House bans
 - Banned words
 - What the check enforces
+- Docs and code comments
 
 ## The copy inventory
 
@@ -39,6 +40,7 @@ For each slot, read its rows and answer these one at a time. Each answer is a ru
 3. **Length.** The longest row that renders without wrapping or truncating at the narrowest width, measured with `probe.mjs --grow --dimension text` on a real instance. The limit sits below the break.
 4. **End punctuation.** Whether the slot ends with a period, and whether that depends on sentence count.
 5. **Recurring jobs.** Strings that do one job on many screens (dismiss, cancel, retry, undo, a completion). Where most rows agree, the rule fixes the exact literal. Where they don't, it is a gate with the most common literal as its default.
+6. **Counts and exceptions.** A count label carries its noun in a singular and a plural form (`1 file`, `3 files`). An exception to the slot's voice, such as an ellipsis on a menu item that opens a dialog, is written as its own rule.
 
 Then test every slot's rows against these principles. Each sets a direction, not a wording to copy:
 
@@ -67,7 +69,7 @@ Declare each chain in the writing page's `## Verb chains` table. `copy-check.mjs
 
 ## House bans
 
-Before the first component, the writing page lists the person's bans from the Frame under `### Across slots`, one rule each: casing (such as no uppercase labels), separators (such as no middle dots), punctuation (such as no em dashes or exclamation marks), weights and words. Each is grounded `person "<their words>", <date>`. The coordinator obeys them in its own code, copy and showcase chrome, since the first family is the pattern workers copy. Each ban also goes in the standing orders word for word, and in `bans` in `scripts/check-system.config.json` (`checks.md`, Bans).
+Before the first component, the writing page lists the person's bans from the Frame under `### Across slots`, one rule each: casing (such as no uppercase labels), separators (such as no middle dots), punctuation (such as no em dashes or exclamation marks), weights and words. Each is grounded `person D<n>`, the `docs/system/decisions.md` row that records it, and never quotes the person. The coordinator obeys them in its own code, copy and showcase chrome, since the first family is the pattern workers copy. Each ban also goes in the standing orders word for word, and in `bans` in `scripts/check-system.config.json` (`checks.md`, Bans).
 
 Generic filler that makes copy read as machine-written goes on the Banned words table whether or not the app uses it, such as "seamlessly", "leverage", "unlock", "delve", "robust" and "effortless". Ground each as `principle heuristic: aesthetic and minimalist design`, under one gate whose default keeps the list, so the person can strike any.
 
@@ -78,3 +80,7 @@ The team sets the list from its own copy and the person's bans, never from anoth
 ## What the check enforces
 
 `node scripts/copy-check.mjs` runs in the check command once `docs/system/writing.md` exists. It fails, with `file:line rule-id message`, on a stale inventory, a row whose slot breaks its casing, length or end punctuation, a banned word, a declared chain whose steps use different verbs, a chain whose cited text moved, and a confirmation in no chain. Existing violations go in `scripts/copy-check-allowlist.json`, written once, keyed like the `check-system.mjs` allowlist. Rules a script cannot see stay `review` on the rules page.
+
+## Docs and code comments
+
+Guidance for the system's own prose, which no script checks. Docs state what holds now and never narrate history, so no "now", "no longer" or "used to". A person-grounded rule cites its `docs/system/decisions.md` row instead of quoting the person. A code comment states one constraint the code cannot show. It never narrates history, restates the code, logs a measurement or names an outside source.

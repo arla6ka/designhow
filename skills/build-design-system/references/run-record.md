@@ -23,7 +23,7 @@ These words mean the same thing in every design.how skill. Other files point her
 
 - **`<skills>`.** The folder that holds this skill and its siblings: a project `.agents/skills/` or `.claude/skills/`, or a global install such as `~/.claude/skills/`.
 - **Surface.** One route, the shared layout every route renders (named `shared`), or a smaller unit migrate cuts, such as a modal. It is the unit of capture, commit and verdict. The capture list `.design-system/review/surfaces.tsv` names every surface, one row each with the columns `surface`, `route` and `states`. To capture one surface, copy its row under the header into `.design-system/tmp/<worker id>/<surface>.surfaces.tsv`. Migrate's work list, `.migration/<run>/queue.tsv`, is keyed by the same surface names.
-- **Run branch.** `ds/<yyyy-mm-dd>-<route>`, cut from HEAD at the start. Every write lands on it. Nothing commits to the starting branch, and merging is the person's call. When the person names a branch for this work, or created one for it in this session, that branch is the run branch and no other is cut. Record "run branch: <name>, the person's own" as a decision. Commits stay local until the person asks for a push or a PR.
+- **Run branch.** `ds/<yyyy-mm-dd>-<route>`, cut from HEAD at the start. Every write lands on it. Nothing commits to the starting branch, and merging is the person's call. When the person names a branch for this work, says "work on my current branch", or created one for it in this session, that branch is the run branch and no other is cut. Record "run branch: <name>, the person's own" as a decision. Commits stay local until the person asks for a push or a PR.
 - **Identical-value swap.** A raw literal replaced by a token that holds exactly its value. It needs no clearance. `pixdiff.mjs <before dir> <after dir> --surface <name>` at tolerance 0 proves it at 0% over every width and theme capture of each surface it touches, never `montage.mjs --diff`, which reads the first theme only. A motion value replaced by a preset that resolves to the same value, such as a raw `200ms` by a 200ms preset, is also a swap, proven by matching before and after animation lists taken with reduced motion off (`browser.md`, Measuring motion). A changed motion value is a decision.
 - **Decision.** A choice a reversible change settles, made and recorded with its evidence. Fixes to broken behavior, adds-only accessibility changes (`traps.md`) and merges inside tolerance are decisions. Removing or restructuring semantics, brand, product vocabulary, visible change on shipped screens beyond tolerance and intentional behavior changes are gates.
 - **Gate.** A product or brand choice a person could reasonably answer either way. It carries a default, the run applies that default on the run branch, and the person reverses it by naming it at merge. Its states are `open` (waits on a person), `decided` (default chosen and recorded) and `applied` (landed on the run branch). At close, a `decided` gate is `applied`, or the handoff lists it as not landed with its reason.
@@ -79,10 +79,14 @@ and the pilot matches its baseline except for D-07 and gate G-01.
 
 ## Questions
 
+The person's words in this session and their saved memory outrank every default in these skills, the branch and push policy included.
+
 The Frame asks the two standing questions and at most one routing or target question, each with its default already applied, in one message. Budget and clearance come back as one reply, `Go, <budget>`. The run goes on under the defaults, and read-only steps start without waiting. Under design-system-boss, the boss asks them.
 
+Every question goes through the host's question tool, with at most four options and the recommended one first. The recommended option is the one that changes and exposes the least: no public upload, no push. A default counts as the person's answer only once the question went through the tool. A default stated only in prose counts as unasked. Before any public action, check which account it runs as. Every progress update ends with what is running, what is committed and what waits on the person.
+
 - Bans. "Anything you never want to see in the UI, its copy or the docs?" Offer uppercase labels, middle-dot or bullet separators, em dashes, exclamation marks, emoji and gradients, none selected. Record each answer word for word as a standing order and a `rule/ban-<slug>` (`checks.md`, Bans), or "none named". A ban stated later becomes a standing order at once, and the next commit sweeps every file for it.
-- Design source, when the person named a design file, brand kit or mockups. "Should the system follow it as reference only, partially, or at pixel fidelity?" The default is reference only (`modes.md`, Following a design source).
+- Design source, when the person named a design file, brand kit or mockups. "Should the system follow it as reference only, partially, or at pixel fidelity?" The default is reference only (`modes.md`, Following a design source). When the source defines a look the app does not have, the same question asks whether the new look goes in place or in a new folder, and the run follows the answer.
 - The one routing or target question, such as a monorepo target nobody named (list candidates with route counts) or an ask that fits two routes a whole phase apart (default: the route that answers the named complaint).
 
 Send a batch of up to six multiple-choice questions only when the person asks to be asked or the run builds or hardens a system. Each lists the recommended option first, already applied. Ask only what changes files a worker writes: the branch and what besides product code is committed, the primary action color and how much brand color the product carries, the typeface and its license, the icon set, and where the person reviews the system.
@@ -95,10 +99,10 @@ This is the one list for every design.how skill, one rule per line, pasted word 
 ## Standing orders
 1. Write only inside your brief's SCOPE. Scripts a rerun needs go in .design-system/scripts/, committed; the check never reads .design-system/. Your scratch and one-off probes live only in .design-system/tmp/<your worker id>/, deleted at close. Never read, apply or delete another worker's scratch.
 2. The token source belongs to the one writer coordinator-path.md names. Generated files, the barrel, registries, indexes, the migration map and the check's config, allowlist and drift list belong to the coordinator. Report allowlist shrink candidates; never edit the allowlist.
-3. Use only the colors, fonts, shadows, gradients, motion, logos and product names the app already has, or that the design source the Frame follows draws.
+3. Use only the colors, fonts, shadows, gradients, motion, logos and product names the app already has, or that the design source the Frame follows draws. A new visual direction lands only when the person chose it through the design-source question.
 4. Baselines, fixtures and checks stay as written. Fix the code instead.
 5. Examples use inert data. No requests on mount.
-6. Report with the REPORT block, status `done`, `partial`, `blocked` or `failed` first, commands and exit codes pasted, not summarized. Every claim that something is fixed, passes or works names the command that proved it this session.
+6. Report with the REPORT block, status `done`, `partial`, `blocked` or `failed` first, commands and exit codes pasted, not summarized. Every claim that something is fixed, passes or works names the command that proved it this session and what that command covers. An audit that does not measure the reported defect is not evidence for it.
 7. Return your report as your final message, as text. Write no report file, and never write into a coordinator file.
 8. Browser commands use absolute paths and your own browser session name, spelled out on every line.
 9. Commit only to the branch your brief names, locally. Never merge, deploy, publish, force-push, stash, reset or clean. No push or PR unless the person asked for one. Leave uncommitted changes and branches you did not create as they are.
@@ -109,6 +113,9 @@ This is the one list for every design.how skill, one rule per line, pasted word 
 14. Put questions in your report, or your own run record, as gates with a default, never as a mid-run ask, then finish the work.
 15. In a checkout other workers share, make small exact edits that fail when the file changed since you read it. Never rewrite a file whole, and never revert or tidy a change you did not make. A script that applies drafts takes an explicit list of your own files.
 16. Start no agents unless your brief names you a coordinator, apart from the two fresh agents a two-agent test needs. A coordinator blocks on each worker and never returns while one runs.
+17. Never change a repo-wide gate (lint flags, CI thresholds, warning limits, project instructions) to make your output pass.
+18. The brief's "Person's calls" are values the person set, each with its file. Never normalize one to a pattern.
+19. Before relaunching a step that looks missing, list the live agents. Hand a file to write only to an agent that can write files.
 ```
 
 ## Phases
@@ -239,6 +246,8 @@ Next: "Merge ds/2026-03-12-build." To undo one, name it: "Merge ds/2026-03-12-bu
 ```
 
 The Trial runs once at handoff: a fresh agent gets only the repo and the AGENTS.md block and builds the named next screen on a throwaway branch. Record its check findings, its `design-review` Blocking count, which twins it opened and which coverage gaps it named. A trial that fails the check or opens no twin is a finding for the handoff.
+
+A run that built the system as a separate layer, in a new folder, adds `### Adoption blockers` before Next: providers not mounted at the root, product imports of the new layer (zero is a blocker), duplicate toast regions, and overlay layering against the legacy layer, each with its file.
 
 The message lists the gates that change what a screen shows or does, by default at most 3 so the person reads them all, each with the default the branch applied. The Next prompt clears every open gate at once and never asks for a step the run could have done, such as rerunning a script. Process disputes, such as which record or verifier to trust, stay in the run record. Each claim comes from a command run in this session. A red check is stated, never left out.
 

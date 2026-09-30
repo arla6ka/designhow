@@ -101,6 +101,7 @@ if (process.argv[1] && (await import("node:path")).resolve(process.argv[1]) === 
     if (argv.length !== 3) bad("--delta takes exactly two colors");
     const [a, b] = argv.slice(1).map((c) => parse(c) || bad(`cannot read the color ${c}`));
     console.log(`${argv[1]}\t${argv[2]}\tdeltaE OK x100 ${deltaEOK(a, b).toFixed(2)}`);
+    console.log("Coverage: 2 colors as sRGB. Not read: alpha, and any color space other than sRGB");
     process.exit(0);
   }
   const unknown = argv.find((a) => a.startsWith("--"));
@@ -110,4 +111,5 @@ if (process.argv[1] && (await import("node:path")).resolve(process.argv[1]) === 
     if (!rgb) bad(`cannot read the color ${c}`);
     console.log(`${c}\t${format(toOklch(rgb))}`);
   }
+  console.log(`Coverage: ${argv.length} color(s) as sRGB. Not read: alpha, and any color space other than sRGB`);
 }

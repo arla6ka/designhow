@@ -181,8 +181,9 @@ HARD=$(cut -f1 "$OUT/harden-dirs.tsv" | sort -u)
 if [ -n "$HARD" ]; then
   while read -r d; do
     [ -z "$d" ] || [ "$d" = "$UI_DIR" ] || printf '%s\n' "$HARD" | grep -qxF "$d" && continue
-    awk -F'\t' -v d="$d" -v hard="$HARD" -v fams="$(IFS=';'; echo "${FAMS[*]}")" '
-      BEGIN { nf=split(fams, fam, ";"); nh=split(hard, h, "\n"); for (i=1;i<=nh;i++) hs[h[i]]=1 }
+    # HARD holds newlines, which BSD awk rejects in a -v value, so it goes through the environment.
+    HARD="$HARD" awk -F'\t' -v d="$d" -v fams="$(IFS=';'; echo "${FAMS[*]}")" '
+      BEGIN { nf=split(fams, fam, ";"); nh=split(ENVIRON["HARD"], h, "\n"); for (i=1;i<=nh;i++) hs[h[i]]=1 }
       { p=$1; if (p !~ /\//) next; sub(/\/[^\/]*$/, "", p)
         for (i=1;i<=nf;i++) if ($2 ~ "(" fam[i] ")$") { if (p==d) mine[i]=$2; if ((p in hs) && (!(i in tn) || length($2) < length(tn[i]))) { tn[i]=$2; theirs[i]=$2 " in " p } } }
       END { for (i=1;i<=nf;i++) if ((i in mine) && (i in theirs)) { print d "\t" mine[i] " duplicates " theirs[i]; exit } }

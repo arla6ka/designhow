@@ -32,7 +32,7 @@ With the skill off, watch for a token picked by number, an ambiguous row settled
 
 **Input:** a DTCG `tokens.json` with semantic and primitive colors, a spacing scale and light and dark modes. Plus one component file with about 15 hardcoded values, including one `border` shorthand and one color written as `hsl()`.
 
-**Expect:** a seven-part report. The border splits into two rows. The `hsl()` color matches its hex token after normalizing, and the source line names how it was converted. Rows carry `file:line` in file order. The source line names the file, time and mode.
+**Expect:** a seven-part report. The border splits into two rows. The `hsl()` color matches its hex token after normalizing, and the source line names how it was converted. Rows carry `file:line` in file order. The source line names the file, time and mode. The last line starts `Coverage:` and names dark mode as not mapped when only light was asked.
 
 **Fails if:** any row is classed on its number alone, a primitive appears where a semantic token fits, or any code file changed.
 
@@ -70,7 +70,7 @@ Tool path only.
 
 **Input:** the normal case, with the tokens split into one file per category and the file read returning only `color.json`, or refusing access to the folder.
 
-**Expect:** it says the read was partial or failed, maps only what came back, marks the other rows unverified, and leaves them out of the gap count.
+**Expect:** it says the read was partial or failed, maps only what came back, marks the other rows unverified, and leaves them out of the gap count. The `Coverage:` line names the files that did not come back.
 
 **Fails if:** the report looks complete, or spacing rows map to token names the tool never returned.
 

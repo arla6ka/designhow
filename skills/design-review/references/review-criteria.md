@@ -59,6 +59,7 @@ Mark each shown or not shown. A case not shown is a question for the designer, n
 - Offline or a lost connection
 - Success or confirmation after the main action
 - An empty state that says what goes here and offers the first action, not a blank area
+- Stand-in content: every placeholder image, avatar, logo, name and number in a demo or fixture is the kind of thing it stands for, at a realistic length
 - On a touch device: no hover state flashes or sticks on tap, focusing an input doesn't zoom the page, and no field opens the keyboard before the user asked (evidence labels in `sources.md`, What counts as evidence)
 - Motion: with reduced motion on, the same action repeated quickly, and on a throttled CPU
 
@@ -66,7 +67,7 @@ Mark each shown or not shown. A case not shown is a question for the designer, n
 
 - Preferences no criterion above supports.
 - Design-system compliance, such as token use, component choice or a spec's own completeness. `token-mapping`, `check-system.mjs` and `check-spec.mjs` cover those. Whether the screen shows a spec's states is an edge case (`SKILL.md` step 8).
-- Spacing that follows the design system. Optical misalignment and oversized icons are findings under criterion 10, citing `trap/icon-optical-align` or `trap/icon-optical-size`, since a person sees them first.
+- Spacing that follows the design system. Optical misalignment and oversized icons are findings under criterion 10, citing `trap/icon-optical-align` or `trap/icon-optical-size`, since a person sees them first. A mark beside text is measured against the alignment reference in `docs/system/decisions.md`. With no such row, give its distance to the cap center, the x-height center and the midpoint, and put the choice under For a person to decide.
 - Rewritten copy. Flag the unclear text and say what is unclear.
 - The product decision behind a fix. Keep the finding and hand the decision to a person. Keeping the user's input is not a product decision (criterion 8).
 - Code defects in a running build, such as console errors. Mention them once under For a person to decide so they reach QA.

@@ -52,7 +52,7 @@ When a tool returns part of what was asked, use what came back and mark each mis
 
 ## Conflicts between sources
 
-Every disagreement gets a Conflicts line. Most are settled by a precedence rule in AGENTS.md or CLAUDE.md, quoted with where it lives. Before applying one, check that its stated reason holds for this case. "The spec wins because code lags" does not cover a variant the code has and the spec lacks.
+Every disagreement gets a Conflicts line. Most are settled by a numbered row in `docs/system/decisions.md`, cited by number, or a precedence rule in AGENTS.md or CLAUDE.md, quoted with where it lives. Before applying one, check that its stated reason holds for this case. "The spec wins because code lags" does not cover a variant the code has and the spec lacks.
 
 These finish the entry and end the reply with a question:
 

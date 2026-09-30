@@ -7,7 +7,7 @@ description: Use when an ask names one phase of design system work, such as "ext
 
 This skill turns the UI an app ships into semantic tokens, canonical components, checks and generated docs with Markdown twins, then proves them on one pilot flow against screenshots taken before any edit. It runs in build, harden or seed mode (`references/modes.md`), and the base reference for the app's foundation (`references/base-*.md`) wins over the general references. It calls `token-mapping`, `component-docs` and `design-review` instead of restating them.
 
-Every write lands on the run branch (`references/run-record.md`, Terms). The run never picks a visual direction, publishes or deploys.
+Every write lands on the run branch (`references/run-record.md`, Terms). A new visual direction lands only when the person chose it (`references/modes.md`). The run never publishes or deploys.
 
 ## When a coordinator calls it
 
@@ -27,7 +27,7 @@ The rest of Done, per mode and footprint, is in `references/coordinator-path.md`
 
 ## Inputs
 
-A vague request is normal. Fill each row from the repo or its default, and never ask for paths.
+Fill each row from the repo or its default, and never ask for paths.
 
 | Input | If missing |
 |---|---|
@@ -39,18 +39,18 @@ A vague request is normal. Fill each row from the repo or its default, and never
 | Themes | The ones the app ships, and no new ones |
 | Mode and foundation | From the router's triage, else `references/modes.md` |
 | Existing tokens, library, design spec or brand | Start from it per the base reference and `references/modes.md` (What decides a question) |
-| AGENTS.md or CLAUDE.md | Their rules win over this file |
+| The person's words and saved memory, AGENTS.md, CLAUDE.md | They win over this file, branch and push policy included |
 
-It needs a shell, git and Node. Without subagents, run the briefs in sequence.
+It needs a shell, git and Node.
 
 ## Procedure
 
-Before phase 1, create the run branch and `.design-system/run.md` (`references/coordinator-path.md`, Start). Each phase ends with its artifact path and a decision row, and stops at its cap. After a crash, read the run record first. After any shared UI or token edit, `capture.mjs --status` must show every route loading (`references/browser.md`). Decisions and gates sort by `references/run-record.md` (Terms), and cuts at a cap by `references/coordinator-path.md` (Phase caps).
+Before phase 1, create the run branch and `.design-system/run.md` (`references/coordinator-path.md`, Start). Each phase ends with its artifact path and a decision row, and stops at its cap. After any shared UI or token edit, `capture.mjs --status` must show every route loading (`references/browser.md`). Decisions and gates sort by `references/run-record.md` (Terms), and cuts at a cap by `references/coordinator-path.md` (Phase caps).
 
 ### 1. Frame
 
 1. Read the agent instructions, manifest, style entry points, theme providers and route tree. Name the mode and foundation, and load the base reference. Done when the Frame names both.
-2. Write the complaint in the person's words and the first visible change that answers it. Choose the pilot and themes. The viewports are the narrowest and widest widths the app supports, default 390 and 1280 px, a common phone and laptop.
+2. Write the complaint in the person's words and the first visible change that answers it. Choose the pilot and themes. The viewports are the narrowest and widest widths the app supports, default 390 and 1280 px.
 3. Write the predicate with blanks for counts and the standing orders, and ask the questions (`references/run-record.md`, Frame and Questions) unless a coordinator did.
 4. Set up the repo for the footprint (`references/coordinator-path.md`, Start). Done when `node scripts/check-system.mjs --init` ran and its guesses are read, or on a minimal footprint when nothing was copied.
 5. Settle `references/coordinator-path.md` (Lock before fan-out) and size the fan-out (`references/worker-brief.md`, When to delegate). Start phase 2 without waiting.
@@ -89,14 +89,12 @@ Follow `references/checks.md`. The check exits 0 before phase 6. Prove the shipp
 ### 6. Pilot, then surfaces
 
 1. Move the rest of the pilot with the codemod, reading every hunk. Move unsupported props by hand.
-2. Capture after with the baseline's viewports, themes and data. An untraced difference is a defect.
+2. Capture after with the baseline's viewports, themes and data. An untraced difference is a defect. A rendered change with no capture reports `checks-only`.
 3. Walk the flow by keyboard, trigger its error and loading states, and recover. Measure every trap in the pilot's files before and after (`references/browser.md`), and fix it or gate it with its measurement.
 4. Run `design-review` on the after screenshots. Fix as decisions what existing tokens and components can fix, and broken behavior. The rest are gates. Done when the rerun review and `check-system.mjs --files` on the pilot's files are clean.
 5. Move surfaces one per commit (`references/coordinator-path.md`, Surfaces on the run branch).
 
 ### 7. Docs
-
-Docs are generated, never hand-written.
 
 1. Run `component-docs` for any canonical component still without a spec. Write the foundation pages from `references/system-structure.md` and the writing page by `references/writing-method.md`.
 2. Document the shared state patterns, in every mode: loading, error, empty, no permission and partial failure, each with its width, component and state order. Each rests on app evidence or is a `docs/system/coverage-gaps.md` row with its Meanwhile, beside a row for every other open gate.

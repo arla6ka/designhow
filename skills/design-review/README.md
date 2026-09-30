@@ -21,11 +21,23 @@ Each rule prevents a specific failure. Change one only when its stated reason do
 - Findings cite a criterion. An uncited finding is one reviewer's opinion, and the team ends up debating it.
 - Findings carry a location and a viewport. Designers skip what they cannot locate, and a narrow-screen problem may not exist on desktop.
 - The screen's purpose comes first. A choice that looks odd often makes sense once you know the user and the task.
-- Each finding says how it was established: seen, measured, or inferred. An inferred finding that would block sets the verdict to "no, pending" the one check that settles it.
+- Each finding says how it was established: seen, measured, or inferred, and carries a dedupe key. An inferred finding that would block sets the verdict to "no, pending" the one check that settles it, and never goes into a fix prompt as a fix.
 - Product calls, and accessibility changes that remove, rename or restructure semantics, go to a person. A confident wrong verdict costs more than an open question. A fix that only adds semantics, such as a missing label, is a ranked finding, because build and migrate land it as a decision.
 - Repeats collapse into one finding with a count. Nobody reads a report where one problem fills a page.
 - Evidence is the rendered design. A description only reflects what its writer noticed.
 - Called by another skill, it runs to the end, opens with a status line and returns the report as text. A coordinator has no one to answer a question mid-run, and some hosts refuse a report file written by a subagent.
+
+## What the scripts touch
+
+This skill ships no scripts. With `build-design-system` installed beside it, it runs these from there:
+
+- `capture.mjs` opens the app's local or given URL in a headless browser and writes PNG and JSON captures under `.design-review/<date>-<flow>/`, or the folder a coordinator names.
+- `state-timeline.js` runs inside the open page and only reads computed styles.
+- `check-spec.mjs` reads `docs/system/` and runs read-only `git` commands.
+- The accessibility scan installs `axe-core` from npm into `.design-system/tmp/`. That install, and `agent-browser` if you use that tool, are the only network calls besides the page under review.
+- A direct run writes its report to `.design-review/<date>-<flow>.md`. Under a coordinator it writes no report file.
+
+On a local build it intercepts every request that is not a same-origin GET or HEAD and aborts or stubs it, so no form submission leaves the machine.
 
 ## Test your changes
 

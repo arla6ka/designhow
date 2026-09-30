@@ -53,7 +53,7 @@ A phase that finishes early passes its time on. A phase at its cap starts nothin
 
 For an app with no system, or one where the ask is to make one.
 
-1. `build-design-system`. Receives the target app, the pilot if the ask named one, its phase cap, the order from Budget, and the triage folder as a first read. Done when it returns its handoff report or stop shape, and `.design-system/run.md` has a Handoff section.
+1. `build-design-system`. Receives the target app, the pilot if the ask named one, its phase cap, the order from Budget, and the triage folder as a first read. Its inventory writes the product coverage map (`build-design-system/references/inventory.md`), which goes into the clearance message beside `plan.md`. Done when it returns its handoff report or stop shape, and `.design-system/run.md` has a Handoff section.
 2. `migrate-design-system`, audit mode, beside step 1 and pinned to the build's token commit. Receives the inventory, the triage folder and the families the build is making. Done when `.migration/<run>/plan.md` exists and its gates are reconciled with the build's at close.
 3. Check the build. Walk the "Done, page by page" table in `build-design-system/references/system-structure.md` against the repo. The generated twins, `llms.txt`, the index and the AGENTS.md block are required rows. HTML pages are met or listed as follow-up. Clone the run branch into a temp folder, install, run the repo's own prerequisites for its typecheck, and see the check and the typecheck exit 0 there. Check fixtures must be invisible to the compiler, by an extension it skips or a folder it excludes, so an error from a fixture fails this step. Done when each row is marked met or not met with a path. The handoff's migration map, codemod command and counts by route go into the clearance message beside `plan.md`.
 4. Apply decided defaults. `migrate-design-system`, edit mode, budgeted to the decided defaults the build did not land and nothing more, such as the codemod on non-pilot screens, color moves and renames. One surface per commit, each with captures and a verifier. Done when every decided default reads `applied` with its commit, or a gate row says why it could not land.
@@ -113,7 +113,7 @@ The person named raw values, so the first writing step's GOAL is the report's id
 
 For a settled system the app has not moved onto. An ask that names families and a PR runs Named families for a PR instead.
 
-1. `migrate-design-system`, audit mode. Receives the system location and commit that triage found. Done when `plan.md` exists.
+1. `migrate-design-system`, audit mode. Receives the system location and commit that triage found, and writes the product coverage map as the build would (`build-design-system/references/inventory.md`). A `missing` pattern becomes a gate, never a new component inside the migration. Done when `plan.md` exists.
 2. Clearance, as Full step 5. Decided defaults need none, so they land in step 3 first.
 3. `migrate-design-system`, as Full step 6.
 4. `design-review`, as Full step 7.
@@ -156,7 +156,7 @@ Nothing changes outside `.design-system/boss/` and `.migration/`, except the aud
 |---|---|---|
 | triage | `triage/signals.tsv`, `raw-colors.txt`, `components.tsv` | every first step, as a first read |
 | `token-mapping` | its report | `build-design-system` foundations, or the migration's first mapping |
-| `build-design-system` | `.design-system/run.md` handoff, migration map, codemod command, counts by route, and in harden mode the stray-code list | `migrate-design-system`, first for decided defaults |
+| `build-design-system` | `.design-system/run.md` handoff, migration map, codemod command, counts by route, product coverage map, and in harden mode the stray-code list | `migrate-design-system`, first for decided defaults |
 | `migrate-design-system` audit | `.migration/<run>/plan.md` | the clearance message, then the editing run |
 | `migrate-design-system` | final integration commit and captures | `design-review` |
 | `component-docs` | the entry and its three blocks | the repo's entry folder, or `returns/component-docs.entry.md` |

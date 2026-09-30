@@ -7,7 +7,7 @@ description: Use for vague whole-app design system asks on an app that already s
 
 The boss triages the app, picks a route, runs each step through subagents where it can, keeps one state file, and hands back one report. The five siblings do the work: `build-design-system`, `migrate-design-system`, `token-mapping`, `design-review` and `component-docs`, each called through its "When a coordinator calls it" section.
 
-Read `references/coordinator-path.md` first. It lists the steps and the one file to open at each.
+Read `references/coordinator-path.md` first. It lists each step and the file to open.
 
 Sibling paths start at `<skills>`. Terms such as surface, gate and clearance mean what `build-design-system/references/run-record.md` (Terms) says, and its standing orders bind the boss too.
 
@@ -35,7 +35,7 @@ If it stops, return the condition, what finished, the state file path, and the s
 | Budget | The Frame's `Go, <budget>` reply, else the host's session, else 2 hours, split per `references/routes.md` (Budget) |
 | The sibling skills | In `<skills>`. A missing one stops only its steps, and the report names it |
 | Subagents, a browser, a shell | Probe per `references/delegation.md` |
-| AGENTS.md or CLAUDE.md | Their rules win over this file. Pass them into every brief |
+| AGENTS.md or CLAUDE.md, the person's words, saved memory | They win over every skill default, branch and push policy included. "Work on my current branch" makes it the run branch. Pass them into every brief |
 
 ## Procedure
 
@@ -67,24 +67,24 @@ State, **weak** and intent come from `references/triage.md`. `references/routes.
 | any | review | Review |
 | any | audit | Audit |
 
-When the ask mentions a PR or upstream, or the repo looks like someone else's, the route runs as `<route>, minimal footprint` (Footprint in run-record Terms). When the ask and the state disagree, the state wins and the Frame says so. "Migrate us" on state `none` is Build. A weak system hardens first, since a migration copies its gaps onto every screen.
+When the ask mentions a PR or upstream, or the repo looks like someone else's, the route runs as `<route>, minimal footprint` (Footprint in run-record Terms). When the ask and the state disagree, the state wins and the Frame says so. "Migrate us" on state `none` is Build.
 
 ## Boundaries
 
 May decide:
 
-- The route, the run branch, the phase split, which read-only steps run side by side, and one retry of a failed step.
+- The route, run branch, phase split, which read-only steps run side by side, and one retry of a failed step.
 - Defaults for any sibling input the ask left out.
 - Skipping a step whose output is current, citing its record.
 
 Stop and ask:
 
 - No repo, or read-only access on a route that writes.
-- Uncommitted changes in a path a writing step would touch. Leave them as they are.
+- A dirty checkout or someone else's branch on a writing route. Never stash.
 - A sibling returns its stop shape and the next step needs its output.
 
 Never:
 
-- Write product code when it can spawn subagents. On a host without subagents, the boss takes a sibling's seat and follows its coordinator rules, recorded as one decision row.
-- Set a new visual direction. "Make it modern" becomes a gate with the default "keep the current look".
+- Write product code when it can spawn subagents (`references/delegation.md`, Who writes product code).
+- Set a new visual direction the person did not choose through the design-source question (`references/triage.md`, Standing questions). "Make it modern" with no design source becomes a gate with the default "keep the current look".
 - Loosen a sibling's predicate or edit a sibling skill.

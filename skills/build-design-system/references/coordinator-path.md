@@ -4,7 +4,7 @@ The one page a coordinator reads to run the build, whether this skill's own or d
 
 ## Start
 
-1. Pick the run branch. When the person named a branch for this work in this session, use it and create no other. Otherwise create one from the current HEAD: `git switch -c ds/<yyyy-mm-dd>-<route>`, where the route is the mode (`build`, `harden`, `seed`) or the one the boss names, and never commit to the starting branch. Write the branch and the rule used into the Frame. Nothing is pushed unless the person asks.
+1. Pick the run branch. When the checkout holds uncommitted changes or sits on a branch someone else works on, a run that writes stops and asks the person which branch to use, and never stashes. When the person named a branch for this work, in this session or in saved memory, or said "work on my current branch", use it and create no other. Otherwise create one from the current HEAD: `git switch -c ds/<yyyy-mm-dd>-<route>`, where the route is the mode (`build`, `harden`, `seed`) or the one the boss names, and never commit to the starting branch. Write the branch and the rule used into the Frame. Nothing is pushed unless the person asks.
 2. Create `.design-system/run.md` from `run-record.md`, with the Frame, the standing orders and the known gates. Workers read gates, so the gates exist before any worker starts.
 3. Decide the footprint. When the repo looks like one the person does not own (a remote that is not theirs, a CONTRIBUTING.md, a README for outside contributors), or the ask mentions a PR or upstream, open a footprint gate with the default "minimal" (`run-record.md`, Terms). Phases 5 and 7 then write only what the repo's own lint and docs already hold. When the ask names families, minimal covers only those, and no migrate audit plan is written. Before editing an instance, confirm something imports it.
 4. Set up for the footprint. Full: copy into `scripts/` only what the repo's check runs (`check-system.mjs`, `check-spec.mjs`, `gen-docs.mjs`, `props-table.mjs`, `copy-check.mjs`), copy `spec-template.md` to `docs/system/`, run `node scripts/check-system.mjs --init`, and add `.design-system/review/**/*.png` and `.design-system/tmp/` to `.gitignore`. Everything else in `.design-system/review/` is a committed record: `surfaces.tsv`, `traces.tsv`, the probe files, the review reports and `index.html`. Nothing in `package.json` reads from `.design-system/` or a skill folder. Minimal: copy nothing, leave `.gitignore` alone, and list `.design-system/` in `.git/info/exclude`. Either way, fixtures, capture, pixdiff and montage run from `<skills>/build-design-system/scripts/`.
@@ -55,6 +55,8 @@ Record the reading and the window as a decision row, and recheck before each wav
 - The migrate verifier always runs its own server in its own worktree, because it checks out a surface commit the shared server does not serve.
 - A failed worker gets one retry, a fresh brief with the failing output pasted in. After a second failure the unit splits into smaller briefs or becomes a gate. On a direct build run the coordinator may take the family over itself instead. Under design-system-boss it writes no product code, so it gates.
 - When the same cause fails two units, stop refilling slots for that cause. Fix it in the brief, the contract or the reference implementation, then resend.
+- A finding two or more workers report as not theirs becomes a coordinator task. After each wave, regenerate every generated file before the next wave reads it.
+- A running worker gets a message only per `worker-brief.md` (Retries and dropouts).
 
 ## Lock before fan-out
 
@@ -64,7 +66,9 @@ A worker writes against the brief it gets today. One writer owns the token sourc
 |---|---|---|
 | The run branch and what stays local | the Frame | one line in the plan |
 | The person's bans | the standing orders, the writing page and `bans` in the check config | the plan's bans line |
-| How closely to follow a design source | the Frame, then the sample (`modes.md`) | the sample beside the source |
+| How closely to follow a design source, and in place or in a new folder | the Frame, then the sample (`modes.md`) | the sample beside the source |
+| Conflicts between named sources, and between a source and the bans (`modes.md`, What decides a question) | numbered rows in `docs/system/decisions.md` | one question per conflict |
+| The alignment reference per context: cap center, x-height center or the midpoint, with the typeface named | a numbered row in `docs/system/decisions.md` | zoomed crops of two real instances with each candidate line drawn (`browser.md`, Measuring optical alignment) |
 | The spec format and the rule shape | `docs/system/spec-template.md` and the first family's spec | that family's page |
 | The API vocabulary (`component-contract.md`, API) | `docs/system/decisions.md` | one decision line |
 | The icon set, its sizes and its alignment rule | the brand page and the icon component | the icon row on the first family's page |
@@ -112,15 +116,17 @@ By default, specs cover the pilot's families, and build adds the families the st
 
 Scopes stop two writers from touching one file, not from answering one question two ways on two pages. So after any fan-out of more than three writers, and again before the handoff, the run reviews itself, settles each conflict once, then fixes every side.
 
-1. **Review.** Four read-only workers side by side, one lens each, each writing `.design-system/review/lens-<name>.md` with the commit it read on its first line, a count table, then findings by topic, worst first. Every finding gives each side's `path:line` with a short quote, a severity (`conflict`, `wrong`, `stale`, `missing`, `nit`) and a proposed answer by the precedence below.
+1. **Review.** Read-only workers side by side, one lens each, each writing `.design-system/review/lens-<name>.md` with the commit it read on its first line, a count table, then findings by topic, worst first. Every finding gives each side's `path:line` with a short quote, a severity (`conflict`, `wrong`, `stale`, `missing`, `nit`), its evidence type (`seen`, `measured` or `inferred`, as `design-review` uses them), a dedupe key `<criterion number or trap/rule ID>|<element role and name, or region>`, and a proposed answer by the precedence below.
    - Cross-page conflicts: the same topic answered two ways, such as durations, sizes, item limits, prop and tone names, the disabled pattern, empty values, or which component does a job. Also "use X instead" that points at nothing, and duplicate or dangling rule IDs.
    - Specs against code: every prop, default, constant, token, key and ARIA claim a spec makes holds at HEAD.
    - Format and bans: headings, the rule shape, counts, sources, and every ban in prose, tables and examples outside `Don't:` lines.
    - Showcase against rules: the showcase obeys the rules it shows, since agents copy it.
-2. **Decide.** The coordinator writes one numbered decision per conflict in `docs/system/decisions.md`, committed, never only in the run record, since agents in later sessions read the repo. A rename of a prop, tone or token is a decision too, so every fix worker writes against the new name at once. Mark findings on files that changed since a lens's commit as stale.
+   - Newcomer: one agent builds one real screen on a real route from the docs alone, logs each place it got stuck, then restores the repo.
+   - Polish: every overlay open, at every width and theme. It can run as `design-review`.
+2. **Decide.** The lenses merge into one ledger by dedupe key, and each finding ends fixed, skipped with a reason, or moved to the roadmap. An `inferred` finding is confirmed before it enters a fix brief. The coordinator writes one numbered decision per conflict in `docs/system/decisions.md`, committed, never only in the run record, since agents in later sessions read the repo. A rename of a prop, tone or token is a decision too, so every fix worker writes against the new name at once. A decision that changes every instance lists its consumers, and the fix sweeps them with named opt-outs, never as a silent global change. Mark findings on files that changed since a lens's commit as stale. No message to the person says done before the lenses have run.
 3. **Fix.** One worker per ownership set, side by side, each reading the decisions first and its lens findings second: code (the component folder, tokens, utility config), foundation and writing pages, specs split by an explicit file list, and the showcase. Docs workers never compile. The code worker lists every call site its renames break, with file and line, for the showcase worker. Then regenerate the indexes, run every check, capture every page the fix touched in both themes, and commit per worker.
 
-The decisions page opens with its precedence: the person's direct words, then this page, then the foundation pages, then the specs, then the code. To change a decision, edit it here and fix every page and component it names in the same change. One line per decision:
+The decisions page opens with its precedence: the person's direct words, then this page, then the foundation pages, then the specs, then the code. It also holds the conflicts between sources that `modes.md` (What decides a question) settles before any writer starts. To change a decision, edit it here and fix every page and component it names in the same change. One line per decision:
 
 ```markdown
 - D12 Menus: open and close instantly, with no fade. Menu, Select and Combobox pages say so, and their components use the `instant` motion preset. Overrides the dialog page, which is a different surface.

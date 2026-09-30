@@ -121,7 +121,7 @@ Write this section when the list states no purposes or the ask is about consiste
 
 A conflict is two sources that give one name two values, or one purpose two names, in the same mode. A common case is a hand-edited CSS file drifting from the JSON it was generated from. An alias to a primitive, per-mode values and a deprecated token beside its replacement are not conflicts.
 
-With a precedence rule in CLAUDE.md or AGENTS.md, follow it and name it in Source. The losing source still appears in For a person to decide. With no rule, report both and do not choose.
+With a precedence rule in CLAUDE.md, AGENTS.md or a `docs/system/decisions.md` row, follow it and name it in Source. The losing source still appears in For a person to decide. With no rule, report both and do not choose.
 
 One list holding the same name with two values in the same mode is a broken list, not a conflict. Stop.
 
@@ -131,7 +131,7 @@ The Summary's first line answers the question the person asked, in one sentence,
 
 The counts line gives rows split into raw and palette, then exact, semantic, ambiguous, gap and Do not use, in occurrences, and says so. Token + alpha and graphic follow as not mapped. A list with no stated purpose adds "Value matching only" to it.
 
-The mapping table's columns are value, location, job, token, class and reason, sorted by file and line so it doubles as a migration list. Do not use gives each token with the purpose it does have. Ambiguous gives every candidate and the fact that would settle the row. Gaps give what the value does and why no token covers it, and Consistency by role follows them when written. For a person to decide asks about the ambiguous rows, the gaps and any open conflict. Source gives the list's name, format, path, read method, date and time, the modes, the color conversion command and exit code, any precedence rule applied, and every assumption.
+The mapping table's columns are value, location, job, token, class and reason, sorted by file and line so it doubles as a migration list. Do not use gives each token with the purpose it does have. Ambiguous gives every candidate and the fact that would settle the row. Gaps give what the value does and why no token covers it, and Consistency by role follows them when written. For a person to decide asks about the ambiguous rows, the gaps and any open conflict. Source gives the list's name, format, path, read method, date and time, the modes, the color conversion command and exit code, any precedence rule applied, and every assumption. The report's last line starts `Coverage:` and names the files, routes and modes read, then what was not: excluded paths, unverified rows and modes not mapped.
 
 ```markdown
 ## Summary
@@ -162,4 +162,6 @@ Mode: light. Dark not mapped.
 
 ## Source
 tokens/tokens.json, DTCG format, read from the repo on 2026-03-12 at 14:10. Light mode. No second source. Colors converted to OKLCH and compared by ΔE OK with `node <skills>/build-design-system/scripts/oklch.mjs` (exit 0). Graphic excluded: 3 values in src/ui/Logo.tsx.
+
+Coverage: src/ui/InvoiceRow.tsx, Badge.css, Owner.tsx, Table.css and Logo.tsx, light mode. Not read: dark mode, and files outside src/ui/.
 ```

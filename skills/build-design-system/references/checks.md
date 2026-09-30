@@ -13,6 +13,7 @@ Contents
 - Passing a rule by hiding from it
 - What the check can't see
 - The check has to run
+- Warnings on a pull request
 - Proving each rule
 - At handoff
 
@@ -31,6 +32,7 @@ node scripts/check-system.mjs                     # the repo against the allowli
 node scripts/check-system.mjs --files app/team/invite/page.tsx   # the pilot, no allowlist
 node scripts/check-system.mjs --prune-allowlist   # at close: drop entries that no longer match a finding
 node scripts/check-system.mjs --no-self-test --left   # at close: what the allowlist still holds, by file and rule
+node scripts/check-system.mjs --changed origin/main --warn   # in CI: warn on what a pull request adds, exit 0
 node /abs/skills/build-design-system/scripts/check-system.mjs --root /abs/app --no-self-test   # from any folder
 ```
 
@@ -66,6 +68,7 @@ One command, such as `npm run check`, runs every rule below and exits nonzero on
 | `rule/unregistered-ui` | A file directly in the ui folder with no registry entry and no drift-list row | yes |
 | `rule/deprecated-import` | An import of a path the registry lists under `replaces`, or the config's `deprecated` | yes |
 | `rule/ban-<slug>` | A pattern the person banned, from the config's `bans`, in UI code or a docs page (Bans, below) | yes, once `bans` lists one |
+| `rule/outside-name` | An outside product name from the config's `names` in a docs page. A warning, never a failure (Bans, below) | yes, once `names` lists one |
 | `spec/*` | `node scripts/check-spec.mjs docs/system` | separate script |
 | docs | `node scripts/gen-docs.mjs --check`: every twin, the rules page, the index and `llms.txt` match a fresh generation | separate script |
 | `copy/*` | `node scripts/copy-check.mjs`, added to the check in phase 7 once `docs/system/writing.md` exists: a stale copy inventory, and strings that break the writing page (`writing-method.md`) | separate script |
@@ -75,6 +78,8 @@ Add each `trap/` or `rule/` from the specs that a regex or AST query can see, un
 ## Bans
 
 Every ban the person states in the Frame or later becomes one entry in `bans` in `scripts/check-system.config.json`, with its rule id, a pattern and the person's words: `{"id": "rule/ban-middle-dot", "pattern": "\u00b7", "why": "no middle-dot separators"}`. The check scans UI code with comments stripped, and the Markdown pages under `banDocs` (default `docs/system`), so specs, foundation pages and the showcase's copy are covered. A line holding `Don't:` or the ban's own id describes the ban and passes. A casing ban needs a pattern that sees the casing, such as a class or style that uppercases text. Add the entry in the same commit as the standing order, and see it fail once on a planted line.
+
+The optional `names` list holds outside product names the shipped docs should not carry, such as a design system the team studied. A hit in a `banDocs` page prints as a `rule/outside-name` warning and never fails the check.
 
 ## Exempting stock files
 
@@ -124,6 +129,20 @@ Every report ends with "The check cannot see", from `--list-blind-spots` (`blind
 - List generated output in the formatter's ignore file, or format it in the generator with the repo's formatter and config, before writing or comparing. Otherwise the first formatter run makes `--check` fail for good. Run the formatter from the repo root with the repo's own binary, since one run inside a container or another folder may pick up another config. Formatters can move backticks in inline code that holds backticks, so write such examples as fenced blocks, and rerun the docs check after formatting.
 - If CI exists, read its config and confirm the command is in it. With no CI, say "runs locally, not in CI". Claiming the check blocks merges needs the CI config.
 
+## Warnings on a pull request
+
+The built system ships a second CI step that warns, and never fails, when a pull request adds UI outside the system: raw values, palette classes, hand-rolled copies of system components and deprecated imports. `--changed <base ref>` keeps only findings on lines the pull request added or changed, and an allowlisted literal warns only past its count, so existing violations stay quiet. `--warn` prints each finding with its rule ID and the system's alternative, as a GitHub annotation on the changed line when `GITHUB_ACTIONS` is set and as `file:line warning ...` elsewhere, and exits 0. It skips the self-test. The blocking check above stays as it is. A minimal GitHub Actions step:
+
+```yaml
+- uses: actions/checkout@v4
+  with:
+    fetch-depth: 0
+- run: node scripts/check-system.mjs --changed origin/${{ github.base_ref }} --warn
+  if: github.event_name == 'pull_request'
+```
+
+Other CI hosts pass the base branch the same way, or pipe their own diff with `--diff -`. A shallow clone has no merge base, so the step prints one warning saying so and exits 0. The AGENTS.md block says the warnings exist (`system-structure.md`, Load conditions in AGENTS.md). The fixture `fixtures/check-system/changed-lines/` proves the scoping.
+
 ## Proving each rule
 
 Every rule gets a failing and a passing fixture under `fixtures/check-system/<rule>/`, in `fail/` and `pass/` folders with a `case.json` naming the rule and the exact count the failing folder must produce. Fixture sources end in `.fixture` (`list.tsx.fixture`), so the typecheck, lint and framework never compile them, and the self-test reads each under its inner name. The standard fixtures stay in the skill folder, and `node scripts/check-system.mjs --self-test --fixtures <skills>/build-design-system/fixtures/check-system` proves the repo's copy against them. A rule the run adds keeps its pair in the repo's `scripts/fixtures/check-system/`, and the default run self-tests whatever sits there.
@@ -134,7 +153,7 @@ Every rule gets a failing and a passing fixture under `fixtures/check-system/<ru
 
 The normal scan skips `scripts/` entirely.
 
-`check-spec.mjs --self-test`, `gen-docs.mjs --self-test`, `copy-check.mjs --self-test` and `probe.mjs --self-test` prove the other scripts the same way, from `fixtures/check-spec/`, `fixtures/gen-docs/`, `fixtures/copy-check/` and `fixtures/probe/` in the skill folder. These fixtures never go into the repo.
+`check-spec.mjs --self-test`, `gen-docs.mjs --self-test`, `copy-check.mjs --self-test`, `probe.mjs --self-test` and `state-timeline.js --self-test --root <playwright root>` prove the other scripts the same way, from `fixtures/check-spec/`, `fixtures/gen-docs/`, `fixtures/copy-check/`, `fixtures/probe/` and `fixtures/state-timeline/` in the skill folder. These fixtures never go into the repo.
 
 ## At handoff
 

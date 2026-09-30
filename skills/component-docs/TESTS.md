@@ -32,6 +32,7 @@ Skip a case whose condition does not hold for your install.
 | Usage rules by the method | Yes |
 | Rule method without the sibling | Installs without build-design-system |
 | Example files on a direct run | Yes |
+| A rule grounded in the person | Yes |
 
 ## Done means
 
@@ -118,9 +119,9 @@ With the skill off, watch for a made-up section order, usage examples nobody sup
 
 ## Spec mode
 
-**Input:** repo access, a Select whose code shows loading and invalid states but not what happens when both hold, and "write the spec for Select". `build-design-system` is installed beside it.
+**Input:** repo access, a Select whose code shows pending and invalid states but not what happens when both hold, and "write the spec for Select". `build-design-system` is installed beside it.
 
-**Expect:** the entry carries the spec template's additions. The loading and invalid pair sits under State precedence as `NEEDS REVIEW`, with the question in Guessed at. The check fails on that one line and the status block quotes it. Every other failure is fixed from a source.
+**Expect:** the entry carries the spec template's additions. The pending and invalid pair sits under State precedence as `NEEDS REVIEW`, with the question in Guessed at. The check fails on that one line and the status block quotes it. Every other failure is fixed from a source.
 
 **Fails if:** a precedence is invented to pass the check, or a state appears that no code, story or capture shows.
 
@@ -212,9 +213,9 @@ With the skill off, watch for a made-up section order, usage examples nobody sup
 
 **Input:** "document the Select" in a repo with two call sites (6 and 9 options), a stories file, and a running dev server.
 
-**Expect:** Usage has the six H3s in order: When to use, When not to use, Rules, Content, Anti-slop, Limits. Every When not to use line names another component and says "instead". Every rule line has a `rule/select-<slug>` ID, a condition, a reason, an `Evidence:` ground (call sites, a measurement with its path, a named principle, or the person's quoted words) and a `Check:`, then a nested `Don't:` and `Do:` line of real code against the component's import. The Limits number comes from growing the option count on a real instance, sits below the break, and cites the saved file. Anti-slop comes from one fresh agent's attempt compared with the call sites, or says `Not applicable` with the reason. Guessed at lists any rule that rests on a principle alone.
+**Expect:** Usage has the six H3s in order: When to use, When not to use, Rules, Content, Anti-slop, Limits. Every When not to use line names another component and says "instead". Every rule line has a `rule/select-<slug>` ID, a condition, a reason, an `Evidence:` ground (call sites, a measurement with its path, a named principle, or a `docs/system/decisions.md` row by number) and a `Check:`, then a nested `Don't:` and `Do:` line of real code against the component's import. The Limits number comes from growing the option count on a real instance, sits below the break, and cites the saved file. Anti-slop comes from one fresh agent's attempt compared with the call sites, or says `Not applicable` with the reason. Guessed at lists any rule that rests on a principle alone.
 
-**Fails if:** a rule says "appropriate", "consistent" or "as needed", a limit has no measurement and no `NEEDS REVIEW (not measured)`, a don't has no instead, a rule lacks its Don't or Do line, a snippet uses a prop the component does not have, or a rule states a number no source or measurement gave.
+**Fails if:** a rule says "appropriate", "consistent" or "as needed", a limit has no measurement and no `NEEDS REVIEW (not measured)`, a don't has no instead, a rule lacks its Don't or Do line, a snippet uses a prop the component does not have, a rule states a number no source or measurement gave, or a rule quotes the person instead of citing a decisions row.
 
 ## Rule method without the sibling
 
@@ -231,3 +232,11 @@ With the skill off, watch for a made-up section order, usage examples nobody sup
 **Expect:** directly, the run writes the default, one file per tone with a visual difference, and a composition inside the table cell, each at `<examples dir>/badge/<name>.<ext>` with a `Caption:` line, the product import path and inert data from the props type and the call site. `### Example files` lists each. Under the coordinator it writes no example file, and each row reads `NOT SUPPLIED: brief scope names no examples folder`.
 
 **Fails if:** an example uses a prop or data no source shows, a tone is dropped without a row, or a file lands outside the brief's SCOPE.
+
+## A rule grounded in the person
+
+**Input:** "document the Badge", where `docs/system/decisions.md` row D7 bans uppercase badge text, and the person says in this run "never show a count badge above 99".
+
+**Expect:** the uppercase rule's `Evidence:` cites D7. The count rule's `Evidence:` names the person's call without quoting it, and the Gates block asks for it as a new decisions row with its default. No line in the entry says "now", "no longer" or "used to".
+
+**Fails if:** either rule quotes the person, the count rule ships with no row and no gate, or the entry narrates what changed.

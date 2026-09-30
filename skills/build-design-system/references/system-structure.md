@@ -125,7 +125,7 @@ What each foundation adds:
 
 | Page | Tokens table groups | Specimens | Accessibility |
 |---|---|---|---|
-| Colors | surface, text, border, icon, action, status, focus | a swatch per role, placed on the surface it pairs with | contrast ratio for every surface and foreground pair in each theme, from a script |
+| Colors | surface, text, border, icon, action, status, focus | a swatch per role, placed on the surface it pairs with | contrast ratio for every surface and foreground pair in each theme, and for each translucent tint composited over every surface it can sit on, from a script |
 | Typography | one row per composite text style: family, size, line height, weight, tracking | a line of real product copy per style | smallest size in use, and zoom to 200% without clipping |
 | Materials | radius, border width, shadow, surface level | one card per surface level and per floating level (menu, dialog, toast) | focus ring stays visible on every surface level |
 | Layout | space scale (inset and gap), grid columns, breakpoints, container widths | the scale as bars, one page shell at each breakpoint | target sizes and reflow at 320 px |
@@ -153,9 +153,11 @@ Done when every slot has a Sources cell with rows behind it, every rule passes t
 Assets are files, so this page is a list with rules. Sections, in order:
 
 1. `## Logo`. Each file with its repo path, format (SVG first, PNG where needed), and the background it is for. Clear space and minimum size if the team has them.
-2. `## Typeface`. Loaded families and weights, license status, and the fallback stack. An unknown license is a gate.
-3. `## Icons`. The icon set the app already uses, its import path, the size per control size, the alignment rule (`traps.md`, `trap/icon-optical-size` and `trap/icon-optical-align`), and the stroke rule. Give icons their own `/system/icons` page with a generated searchable grid once a list stops being scannable, default about 30. Do not add an icon library unasked. When the person asks for another set, swap every icon in one commit, then rederive sizes and alignment before anyone reviews it.
-4. `## Names`. Product and feature names as the product spells them.
+2. `## Colors`. The literal brand values that do not change with the theme, and the semantic role that carries each.
+3. `## Typeface`. Loaded families and weights, license status, and the fallback stack. An unknown license is a gate. A weight token names only a weight whose font file exists. A missing weight is a gate, never synthesized (`trap/weight-synthesized`).
+4. `## Icons`. The icon set the app already uses, its import path, the size per control size, the alignment rule (`traps.md`, `trap/icon-optical-size` and `trap/icon-optical-align`), and the stroke rule. Give icons their own `/system/icons` page with a generated searchable grid once a list stops being scannable, default about 30. Do not add an icon library unasked. When the person asks for another set, swap every icon in one commit, then rederive sizes and alignment before anyone reviews it.
+5. `## Names`. Product and feature names as the product spells them.
+6. `## Source map`, when the person gave a design source, at any fidelity. One row per source element: the token or component that carries it and its frame id, or "marketing only".
 
 Done when every file listed exists at its path and every rule names who confirmed it, or is a gate.
 
@@ -176,13 +178,13 @@ When the person reviews in a browser, or asks for a page in the app rather than 
 - One page per component and per foundation or guideline page, each with its own URL. The overview only links out.
 - The sidebar is a navigator only: groups and links in sentence case, the current page marked, with no previews, counts or content.
 - Each page has one `h1`, the component's name, then examples, variants, states, edge cases, an example from a real screen, and last the Usage rules rendered from the spec, each rule with its Don't and Do pair labeled. Previous and next links close the page.
-- A theme switch sits in the top bar. Examples use inert data from one shared fixtures file in the app's own vocabulary.
+- A theme switch sits in the top bar. Examples use inert data from one shared fixtures file in the app's own vocabulary. A stand-in asset is the kind it stands for: an avatar is a face or initials, a logo slot holds a logo-shaped mark.
 - Pages come from one registry that finds its entries, so a new page needs no edit to a shared file.
-- The pages obey every rule and ban they show, since agents copy them.
+- The pages obey every rule and ban they show, since agents copy them. Demos meet the component contract too, and a stepped demo waits on the element's animations, never on timers (`trap/demo-on-timers`).
 
 Give the person the link, and open it in the host's browser or preview pane when it has one.
 
-When the person asks for an agent view, each page gets a named radio group, "Human" and "Agent", whose choice shows in the URL. The agent view renders the twin's source Markdown as a file viewer and is tested like any page in both themes at 360 and 1280 px.
+When the person reviews in a browser, each page also gets an agent view: a named radio group, "Human" and "Agent", whose choice shows in the URL. The agent view renders the twin's source Markdown as a file viewer with the same content edge as the human view. Prose lines stop near 96 characters, tables and code scroll in their own box, and line numbers stay out of the text selection and the accessibility tree. It is tested like any page, in both themes, at the stress widths (`stress-test.md`).
 
 ## Pattern pages
 
@@ -203,7 +205,7 @@ The system keeps working only when someone owns it. On a full footprint, the han
 
 - An owner per system folder (tokens, components, docs), as a CODEOWNERS line when the repo uses them, named in the Frame.
 - Registry fields `owner`, `since` and `deprecated: {by, removeBy}`. A deprecated import warns until `removeBy`, then fails `rule/deprecated-import`.
-- A CI step that fails when the allowlist total grows against the merge base.
+- A CI step that fails when the allowlist total grows against the merge base, and the warn step for changed lines (`checks.md`, Warnings on a pull request).
 - The contribution path. The AGENTS.md block's "open a gate" line names the repo's real path, an issue or PR label named in the Frame.
 
 `check-system.mjs` fails a deprecated import at once today. The warn-until-date form and the allowlist total are team additions to the check, each with a fixture pair.
@@ -279,7 +281,7 @@ Each line's note, saying when to open the page, comes from the first sentence un
       "markdown": "/system/button.md",
       "entry": "docs/system/button.md",
       "variants": { "tone": ["neutral", "primary", "danger"], "size": ["sm", "md"] },
-      "states": ["loading", "disabled"],
+      "states": ["pending", "disabled"],
       "tokens": ["color.action.primary.bg", "radius.control"],
       "replaces": ["components/legacy/PrimaryButton.tsx", "app/settings/SaveButton.tsx"],
       "status": "ready"
@@ -304,11 +306,15 @@ Before you add or change a component, a screen, a style, a token, or copy in the
 2. If the task is in public/system/coverage-gaps.md, follow that row's Meanwhile and name the gap in your final message.
 3. Use a registry component and the tokens in styles/globals.css. If none fits, open a gate before writing one.
 Before you finish: run `npm run check`, and capture the changed screens at 390 and 1280.
+CI warns on changed lines that bypass the system. Fix each warning, or say in the PR why it stays.
+These rules win over the color and component rules in .cursor/rules/ui.mdc and docs/brand-guide.md.
 ```
 
 Name real paths, the real check command and the Frame's viewports. Before the docs exist, the block names the token file and the check, and phase 7 adds the docs lines. Delete a line when the repo has no such thing.
 
-On a full footprint, phase 8 also writes four project skills in the repo's skills folder, named after the product, and the block names each: use (build screens with the system: the component picker, the bans, page anatomy, states and a pre-ship check), maintain (add or change a component or token end to end, with the verification commands and the dev-environment traps met in the run, and a correction log, where a correction lands as a token, variant or check once it repeats, and its count is rechecked after the fix), review (the four lenses in `coordinator-path.md`, Review, decide, fix) and migrate (one legacy screen per commit, with before and after captures). Each points to the docs and never restates their rules. One worker writes them from the finished system, not from the run's briefs, runs every command it names once, and reports each inconsistency it finds as a fix before close. Everything they cite, trap and rule IDs included, is defined in the repo, never only in an installed skill.
+In phase 3, find the other agent-instruction files and brand guides (AGENTS.md, CLAUDE.md, editor rule files, copilot instructions) whose color, type or component rules contradict the new system. The precedence line names each. Edit those files only when the person asks.
+
+On a full footprint, phase 8 also writes four project skills in the repo's skills folder, named after the product, and the block names each: use (build screens with the system: the component picker, the bans, page anatomy, states and a pre-ship check), maintain (add or change a component or token end to end, with the verification commands and the dev-environment traps met in the run, and a correction log, where a correction lands as a token, variant or check once it repeats, and its count is rechecked after the fix), review (the lenses in `coordinator-path.md`, Review, decide, fix) and migrate (one legacy screen per commit, with before and after captures). Each points to the docs and never restates their rules. One worker writes them from the finished system, not from the run's briefs, runs every command it names once, and reports each inconsistency it finds as a fix before close. Everything they cite, trap and rule IDs included, is defined in the repo, never only in an installed skill.
 
 ## Checks for the docs
 
@@ -337,5 +343,5 @@ Add these to the phase 5 check. The first three run on every system. The rest ap
 | Twins and `llms.txt` | `gen-docs.mjs --check` exits 0, every `llms.txt` link loads |
 | AGENTS.md | The load-conditions block names real paths and the real check command |
 | HTML docs site, optional | The Done line under Component pages holds, and `check-docs-leak.mjs` exits 0 |
-| Live showcase, when the person reviews in a browser | One page per component and foundation, a navigator-only sidebar, the rules rendered on every page, and any agent view passing its tests |
+| Live showcase, when the person reviews in a browser | One page per component and foundation, a navigator-only sidebar, the rules rendered on every page, and the agent view passing its tests |
 | Project skills, on a full footprint | Use, maintain, review and migrate exist in the repo, every command they name ran once, and the agent-instructions block names them |

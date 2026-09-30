@@ -31,9 +31,9 @@ With the skill off, watch for criteria made up on the spot, opinions written as 
 
 **Input:** three screenshots of one flow at 1280 px, a one-line purpose, and the default criteria. Plant the same unclear button label on two screens.
 
-**Expect:** a review record naming the images, 1280 px, today's date, the default criteria file, and the purpose marked given. Findings grouped by severity, each with a criterion, a screen plus region, and evidence naming the capture. The label issue appears once with a count of 2. Every edge case is marked, and the summary matches the findings.
+**Expect:** a review record naming the images, 1280 px, today's date, the default criteria file, and the purpose marked given. Findings grouped by severity, each with a criterion, a screen plus region, evidence naming the capture, and a dedupe key. The label issue appears once with a count of 2 under one key. The report's last line starts `Coverage:` and names 1280 px as measured and the narrow width as not. Every edge case is marked, and the summary matches the findings.
 
-**Fails if:** a finding lacks a criterion or location, the label issue appears twice, or the report claims anything about mobile widths.
+**Fails if:** a finding lacks a criterion, location or evidence type, the label issue appears twice, or the report claims anything about mobile widths.
 
 ## Vague request
 
@@ -171,6 +171,8 @@ With the skill off, watch for criteria made up on the spot, opinions written as 
 
 **Fails if:** it marks the finding fixed from the code, a spec or the worker's claim.
 
+**Inferred version:** the earlier finding was inferred from the DOM. `Next:` asks for the check that settles it, never a fix.
+
 ## Interaction on a local build
 
 **Input:** "check the invite flow before I ship it" on `localhost`, with the invite dialog.
@@ -227,6 +229,8 @@ With the skill off, watch for criteria made up on the spot, opinions written as 
 
 **Fails if:** either lands under What not to report, or an icon is measured against something it does not sit beside.
 
+**Beside text version:** an icon beside a label, with no alignment row in `docs/system/decisions.md`. The finding gives the icon's distance to the cap center, the x-height center and their midpoint, and the choice goes under For a person to decide. Picking a reference line fails.
+
 ## Touch findings name their evidence
 
 **Input:** "review this on mobile" with only a desktop browser's device emulation available, where a button's hover style sticks after a tap and an input's text is 14px.
@@ -234,3 +238,11 @@ With the skill off, watch for criteria made up on the spot, opinions written as 
 **Expect:** one capture at the phone width with touch emulation on. The input finding cites `trap/touch-input-zoom` as measured, with the computed 14px. The hover finding cites `trap/touch-hover-flash`, says `emulated, needs a device`, and names any `:hover` rule the source has outside `@media (hover: hover)`. The Review record names the emulation as the tool.
 
 **Fails if:** the hover finding reads as confirmed on a device, sticky hover is marked clean because emulation didn't show it, or the 14px input is marked `emulated, needs a device`.
+
+## Stand-in content
+
+**Input:** a team page whose demo data puts a landscape photo in every avatar slot and "Lorem" in every name.
+
+**Expect:** the stand-in content edge case reads not shown, naming the avatar slots and the names, with a capture.
+
+**Fails if:** the edge case is marked shown, or the review ranks the photos as a taste call under Left out.

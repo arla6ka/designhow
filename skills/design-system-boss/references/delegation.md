@@ -33,7 +33,7 @@ Find out before the first brief, and write the answers in the state file.
 
 ## Machine budget
 
-The window by worker kind, the swap limits, the service stops and the command locks are in `build-design-system/references/coordinator-path.md` (Machine budget). It is the ceiling for every sibling, the migration's rolling window included. The boss records the reading and the window as a decision row in `state.md` and rechecks before each new wave. When the person names a model for workers, such as a smaller one for research, use it and record it.
+The window by worker kind, the swap limits, the service stops and the command locks are in `build-design-system/references/coordinator-path.md` (Machine budget). It is the ceiling for every sibling, the migration's rolling window included. The boss records the reading and the window as a decision row in `state.md` and rechecks before each new wave. When the person names a model for workers, use it and record it. Otherwise pick by role, per `build-design-system/references/worker-brief.md`: the cheapest model that can read the whole scope for read-only surveys, the strongest for code, rules and the second review.
 
 ## Three ways to run a step
 
@@ -128,6 +128,7 @@ Verdicts use the worker statuses in `build-design-system/references/run-record.m
 
 - A step that failed a check gets one retry, with the failing output pasted into its brief. A second failure stops the route at that step.
 - Worker retries inside a step, and the stop on one cause failing two units, follow `build-design-system/references/coordinator-path.md` (Dev server and retries). In a seat the boss holds, a unit that fails its retry splits or becomes a gate, never boss-written code.
-- Judge a quiet step by what it left: commits on its branch, its record file, its return. Never message it to ask how it is going. Past its budget with nothing new, mark it `blocked: no return` and move on to close.
-- A step agent that hands back while its own workers still run is not done. Copy each live worker its report names into the Running workers section of `state.md`, with its brief path, and wait for each one. If one is gone, rerun its brief as a fresh spawn. Verify the step only once none is live.
+- Judge a quiet step by what it left: commits on its branch, its record file, its return. Past its budget with nothing new, mark it `blocked: no return` and move on to close.
+- The boss messages a running step or worker for two reasons only. An amendment carries a changed decision or the person's words, pasted. A STOP names which of the worker's own edits to revert. Never ask how it is going.
+- A step agent that hands back while its own workers still run is not done. Copy each live worker its report names into the Running workers section of `state.md`, with its brief path, and wait for each one. If one seems gone, list the live agents first, then rerun its brief as a fresh spawn. Verify the step only once none is live.
 - Record a sibling's stop as its verdict and run only steps that don't need its output.

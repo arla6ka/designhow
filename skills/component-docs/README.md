@@ -24,6 +24,15 @@ Name the component, as in "document the button". With repo access the skill find
 - Guessed at keeps guesses from becoming documented fact.
 - Under a coordinator, a status line replaces questions. Nobody can answer mid-run, so open questions go in the output and only missing inputs stop it. The entry comes back as text and the coordinator saves it, since some hosts refuse files a subagent writes.
 
+## What the scripts touch
+
+This skill ships no scripts. With `build-design-system` installed beside it, it runs these from there, or the repo's own copies:
+
+- `check-spec.mjs` reads the entry from stdin or `docs/system/` and runs read-only `git` commands.
+- `probe.mjs --grow` opens a local or given URL in a headless browser and writes JSON under `.design-system/evidence/<component>/`.
+
+A direct run writes the entry to `docs/system/<name>.md` and missing example files to the examples folder. Under a coordinator it writes only what the brief's SCOPE names. It makes no network call besides the pages it opens.
+
 ## Check after changing
 
 Repo access, a component workbench and a browser are optional, and the pasted path must keep working. Run `TESTS.md`, then check one entry's headings against a published one.

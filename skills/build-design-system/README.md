@@ -30,7 +30,7 @@ Change one only when its stated reason doesn't apply to you.
 
 - Screenshots before the first edit. Without them, nobody can tell an intended change from a regression.
 - Scripts produce every count so the handoff can rerun them. Counts read by eye miss re-exports and aliases.
-- No new visual direction. The system describes the app you have. Brand and taste changes are gates for a person.
+- No new visual direction unless you chose one. The system describes the app you have. A new look lands only when you picked it in the design-source question, in place or in a new folder.
 - Gates with defaults, not questions that stop work. A run that waits on a naming answer for a day produces nothing.
 - One writer per shared file. The token source belongs to the one writer `references/coordinator-path.md` names, and the registry, barrel and migration map to the coordinator. Workers report requests.
 - Generated docs. A hand-written twin drifts on the first change, and agents trust it anyway.
@@ -48,9 +48,17 @@ Change one only when its stated reason doesn't apply to you.
 - Subagents or separate agent sessions on their own branches, for phase 4. Without them, the same briefs run one after another.
 - A second model for reviewing worker output where judgment matters, such as accessibility and API shape.
 
+## What the scripts touch
+
+Read these before you install. No script sends data anywhere except to the app URL you give it.
+
+- `check-system.mjs`, `check-spec.mjs`, `copy-check.mjs`, `gen-docs.mjs` and `props-table.mjs` read the repo. The check writes only its config, allowlist, drift list and stock copies under `scripts/`, when you pass a flag that says so. `gen-docs.mjs` writes the twins and indexes under `public/` and its own config, and `copy-check.mjs --extract` writes `docs/system/copy-inventory.tsv`. They run `git` to find the repo root and changed lines, and self-tests run Node on temp copies of fixtures.
+- `capture.mjs`, `probe.mjs`, `pixdiff.mjs`, `montage.mjs`, `state-timeline.js` and `check-docs-leak.mjs` launch a local Chromium through Playwright (`find-chromium.mjs` finds it, and runs `npm root -g` to look for a global install) and load only the URL or fixtures you pass. They write captures, JSON results and a review page where `--out` or `--json` points, and `capture.mjs --eval` writes one JSON file per capture. `capture.mjs --via` and `check-docs-leak.mjs` shell out to `agent-browser`.
+- `oklch.mjs` and `optical.js` compute only. `optical.js` runs inside a page you open.
+
 ## Check after changing
 
-From the skill folder, run `--self-test` on `check-system.mjs`, `check-spec.mjs`, `gen-docs.mjs`, `copy-check.mjs` and `oklch.mjs`, then the cases in `TESTS.md` per `../TESTING.md`. At minimum, run Missing required input, Enforcement proves itself and Scope creep.
+From the skill folder, run `--self-test` on `check-system.mjs`, `check-spec.mjs`, `gen-docs.mjs`, `copy-check.mjs` and `oklch.mjs`, and `--self-test --root <playwright root>` on `probe.mjs` and `state-timeline.js`, then the cases in `TESTS.md` per `../TESTING.md`. At minimum, run Missing required input, Enforcement proves itself and Scope creep.
 
 ## Adapt this skill
 

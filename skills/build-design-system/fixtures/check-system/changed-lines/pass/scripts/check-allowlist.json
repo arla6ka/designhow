@@ -1,0 +1,7 @@
+{
+  "app/page.tsx": {
+    "rule/raw-value": {
+      "#111111": 1
+    }
+  }
+}

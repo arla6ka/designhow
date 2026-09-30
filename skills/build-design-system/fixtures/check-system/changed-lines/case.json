@@ -1,0 +1,2 @@
+{ "rule": "mode/changed-lines", "changed": "changes.diff",
+  "expect": { "rule/raw-value": 2, "rule/palette-use": 1 } }

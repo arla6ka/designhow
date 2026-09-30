@@ -34,9 +34,9 @@ Quantity
 - [ ] Deep nesting, and one very long single line
 
 State
-- [ ] Disabled, invalid, read-only and loading at once
+- [ ] Disabled, invalid, read-only and pending at once
 - [ ] Disabled with a reason: focusable, not activatable, the reason reachable by keyboard
-- [ ] Loading keeps the label and the width, and a second press is blocked
+- [ ] Pending keeps the label and the width, and a second press is blocked
 - [ ] A selected value missing from the options
 
 Layout
@@ -63,7 +63,7 @@ On top of the checklist, each family has its own weak points.
 
 | Family | Also try |
 |---|---|
-| Actions | A label past the button's width at 360, an icon-only button with no name, a link and a button side by side, loading on a button in a toolbar row |
+| Actions | A label past the button's width at 360, an icon-only button with no name, a link and a button side by side, a pending button in a toolbar row |
 | Text entry | A value longer than the field, paste into a field with a max length, an error that appears while typing, autofill in both themes |
 | Choice | A selected option that was removed, an async list that fails, an option label longer than the popup, 500 options on a phone |
 | Overlays | A dialog taller than a 320 px screen, a sheet opened at 360, Escape while a submit is pending, focus when the opener is gone |

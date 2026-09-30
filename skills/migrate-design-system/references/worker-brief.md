@@ -14,6 +14,7 @@ A worker starts with an empty context and cannot ask a question. Everything it n
 ## The template
 
 ```
+TEMPLATE       v<n>
 SURFACE        <id from queue.tsv>, attempt <n>
 OUTCOME        <one sentence a stranger could act on>
 BASE           branch <name> from commit <sha>. Worktree <path>. Commit only to this branch.
@@ -21,6 +22,8 @@ MAY EDIT       <globs>
 MUST NOT EDIT  <globs>, plus the do-not-edit standing order
 INPUTS         <paths to read first>
 KEEP           <behavior that must not change, one per line>
+PERSON'S CALLS <explicit values the person set, with file, or none. Never normalize them to a pattern.>
+KNOWN FAILING  <checks already failing before you start, each with who owns the fix, or none>
 DONE WHEN      <checkable lines>
 RUN            <exact commands, in order>
 SERVER         <shared dev server URL>. If it does not answer for <wait, default 60s>: in your own
@@ -34,6 +37,8 @@ STANDING ORDERS
 
 ## What goes in each field
 
+**TEMPLATE.** The template version the brief was written from (`references/orchestration.md`, Drains).
+
 **SURFACE.** The id and attempt number, so the report lands in the right file.
 
 **OUTCOME.** What is true when the work is done, not the steps, such as "The invoices route renders only @acme/ui components and tokens, with no change in behavior."
@@ -46,7 +51,11 @@ STANDING ORDERS
 
 **INPUTS.** Paths, not pasted text, for anything the worker can read locally: `mapping/<surface>.md`, `codemod/RECIPE.md`, the system docs for each component the mapping names, and the pilot's landed diff as a worked example. On a retry, paste the previous report and the failing output in full, since those are what the retry acts on. Cloud workers that cannot read the run folder get every input pasted.
 
-**KEEP.** The behavior that must survive, as checkable lines: which requests fire and when, validation timing, focus movement, keyboard paths, URLs, what persists, and what the user sees on failure. Take them from the surface's tests, its code and the baseline accessibility snapshot. "Preserve behavior" does not count.
+**KEEP.** The behavior that must survive, as checkable lines: which requests fire and when, validation timing, focus movement, keyboard paths, URLs, what persists, and what the user sees on failure. Take them from the surface's tests, its code, the baseline accessibility snapshot and the surface's rows in `parity.tsv`. "Preserve behavior" does not count.
+
+**PERSON'S CALLS.** Every explicit value the person set on this surface, such as a color or a spacing they chose, with its file and line or its `decisions.tsv` row. A worker keeps each as written even where the mapping would swap it.
+
+**KNOWN FAILING.** Checks that fail on the base commit, with the unit or person that owns the fix, so the worker neither fixes them outside its scope nor reports them as its own.
 
 **DONE WHEN.** Lines the worker can check itself: its paths' inventory count is zero, its checks pass, its captures exist.
 
@@ -61,6 +70,8 @@ STANDING ORDERS
 A decision or gate the worker proposes carries its surface as prefix, such as `G-billing-invoices-01`, since two workers both reach for `-01`. The coordinator renumbers it to the next free `D-NN` or `G-NN` and keeps the worker's ID beside it.
 
 **STANDING ORDERS.** The whole file, pasted, never summarized, since a summary drops the line that mattered.
+
+A message from the coordinator mid-run is an amendment, which replaces the brief line it names, or a `STOP`, which names the worker's own edits to revert before it returns `partial` (`references/orchestration.md`, Liveness). The worker lists either under Deviations.
 
 Size the brief to the surface. When the codemod does everything and one command proves it, a short paragraph will do, as long as it names the outcome, scope, command, server and report schema.
 
@@ -79,6 +90,7 @@ If any field is empty or reads "TBD", the surface is not ready. Do not spawn it.
 ## Filled example
 
 ```
+TEMPLATE       v3
 SURFACE        billing-invoices, attempt 1
 OUTCOME        The invoices route renders only @acme/ui components and tokens,
                with no change in behavior. Accessibility-tree changes only add semantics.
@@ -97,6 +109,8 @@ KEEP           Page loads invoices with one GET /api/invoices?page=1.
                Row click navigates to /billing/invoices/<id>. Cmd-click opens a new tab.
                Empty state shows when the list is empty, with the "Create invoice" link.
                Error state shows "Couldn't load invoices" and a Retry button that refetches page 1.
+PERSON'S CALLS The Overdue badge text stays #b42318 (decisions.tsv D-05).
+KNOWN FAILING  npm test -- export fails on the base commit. Owner: unit billing-export.
 DONE WHEN      node /repo/scripts/migration-inventory.mjs --run /repo/.migration/q3 --paths "app/billing/invoices/**" prints 0 0 0 0
                npm run typecheck, npm run lint, npm test -- invoices all pass
                captures exist for empty, list, error, loading at both widths, light and dark
@@ -113,7 +127,7 @@ TIME LIMIT     45 minutes. At the limit, commit what you have, report partial, s
 REPORT         return the schema below as your final message. Write it to no file.
 STANDING ORDERS
 1. Write only inside your brief's SCOPE. ...
-(orders 2 to 16 from run-record.md, word for word)
+(every other numbered order from run-record.md, word for word)
 - Target is @acme/ui 4.2.0. Import only from "@acme/ui". ...
 ```
 

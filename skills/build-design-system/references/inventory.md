@@ -10,6 +10,7 @@ Contents
 - Routes
 - Component definitions and call sites
 - Families and duplicates
+- Product coverage map
 - Raw values
 - Existing tokens, fonts and icons
 - Copy
@@ -31,7 +32,7 @@ Save every script under `.design-system/scripts/`. Each writes a TSV or JSON fil
   run.md
   scripts/        scripts a rerun needs: inventory scripts, the states module, rendered-type. Committed. The check never reads them
   tmp/<worker>/   one-off probes, deleted at close
-  inventory/      routes.tsv, components.tsv, values.tsv, palette.tsv, tokens.tsv
+  inventory/      routes.tsv, components.tsv, values.tsv, palette.tsv, tokens.tsv, coverage.tsv
   delete-plan.md
 ```
 
@@ -50,12 +51,15 @@ action and state (loading, empty, error, no permission, saving), and which parts
 the known set, custom components or raw markup. Then every component or pattern beyond
 the known set: path, what it does, where it is reused, and whether it should become a
 system component. Flag duplicates, raw colors and theme gaps with file:line.
+Record accessibility gaps per screen with file:line, and say where the code
+contradicts this brief. End with a Coverage: line naming what you read and
+what you did not.
 Return the report as your final message, with a 15-line summary first.
 ```
 
 The coordinator saves each report under `.design-system/inventory/screens/`. The notes feed judgment. The counts still come from the scripts below.
 
-For each design file, brand kit, reference system or product the person names, one more read-only worker writes `.design-system/research/<source>.md`: what it offers in the run's own words, which parts are marketing art, and what it decides per `modes.md` (Following a design source). Later briefs cite these files by path.
+For each design file, brand kit, reference system or product the person names, one more read-only worker writes `.design-system/research/<source>.md`: what it offers in the run's own words, which parts are marketing art, and what it decides per `modes.md` (Following a design source). Later briefs cite these files by path. Each research file ends with the conflicts it found, between named sources and between a source and the person's bans. Before any writer starts, the coordinator turns each into a numbered row in `docs/system/decisions.md` (`modes.md`, What decides a question).
 
 ## Routes
 
@@ -102,6 +106,15 @@ A family is a set of components that do the same job for the user. Group them by
 Links styled as buttons go in the Link family, since they navigate and keep an `<a>`. Product compositions (an invite form, a billing panel) get their own rows with disposition "product composition". They use system components but do not become one.
 
 Disposition is one of: canonical, merged into `<canonical name>`, deleted, product composition. Every row gets one by the end of phase 4.
+
+## Product coverage map
+
+The reverse of migrate's parity list: what the product needs that the system lacks. Write `.design-system/inventory/coverage.tsv` from the screen notes and `components.tsv`, one row per product pattern with its call sites and product areas, marked `covered`, `partial` (name the missing variant, prop or slot) or `missing`.
+
+- Group near-duplicates into one proposal: its variants, a props sketch, the primitives it composes, its states, keyboard and motion.
+- Rank proposals by how many surfaces each unblocks.
+- A pattern used in two or more product areas becomes a system component. The rest stay product compositions.
+- A pattern that needs a look the app does not have goes to a question round before anyone builds it (`run-record.md`, Questions).
 
 ## Raw values
 

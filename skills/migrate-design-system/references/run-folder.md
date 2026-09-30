@@ -21,6 +21,7 @@ A new coordinator resumes from these files alone, so write each fact here before
   close.md                    coordinator at Close, the one source of every count in the final message
   inventory/                  the inventory script
   mapping/<surface>.md        the token-mapping run for that surface
+  parity.tsv                  the parity agent during Parity, the coordinator afterward
   baselines/                  the baseline agent during Baselines, read only afterward
   baselines/traps.tsv         the same agent, every trap's before number, measured before any edit
   codemod/                    the codemod builder during Build the codemod, read only afterward
@@ -43,7 +44,7 @@ The same rule covers the repo. The shared layer has one owner during its phase a
 
 ## frame.md
 
-Written once in Frame. It changes only through a logged decision.
+Written once in Frame. It changes only through a logged decision. A dirty checkout, or a branch someone else is working on, stops the run with a question to the person before this file exists. The run never stashes (`build-design-system/references/coordinator-path.md`, Start).
 
 ```markdown
 # Frame: billing-app to acme-ui 4.2
